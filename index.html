@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pro Star — Metrics</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--navy:#10233f;--ink:#18202f;--paper:#fff;--canvas:#e8eef7;--muted:#55607a;--faint:#5b6478;
+    --line:#dbe2ee;--line2:#e7ecf4;--ctl:#c2cfe2;--green:#2b7a1f;--red:#b4422f;
+    --tint-50:#f4f7fb;--tint-100:#edf2f9;--tint-200:#e3eaf4;
+    --amber-bg:#fdeec9;--amber-tx:#6f4602;--amber-bd:#e3c581;--green-bg:#e4f1e0;--green-bd:#bcdcb3;
+    --blue-bg:#ddeafc;--blue-tx:#1c4d8d;--blue-bd:#a9c8ef;
+    --f:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+  body{font-family:var(--f);background:#d8e0ec;color:var(--ink);-webkit-font-smoothing:antialiased;padding:24px 18px 56px}
+  .tnum{font-variant-numeric:tabular-nums}
+  .app{max-width:1100px;margin:0 auto;border-radius:14px;overflow:hidden;background:var(--canvas);box-shadow:0 20px 50px -26px rgba(16,35,63,.45),0 2px 8px rgba(16,35,63,.1)}
+  .bar{background:var(--navy);height:58px;display:flex;align-items:center;gap:18px;padding:0 22px}
+  .logo{display:flex;align-items:center;font-weight:800;font-size:18px;letter-spacing:.5px;color:#fff}
+  .nav{display:flex;gap:3px;margin-left:6px}
+  .nav a{font-size:13.5px;color:rgba(255,255,255,.72);text-decoration:none;font-weight:500;padding:7px 13px;border-radius:8px;cursor:pointer}
+  .nav a.on{background:rgba(255,255,255,.14);color:#fff;font-weight:600}
+  .search{flex:1;max-width:380px;margin-left:6px;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);border-radius:9px;padding:7px 13px;color:rgba(255,255,255,.5);font-size:13px}
+  .gear{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.14)}
+  .page{padding:20px 24px 26px;display:none}.page.on{display:block}
+  .phd{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+  .phd h1{font-size:20px;font-weight:700;letter-spacing:-.2px}.phd .sb{font-size:12.5px;color:var(--muted);margin-top:4px}
+  .seg{display:flex;background:var(--paper);border:1px solid var(--ctl);border-radius:9px;overflow:hidden}
+  .seg b{font-size:12.5px;font-weight:500;color:var(--muted);padding:7px 14px;border-right:1px solid var(--line)}.seg b:last-child{border-right:0}.seg b.on{background:var(--navy);color:#fff;font-weight:600}
+  .note{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:9px 13px;border-radius:9px;margin-bottom:14px;line-height:1.5}
+  .note.am{background:var(--amber-bg);border:1px solid var(--amber-bd);color:var(--amber-tx)}
+  .note.bl{background:var(--blue-bg);border:1px solid var(--blue-bd);color:var(--blue-tx)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin-bottom:14px}
+  .tile{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:15px 17px}
+  .lab{font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .v{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-top:8px}
+  .delta{font-size:11.5px;font-weight:600;color:var(--green);margin-top:5px;display:inline-block}.delta.dn{color:var(--red)}.delta.fl{color:var(--muted)}
+  .row{display:grid;gap:13px;margin-bottom:13px}.row.g2{grid-template-columns:1.55fr 1fr}.row.g11{grid-template-columns:1fr 1fr}
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:17px 19px}
+  .panel h3{font-size:12.5px;font-weight:700;margin-bottom:2px}.panel h3 em{float:right;font-style:normal;font-size:11px;color:var(--muted);font-weight:500}
+  .bars{display:flex;align-items:flex-end;gap:12px;height:148px;margin-top:18px;padding-bottom:22px}
+  .grp{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:5px;height:100%;position:relative}
+  .b{width:15px;border-radius:4px 4px 0 0}.b.c{background:#c2cfe2}.b.w{background:var(--green)}
+  .grp .ml{position:absolute;bottom:-20px;font-size:11px;color:var(--faint)}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:4px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .mixrow{display:flex;align-items:center;gap:12px;margin-top:13px;font-size:13px}
+  .mixrow .nm{width:170px;flex:none;color:var(--ink)}
+  .mixrow .tk{flex:1;height:9px;border-radius:5px;background:var(--tint-200);overflow:hidden}.mixrow .fl{height:100%;border-radius:5px;background:var(--green)}
+  .mixrow .vv{width:96px;text-align:right;color:var(--muted);font-weight:600}
+  .pair{margin-top:13px}.pair .pl{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:6px}
+  .pbar{height:9px;border-radius:5px;background:var(--tint-200);overflow:hidden;margin-bottom:4px}.pbar i{display:block;height:100%;border-radius:5px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;padding:0 9px 9px;border-bottom:1px solid var(--line)}
+  th.r,td.r{text-align:right}
+  td{padding:9px;border-bottom:1px solid var(--line2);color:var(--ink)}tr:last-child td{border-bottom:0}
+  .chip{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:6px}
+  .chip.am{background:var(--amber-bg);color:var(--amber-tx);border:1px solid var(--amber-bd)}
+  .chip.gr{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+  .chip.rd{background:#f7e3df;color:var(--red);border:1px solid #e6b9af}
+  .chip.gy{background:#e8ecf3;color:#46536e;border:1px solid #cfd7e4}
+  .btn{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--ctl);background:var(--paper);color:var(--ink);padding:8px 13px;border-radius:9px;cursor:pointer}
+  .btn.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .ctrls{display:flex;gap:16px;flex-wrap:wrap;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:13px 17px;margin-bottom:13px}
+  .ctrls .f{display:flex;flex-direction:column;gap:5px}.ctrls .f label{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600}
+  input.ed{font:inherit;font-size:12.5px;border:1px solid var(--ctl);border-radius:7px;padding:6px 8px;width:70px;color:var(--ink);background:var(--tint-50)}
+  input.ed:focus{outline:none;border-color:var(--navy);background:#fff}
+  td input.ed{width:96px}
+  .sumstrip{display:flex;gap:26px;flex-wrap:wrap;background:var(--tint-50);border:1px solid var(--line);border-radius:11px;padding:13px 19px;margin-bottom:13px}
+  .sumstrip .s b{display:block;font-size:19px;font-weight:800;margin-top:3px;letter-spacing:-.3px}
+  .sumstrip .s span{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600}
+  .tier{font:inherit;font-size:12px;border:1px solid var(--ctl);border-radius:7px;padding:5px 6px;background:var(--tint-50);color:var(--ink)}
+  .foot{padding:2px 24px 20px;font-size:11.5px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="bar">
+    <div class="logo">PRO<svg width="20" height="20" viewBox="0 0 24 24" style="margin:0 3px"><path d="M12 2l2.6 6.9 7.4.4-5.8 4.6 2 7.1L12 17l-6.2 4 2-7.1L2 9.3l7.4-.4z" fill="#fff"/></svg>STAR</div>
+    <div class="nav"><a data-p="quotes" class="on">Quotes</a><a data-p="jobs">Jobs</a><a data-p="tech">Technicians</a><a data-p="comm">Commissions</a></div>
+    <div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg> Search…</div>
+    <div class="gear"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></div>
+  </div>
+
+  <!-- QUOTES -->
+  <div class="page on" id="p-quotes">
+    <div class="phd"><div><h1>Quote metrics</h1><div class="sb">June 2026 · data through Jun 26 (live)</div></div><div class="seg"><b>Week</b><b class="on">Month</b><b>Year</b></div></div>
+    <div class="kpis">
+      <div class="tile"><div class="lab">Quotes created</div><div class="v tnum">186</div><div class="delta dn">▼ 1 vs May</div></div>
+      <div class="tile"><div class="lab">Quote value</div><div class="v tnum">$2.19M</div><div class="delta">▲ 34% vs May</div></div>
+      <div class="tile"><div class="lab">Won (converted)</div><div class="v tnum">75</div><div class="delta dn">▼ 9</div></div>
+      <div class="tile"><div class="lab">Won value</div><div class="v tnum">$368K</div><div class="delta dn">▼ 16%</div></div>
+      <div class="tile"><div class="lab">Win rate (count)</div><div class="v tnum">40.3%</div><div class="delta dn">▼ 4.6 pts</div></div>
+    </div>
+    <div class="row g2">
+      <div class="panel"><h3>Quotes created vs won<em>by month, 2026</em></h3><div class="bars" id="qbars"></div>
+        <div class="legend"><span><i style="background:#c2cfe2"></i>Created</span><span><i style="background:#2b7a1f"></i>Won (converted to job)</span></div></div>
+      <div class="panel"><h3>Win rate<em>converted ÷ created</em></h3>
+        <div style="margin-top:10px" id="winlist"></div></div>
+    </div>
+    <div class="panel"><h3>Largest open quotes — follow-up<em>aging in amber (&gt; 90 days)</em></h3>
+      <table><thead><tr><th>Quote</th><th>Customer</th><th>Salesperson</th><th class="r">Value</th><th class="r">Days open</th></tr></thead><tbody>
+        <tr><td>Q-543</td><td>Worldmark San Diego Balboa Park</td><td>Laila Karamally</td><td class="r tnum">$771,497</td><td class="r"><span class="chip am">359 d</span></td></tr>
+        <tr><td>Q-1782</td><td>Town &amp; Country San Diego</td><td>Laila Karamally</td><td class="r tnum">$450,926</td><td class="r"><span class="chip am">129 d</span></td></tr>
+        <tr><td>Q-2184</td><td>Hyatt Regency Huntington Beach</td><td>Nelida Banuelos</td><td class="r tnum">$412,690</td><td class="r">68 d</td></tr>
+        <tr><td>Q-1185</td><td>Griffis Residential</td><td>—</td><td class="r tnum">$370,869</td><td class="r"><span class="chip am">235 d</span></td></tr>
+        <tr><td>Q-2467</td><td>Hotel Lulu, BW Premier Collection</td><td>—</td><td class="r tnum">$323,087</td><td class="r">25 d</td></tr>
+        <tr><td>Q-1376</td><td>PMP Management</td><td>—</td><td class="r tnum">$252,384</td><td class="r"><span class="chip am">194 d</span></td></tr>
+      </tbody></table></div>
+  </div>
+
+  <!-- JOBS -->
+  <div class="page" id="p-jobs">
+    <div class="phd"><div><h1>Job metrics</h1><div class="sb">June 2026 completed jobs · accuracy on quote-sourced jobs only</div></div><div class="seg"><b>Week</b><b class="on">Month</b><b>Year</b></div></div>
+    <div class="kpis">
+      <div class="tile"><div class="lab">Jobs completed</div><div class="v tnum">257</div><div class="delta">▲ June</div></div>
+      <div class="tile"><div class="lab">Avg job value</div><div class="v tnum">$1,592</div></div>
+      <div class="tile"><div class="lab">Total billed</div><div class="v tnum">$409K</div></div>
+      <div class="tile"><div class="lab">Gross margin</div><div class="v tnum">28.8%</div></div>
+    </div>
+    <div class="row g11">
+      <div class="panel"><h3>Estimate accuracy — labor<em>182 of 194 quote-sourced jobs (Mar–Jun)</em></h3>
+        <div class="pair"><div class="pl"><span>Quoted</span><span class="tnum">1,334 hrs</span></div><div class="pbar"><i style="width:78%;background:#c2cfe2"></i></div></div>
+        <div class="pair"><div class="pl"><span>Actual</span><span class="tnum">1,456 hrs</span></div><div class="pbar"><i style="width:85%;background:#2b7a1f"></i></div></div>
+        <div style="margin-top:11px;font-size:12.5px;color:var(--muted)">Jobs run <span class="chip rd">+9.1% over</span> quoted labor on average.</div></div>
+      <div class="panel"><h3>Estimate accuracy — parts<em>needs reconciliation</em></h3>
+        <div class="note am" style="margin:8px 0 0"><span>⚠</span><span>Quoted parts ($254K) appear to be sell-price while actual ($112K) is cost — not like-for-like. A valid parts-accuracy figure needs matching basis; flagged, not reported.</span></div></div>
+    </div>
+    <div class="panel" style="margin-bottom:13px"><h3>Work mix<em>completed jobs, last 90 days · $1.05M</em></h3>
+      <div class="mixrow"><span class="nm">On-demand service</span><span class="tk"><span class="fl" style="width:84%"></span></span><span class="vv tnum">$886K · 84%</span></div>
+      <div class="mixrow"><span class="nm">Maintenance · Boiler</span><span class="tk"><span class="fl" style="width:11%"></span></span><span class="vv tnum">$115K · 11%</span></div>
+      <div class="mixrow"><span class="nm">Maintenance · Water heater</span><span class="tk"><span class="fl" style="width:3%"></span></span><span class="vv tnum">$31K · 3%</span></div>
+      <div class="mixrow"><span class="nm">Maintenance · AC / HVAC</span><span class="tk"><span class="fl" style="width:1%"></span></span><span class="vv tnum">$10K · 1%</span></div>
+    </div>
+    <div class="panel"><h3>Quote-sourced jobs — quoted vs actual<em>largest, May–Jun</em></h3>
+      <table><thead><tr><th>Job</th><th>Customer</th><th class="r">Quoted hrs</th><th class="r">Actual hrs</th><th class="r">Quoted parts</th><th class="r">Actual parts</th><th class="r">Billed</th></tr></thead><tbody>
+        <tr><td>#16614</td><td>Holiday Inn Express #1955</td><td class="r tnum">76.0</td><td class="r tnum">70.0</td><td class="r tnum">$31,379</td><td class="r tnum">$17,099</td><td class="r tnum">$64,419</td></tr>
+        <tr><td>#16630</td><td>JK 959 Global</td><td class="r tnum">29.0</td><td class="r tnum">77.8</td><td class="r tnum">$21,378</td><td class="r tnum">$2,246</td><td class="r tnum">$45,887</td></tr>
+        <tr><td>#17034</td><td>Queen's Surf Building</td><td class="r tnum">40.0</td><td class="r"><span class="chip gy">not synced</span></td><td class="r tnum">$22,369</td><td class="r"><span class="chip gy">—</span></td><td class="r tnum">$43,249</td></tr>
+        <tr><td>#16745</td><td>The Prescott Company</td><td class="r tnum">44.0</td><td class="r"><span class="chip gy">not synced</span></td><td class="r tnum">$12,490</td><td class="r"><span class="chip gy">—</span></td><td class="r tnum">$31,869</td></tr>
+        <tr><td>#16831</td><td>Powerstone Property Mgmt</td><td class="r tnum">39.0</td><td class="r tnum">52.0</td><td class="r tnum">$5,117</td><td class="r tnum">$4,305</td><td class="r tnum">$19,812</td></tr>
+      </tbody></table></div>
+  </div>
+
+  <!-- TECHNICIANS -->
+  <div class="page" id="p-tech">
+    <div class="phd"><div><h1>Technician performance</h1><div class="sb">May 2026 · hours &amp; jobs from timesheets (live to Jun 13)</div></div><div class="seg"><b>Week</b><b class="on">Month</b><b>Year</b></div></div>
+    <div class="kpis">
+      <div class="tile"><div class="lab">Field technicians</div><div class="v tnum">8</div></div>
+      <div class="tile"><div class="lab">Hours on jobs</div><div class="v tnum">804</div></div>
+      <div class="tile"><div class="lab">Work value</div><div class="v tnum">$324K</div></div>
+      <div class="tile"><div class="lab">Avg jobs / tech</div><div class="v tnum">31</div></div>
+    </div>
+    <div class="panel" style="margin-bottom:13px"><h3>Per technician — May 2026<em>credit-shared on multi-tech jobs</em></h3>
+      <table><thead><tr><th>Technician</th><th class="r">Jobs</th><th class="r">Hours on jobs</th><th class="r">Work value</th><th class="r">$ / hour</th></tr></thead><tbody>
+        <tr><td>Jeffrey Perry</td><td class="r tnum">31</td><td class="r tnum">99.3</td><td class="r tnum">$58,817</td><td class="r tnum">$592</td></tr>
+        <tr><td>Justin Molina</td><td class="r tnum">35</td><td class="r tnum">94.5</td><td class="r tnum">$53,828</td><td class="r tnum">$570</td></tr>
+        <tr><td>Cole Bender</td><td class="r tnum">32</td><td class="r tnum">122.3</td><td class="r tnum">$49,071</td><td class="r tnum">$401</td></tr>
+        <tr><td>Juan Serrato</td><td class="r tnum">31</td><td class="r tnum">109.8</td><td class="r tnum">$48,545</td><td class="r tnum">$442</td></tr>
+        <tr><td>Rob Sires</td><td class="r tnum">41</td><td class="r tnum">120.0</td><td class="r tnum">$45,586</td><td class="r tnum">$380</td></tr>
+        <tr><td>Ismael Contreras</td><td class="r tnum">27</td><td class="r tnum">120.0</td><td class="r tnum">$29,906</td><td class="r tnum">$249</td></tr>
+        <tr><td>Jim Ochoa</td><td class="r tnum">35</td><td class="r tnum">87.5</td><td class="r tnum">$25,302</td><td class="r tnum">$289</td></tr>
+        <tr><td>Erick Eudave</td><td class="r tnum">17</td><td class="r tnum">51.0</td><td class="r tnum">$12,742</td><td class="r tnum">$250</td></tr>
+      </tbody></table></div>
+    <div class="note am"><span>⚠</span><span>On-time completion and hours-clocked / utilization aren't shown live: actual job-card hours stalled Mar 11, and payroll-clocked hours aren't joined yet. The estimate-accuracy below is the last reliable 12-month read, frozen at Mar 11.</span></div>
+    <div class="panel"><h3>Estimate accuracy<em>12-month, through Mar 11 (sync stalled)</em></h3>
+      <table><thead><tr><th>Technician</th><th class="r">Jobs w/ estimate</th><th class="r">On-target</th><th class="r">Avg labor variance</th><th class="r">Callbacks</th></tr></thead><tbody>
+        <tr><td>Roberto Villalta</td><td class="r tnum">311</td><td class="r"><span class="chip gr">95%</span></td><td class="r tnum">+0.4%</td><td class="r tnum">30</td></tr>
+        <tr><td>Cole Bender</td><td class="r tnum">167</td><td class="r"><span class="chip gr">96%</span></td><td class="r tnum">−0.5%</td><td class="r tnum">11</td></tr>
+        <tr><td>Justin Molina</td><td class="r tnum">355</td><td class="r"><span class="chip gr">94%</span></td><td class="r tnum">−0.7%</td><td class="r tnum">26</td></tr>
+        <tr><td>Rob Sires</td><td class="r tnum">316</td><td class="r"><span class="chip gr">92%</span></td><td class="r tnum">+1.2%</td><td class="r tnum">28</td></tr>
+        <tr><td>Jeffrey Perry</td><td class="r tnum">335</td><td class="r"><span class="chip gr">91%</span></td><td class="r tnum">+0.6%</td><td class="r tnum">19</td></tr>
+        <tr><td>Juan Serrato</td><td class="r tnum">317</td><td class="r"><span class="chip gr">91%</span></td><td class="r tnum">+1.6%</td><td class="r tnum">18</td></tr>
+      </tbody></table></div>
+  </div>
+
+  <!-- COMMISSIONS -->
+  <div class="page" id="p-comm">
+    <div class="phd"><div><h1>Technician commissions</h1><div class="sb">May 2026 · pool / tier model · every value editable, nothing locked</div></div>
+      <div style="display:flex;gap:8px"><button class="btn" onclick="recompute()">Recompute</button><button class="btn pri">Export pay sheet</button></div></div>
+    <div class="note bl"><span>i</span><span>Allocated value and hours are real, computed from May timesheets (each job's value split by each tech's share of hours). Pool %, tiers, and any value below are editable; bonuses recompute live.</span></div>
+    <div class="ctrls">
+      <div class="f"><label>Pool %</label><input class="ed" id="poolPct" value="0.5" oninput="recompute()"></div>
+      <div class="f"><label>Gold ×</label><input class="ed" id="mGold" value="1.30" oninput="recompute()"></div>
+      <div class="f"><label>Silver ×</label><input class="ed" id="mSilver" value="1.20" oninput="recompute()"></div>
+      <div class="f"><label>Bronze ×</label><input class="ed" id="mBronze" value="1.10" oninput="recompute()"></div>
+    </div>
+    <div class="sumstrip">
+      <div class="s"><span>Total work value</span><b class="tnum" id="sumWork">$0</b></div>
+      <div class="s"><span>Commission pool</span><b class="tnum" id="sumPool" style="color:var(--green)">$0</b></div>
+      <div class="s"><span>Total paid out</span><b class="tnum" id="sumPaid">$0</b></div>
+    </div>
+    <div class="panel"><table id="commTbl"><thead><tr>
+      <th>Technician</th><th class="r">Hours</th><th class="r">Allocated value</th><th>Tier</th><th class="r">× mult</th><th class="r">Base</th><th class="r">Adjustment</th><th class="r">Final bonus</th></tr></thead>
+      <tbody id="commBody"></tbody></table></div>
+  </div>
+
+  <div class="foot">Pro Star Mechanical · Anaheim, CA · live Supabase data, June 2026</div>
+</div>
+
+<script>
+document.querySelector('.nav').addEventListener('click',e=>{const a=e.target.closest('a');if(!a)return;
+  document.querySelectorAll('.nav a').forEach(x=>x.classList.toggle('on',x===a));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id==='p-'+a.dataset.p));});
+
+(function(){const created=[197,170,179,165,187,186],won=[102,73,86,79,84,75],mx=Math.max(...created),M=['Jan','Feb','Mar','Apr','May','Jun'];
+  document.getElementById('qbars').innerHTML=created.map((c,i)=>`<div class="grp"><div class="b c" style="height:${(c/mx*100).toFixed(0)}%"></div><div class="b w" style="height:${(won[i]/mx*100).toFixed(0)}%"></div><div class="ml">${M[i]}</div></div>`).join('');
+  document.getElementById('winlist').innerHTML=created.map((c,i)=>{const r=Math.round(won[i]/c*100);return `<div class="mixrow"><span class="nm" style="width:42px">${M[i]}</span><span class="tk"><span class="fl" style="width:${r}%"></span></span><span class="vv tnum" style="width:42px">${r}%</span></div>`;}).join('');})();
+
+const techs=[{n:'Jeffrey Perry',h:99.3,a:58817,t:'Gold'},{n:'Justin Molina',h:94.5,a:53828,t:'Silver'},{n:'Cole Bender',h:122.3,a:49071,t:'Bronze'},{n:'Juan Serrato',h:109.8,a:48545,t:'Std'},{n:'Rob Sires',h:120.0,a:45586,t:'Std'},{n:'Ismael Contreras',h:120.0,a:29906,t:'Std'},{n:'Jim Ochoa',h:87.5,a:25302,t:'Std'},{n:'Erick Eudave',h:51.0,a:12742,t:'Std'}];
+const fmt=n=>'$'+Math.round(n).toLocaleString('en-US');
+document.getElementById('commBody').innerHTML=techs.map((t,i)=>`<tr>
+  <td>${t.n}</td><td class="r tnum">${t.h.toFixed(1)}</td>
+  <td class="r"><input class="ed alloc tnum" value="${t.a}" oninput="recompute()"></td>
+  <td><select class="tier" onchange="recompute()">${['Gold','Silver','Bronze','Std'].map(x=>`<option ${x===t.t?'selected':''}>${x}</option>`).join('')}</select></td>
+  <td class="r tnum" id="mult${i}">—</td><td class="r tnum" id="base${i}">—</td>
+  <td class="r"><input class="ed adj tnum" value="0" oninput="recompute()"></td>
+  <td class="r tnum" id="final${i}" style="font-weight:700">—</td></tr>`).join('');
+function recompute(){
+  const poolPct=parseFloat(document.getElementById('poolPct').value)||0;
+  const mult={Gold:parseFloat(mGold.value)||1,Silver:parseFloat(mSilver.value)||1,Bronze:parseFloat(mBronze.value)||1,Std:1};
+  const allocs=[...document.querySelectorAll('.alloc')].map(x=>parseFloat(x.value)||0);
+  const tiers=[...document.querySelectorAll('.tier')].map(x=>x.value);
+  const adjs=[...document.querySelectorAll('.adj')].map(x=>parseFloat(x.value)||0);
+  const totalWork=allocs.reduce((s,v)=>s+v,0),pool=totalWork*poolPct/100;
+  const base=allocs.map(a=>totalWork?a/totalWork*pool:0);
+  const weighted=base.map((b,i)=>b*mult[tiers[i]]),sumW=weighted.reduce((s,v)=>s+v,0);
+  let paid=0;
+  weighted.forEach((w,i)=>{const fin=(sumW?w/sumW*pool:0)+adjs[i];paid+=fin;
+    document.getElementById('mult'+i).textContent='×'+mult[tiers[i]].toFixed(2);
+    document.getElementById('base'+i).textContent=fmt(base[i]);
+    document.getElementById('final'+i).textContent=fmt(fin);});
+  document.getElementById('sumWork').textContent=fmt(totalWork);
+  document.getElementById('sumPool').textContent=fmt(pool);
+  document.getElementById('sumPaid').textContent=fmt(paid);
+}
+recompute();
+</script>
+</body>
+</html>
