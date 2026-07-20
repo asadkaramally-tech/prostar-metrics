@@ -1,29 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { DevBars, fmt, Histogram, HStack, tipHide, tipRow, tipShow, tipTitle, type HistogramBucket, type HStackRow } from "@/components/charts";
+import { DevBars, fmt, Histogram, tipHide, tipRow, tipShow, tipTitle, type HistogramBucket } from "@/components/charts";
 import {
   Card,
   CardBody,
-  Chipd,
   Def,
   DefTooltipProvider,
   DNote,
+  Drawer,
   DSec,
-  Flag,
-  Flags,
   Fnote,
-  Focal,
-  FocalCov,
-  FocalLabel,
-  FocalMeta,
-  FocalValue,
-  Hero,
   KV,
   KVCell,
   Legend,
-  Meter,
-  Mgn,
   Seg,
   Skel,
   StateEmpty,
@@ -31,6 +21,7 @@ import {
   StateMini,
   StatesStrip,
 } from "@/components/reset";
+import { KpiBand, KpiBandNote, KpiTile, KpiTiles } from "@/components/band";
 import type {
   TechnicianJobAllocationDetail,
   TechnicianPerformance,
@@ -39,32 +30,29 @@ import type {
 } from "@/lib/metrics/technicians";
 import type { DashboardReadModel } from "@/lib/store/dashboard-read-models";
 
-/* /technicians — implements the approved
-   redesign-handoff/product-reset/APPROVED-2026-07-15/mockups/technicians.html
-   exactly, with every figure taken from the technician read-model payload
-   (the mockup's numbers were June-2026 snapshots). Provenance grammar:
-   solid = verified, .repr dotted amber = representative, hatched = interim
-   allocation. Honest empty/error states throughout. */
+/* /technicians — implements the owner-approved redesign
+   docs/approved-design/mockups/technicians.html exactly, with every figure
+   taken from the technician read-model payload. Composition: KPI band
+   (primary PRODUCTIVE UTILIZATION card + UNBILLED/QLE/ON-TIME tiles + the
+   no-history note) → full-width Recorded Time card (job / travel / other
+   unbilled per technician) → Labor Efficiency + Punctuality (drills to the
+   ranked per-tech on-time list) → Scorecard → Completed-Job Economics.
+   OWNER RULINGS: no capacity model anywhere (no capacity line, no
+   capacity-used tile or column, no capacity math in hover detail) and no
+   alert banners. */
 
 const ACC = "#5b63d3";
-const GREY = "#8a92a4";
-const CAP_TICK = "#1c2230";
-const AMBER = "#b4791a";
-const INACTIVE_GREY = "#6b7383";
+const SERIES2 = "#0e9aae"; /* var(--series-2) */
+const GREY = "#9aa2b2"; /* var(--series-weak) */
 const POS = "#1a8a5a";
 const NEG = "#d0463a";
-const HERO_JOB = "#8087ec";
-const HERO_TARGET = "#e6c07a";
-/** Example utilization target shown on the hero bar — explicitly labeled "(example)". */
-const EXAMPLE_TARGET_PCT = 65;
-/** Mockup inactive rule: recorded below 20% of monthly capacity. */
+/** Inactive rule (display only): recorded below 20% of the month's gross availability. */
 const INACTIVE_SHARE = 0.2;
-const OVER_CAPACITY_SHARE = 1.15;
 
 /* ── Payload guard ─────────────────────────────────────── */
 
 /** Accepts only the detailed technician contract (exact net-profit basis +
- *  the new roster/outside-roster disclosure fields). Anything else renders
+ *  the roster/outside-roster disclosure fields). Anything else renders
  *  the honest error state — never synthetic zeros. */
 export function technicianPayload(model: DashboardReadModel): TechnicianPerformanceReadModel | null {
   const candidate = model.payload;
@@ -108,13 +96,9 @@ export type TechnicianScoreRow = {
   rec: number;
   /** Unbilled = recorded − job-assigned. */
   unb: number;
-  /** Gross monthly capacity hours (hire/archive gated). */
-  cap: number;
   inactive: boolean;
   /** Productive utilization %, job ÷ recorded (null when inactive/no basis). */
   util: number | null;
-  /** Capacity use %, recorded ÷ capacity (null when inactive/no basis). */
-  capUse: number | null;
   /** Quote-linked labor efficiency ratio (est ÷ act), representative. */
   effQ: number | null;
   /** Recurring labor efficiency ratio (est ÷ act), representative. */
@@ -132,8 +116,8 @@ export type TechnicianScoreRow = {
 function toScoreRow(tech: TechnicianPerformance): TechnicianScoreRow {
   const job = tech.jobHours;
   const rec = tech.totalRecordedHours;
-  const cap = tech.grossCapacityHours;
-  const inactive = cap > 0 ? rec < cap * INACTIVE_SHARE : rec <= 0;
+  const avail = tech.grossCapacityHours;
+  const inactive = avail > 0 ? rec < avail * INACTIVE_SHARE : rec <= 0;
   const qg = tech.laborEfficiency.quoteGenerated;
   const rc = tech.laborEfficiency.recurring;
   return {
@@ -143,10 +127,8 @@ function toScoreRow(tech: TechnicianPerformance): TechnicianScoreRow {
     job,
     rec,
     unb: Math.max(rec - job, 0),
-    cap,
     inactive,
     util: !inactive && rec > 0 ? (job / rec) * 100 : null,
-    capUse: !inactive && cap > 0 ? (rec / cap) * 100 : null,
     effQ: qg.jobs > 0 && qg.actualHours > 0 ? qg.quotedHours / qg.actualHours : null,
     effR: rc.jobs > 0 && rc.actualHours > 0 ? rc.quotedHours / rc.actualHours : null,
     ot: tech.arrivalCoveredVisits > 0 && tech.onTimeRate !== null ? tech.onTimeRate : null,
@@ -165,17 +147,16 @@ export function technicianScoreRows(payload: TechnicianPerformanceReadModel): Te
   return payload.technicians.filter((tech) => !tech.archived).map(toScoreRow);
 }
 
-/** Archived field-position people kept for history (zero capacity). */
+/** Archived field-position people kept for history. */
 export function archivedTechnicianRows(payload: TechnicianPerformanceReadModel): TechnicianScoreRow[] {
   return payload.technicians.filter((tech) => tech.archived).map(toScoreRow);
 }
 
-export const SCORE_SORT_KEYS = ["job", "unb", "util", "cap", "effQ", "ot"] as const;
+export const SCORE_SORT_KEYS = ["job", "unb", "util", "effQ", "ot"] as const;
 export type ScoreSortKey = (typeof SCORE_SORT_KEYS)[number];
 
 export function scoreSortValue(row: TechnicianScoreRow, key: ScoreSortKey): number | null {
   if (key === "util") return row.inactive ? null : row.rec > 0 ? row.job / row.rec : null;
-  if (key === "cap") return row.inactive ? null : row.cap > 0 ? row.rec / row.cap : null;
   if (key === "unb") return row.unb;
   if (key === "effQ") return row.effQ;
   if (key === "ot") return row.ot;
@@ -206,50 +187,40 @@ export function punctualityBuckets(punctuality: TechnicianPunctualityDistributio
   ];
 }
 
-export type TechnicianExceptionFlag =
-  | { kind: "over_capacity"; tone: "warn"; name: string; recordedHours: number; capacityHours: number; overHours: number }
-  | { kind: "low_hours"; tone: "down"; name: string; recordedHours: number }
-  | { kind: "archived_with_work"; tone: "info"; name: string; allocatedJobs: number; recordedHours: number };
+/* ── Unbilled activity split (owner requirement: never lumped) ── */
 
-/** Data-driven exception flags — derived from the payload, never hardcoded:
- *  the top over-capacity technician, the lowest-hours (inactive-rule) roster
- *  member, and every archived person with in-month work. */
-export function deriveExceptionFlags(
-  rows: TechnicianScoreRow[],
-  archivedRows: TechnicianScoreRow[],
-): TechnicianExceptionFlag[] {
-  const flags: TechnicianExceptionFlag[] = [];
-  const over = rows
-    .filter((row) => row.cap > 0 && row.rec > row.cap)
-    .sort((a, b) => (b.rec - b.cap) - (a.rec - a.cap))[0];
-  if (over) {
-    flags.push({
-      kind: "over_capacity",
-      tone: "warn",
-      name: over.name,
-      recordedHours: over.rec,
-      capacityHours: over.cap,
-      overHours: over.rec - over.cap,
-    });
-  }
-  const low = rows
-    .filter((row) => row.inactive && row.cap > 0)
-    .sort((a, b) => a.rec - b.rec)[0];
-  if (low) {
-    flags.push({ kind: "low_hours", tone: "down", name: low.name, recordedHours: low.rec });
-  }
-  for (const archived of archivedRows) {
-    if (archived.jobs > 0 || archived.rec > 0) {
-      flags.push({
-        kind: "archived_with_work",
-        tone: "info",
-        name: archived.name,
-        allocatedJobs: archived.jobs,
-        recordedHours: archived.rec,
-      });
-    }
-  }
-  return flags;
+export type TechnicianActivityBucket = { label: string; hours: number };
+
+/** Per-technician (or summed team) unbilled activity split from the REAL
+ *  payload fields — never invented, never lumped into one number. */
+export function activityBuckets(source: {
+  travelHours: number;
+  holidayHours: number;
+  lunchHours: number;
+  pickupPartsHours: number;
+  sickPersonalHours: number;
+  ptoHours: number;
+  supportHours: number;
+}): TechnicianActivityBucket[] {
+  return [
+    { label: "Travel", hours: source.travelHours },
+    { label: "Holiday", hours: source.holidayHours },
+    { label: "Lunch", hours: source.lunchHours },
+    { label: "Pickup parts", hours: source.pickupPartsHours },
+    { label: "Sick / personal", hours: source.sickPersonalHours },
+    { label: "PTO", hours: source.ptoHours },
+    { label: "Support / office", hours: source.supportHours },
+  ]
+    .filter((bucket) => bucket.hours > 0.049)
+    .sort((a, b) => b.hours - a.hours);
+}
+
+/** "Travel 240.5h · Holiday 72h · … · 2 more types" (mockup tile sub). */
+export function activitySplitText(buckets: TechnicianActivityBucket[], max = 5): string {
+  if (buckets.length === 0) return "no unbilled activity recorded";
+  const shown = buckets.slice(0, max).map((bucket) => `${bucket.label} ${fmt.hrs(bucket.hours)}`);
+  const rest = buckets.length - max;
+  return rest > 0 ? `${shown.join(" · ")} · ${rest} more ${rest === 1 ? "type" : "types"}` : shown.join(" · ");
 }
 
 /* ── Formatting helpers ────────────────────────────────── */
@@ -265,6 +236,15 @@ function monthLongName(periodStart: string): string {
 
 function periodYear(periodStart: string): string {
   return periodStart.slice(0, 4);
+}
+
+/** "2026-07-01" shifted by n months → "Jun ’26" / "Jul ’25". */
+function shiftedSeriesName(periodStart: string, shiftMonths: number): string {
+  const [year, month] = periodStart.split("-").map(Number);
+  if (!year || !month) return periodStart;
+  const date = new Date(Date.UTC(year, month - 1 + shiftMonths, 1));
+  const mon = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(date);
+  return `${mon} ’${String(date.getUTCFullYear()).slice(2)}`;
 }
 
 /** "2007-08-27" → "Aug 2007". */
@@ -290,13 +270,9 @@ export type TechnicianTeamFacts = {
   job: number;
   rec: number;
   unb: number;
-  cap: number;
-  workdays: number;
-  /** True when Σ capacity equals workdays × 8 × roster (flat-rule prose applies). */
-  flatCapacityRule: boolean;
+  /** Team unbilled activity split (descending, real payload fields summed). */
+  activity: TechnicianActivityBucket[];
   utilPct: number | null;
-  capPct: number | null;
-  over115Count: number;
   /** Verified team quote-linked efficiency ratio (Σ est ÷ Σ act). */
   teamEff: number | null;
   teamEffEstHours: number;
@@ -314,8 +290,6 @@ export type TechnicianTeamFacts = {
 export function deriveTeamFacts(payload: TechnicianPerformanceReadModel, rows: TechnicianScoreRow[]): TechnicianTeamFacts {
   const job = rows.reduce((sum, row) => sum + row.job, 0);
   const rec = rows.reduce((sum, row) => sum + row.rec, 0);
-  const cap = rows.reduce((sum, row) => sum + row.cap, 0);
-  const workdays = rows.reduce((max, row) => Math.max(max, row.tech.eligibleWorkdays), 0);
   const coverage = payload.coverage;
   const teamEffEstHours = coverage.quoteGeneratedAllocatedQuotedHours;
   const teamEffActHours = coverage.quoteGeneratedActualHours;
@@ -323,6 +297,15 @@ export function deriveTeamFacts(payload: TechnicianPerformanceReadModel, rows: T
   const scheduledVisits = rosterTechs.reduce((sum, tech) => sum + tech.scheduledVisits, 0);
   const verifiedVisits = rosterTechs.reduce((sum, tech) => sum + tech.arrivalCoveredVisits, 0);
   const onTimeVisits = rosterTechs.reduce((sum, tech) => sum + tech.onTimeVisits, 0);
+  const activity = activityBuckets({
+    travelHours: rows.reduce((sum, row) => sum + row.tech.travelHours, 0),
+    holidayHours: rows.reduce((sum, row) => sum + row.tech.holidayHours, 0),
+    lunchHours: rows.reduce((sum, row) => sum + row.tech.lunchHours, 0),
+    pickupPartsHours: rows.reduce((sum, row) => sum + row.tech.pickupPartsHours, 0),
+    sickPersonalHours: rows.reduce((sum, row) => sum + row.tech.sickPersonalHours, 0),
+    ptoHours: rows.reduce((sum, row) => sum + row.tech.ptoHours, 0),
+    supportHours: rows.reduce((sum, row) => sum + row.tech.supportHours, 0),
+  });
   return {
     monthLong: monthLongName(payload.periodStart),
     year: periodYear(payload.periodStart),
@@ -330,12 +313,8 @@ export function deriveTeamFacts(payload: TechnicianPerformanceReadModel, rows: T
     job,
     rec,
     unb: Math.max(rec - job, 0),
-    cap,
-    workdays,
-    flatCapacityRule: cap > 0 && Math.abs(cap - workdays * 8 * rows.length) < 0.001,
+    activity,
     utilPct: rec > 0 ? (job / rec) * 100 : null,
-    capPct: cap > 0 ? (rec / cap) * 100 : null,
-    over115Count: rows.filter((row) => row.capUse !== null && row.capUse > OVER_CAPACITY_SHARE * 100).length,
     teamEff: teamEffActHours > 0 ? teamEffEstHours / teamEffActHours : null,
     teamEffEstHours,
     teamEffActHours,
@@ -398,7 +377,7 @@ export function TechniciansDashboard({ model, showStates, initialDrillEmployeeId
           <StateEmpty>A technician with no verified visits shows “no coverage” — never 0% or 100%.</StateEmpty>
         </StateMini>
         <StateMini label="Mid-month roster change">
-          <StateEmpty>Archived on the 14th → capacity accrues through the 13th only; history stays.</StateEmpty>
+          <StateEmpty>Archived on the 14th → hours through the 13th only; history stays.</StateEmpty>
         </StateMini>
         <StateMini label="Error">
           <StateError>Technician data could not be loaded.</StateError>
@@ -433,271 +412,417 @@ function TechniciansContent({
   const rows = useMemo(() => technicianScoreRows(payload), [payload]);
   const archivedRows = useMemo(() => archivedTechnicianRows(payload), [payload]);
   const facts = useMemo(() => deriveTeamFacts(payload, rows), [payload, rows]);
-  const flags = useMemo(() => deriveExceptionFlags(rows, archivedRows), [rows, archivedRows]);
   const [drillId, setDrillId] = useState<string | null>(initialDrillEmployeeId ?? null);
+  const [punctOpen, setPunctOpen] = useState(false);
   const drillRow = drillId !== null
     ? rows.find((row) => row.employeeId === drillId) ?? archivedRows.find((row) => row.employeeId === drillId) ?? null
     : null;
 
   return (
     <>
-      <TechniciansHero facts={facts} />
-      {flags.length > 0 ? (
-        <Flags>
-          {flags.map((flag) => (
-            <Flag key={`${flag.kind}-${flag.name}`} tone={flag.tone}>
-              <FlagBody flag={flag} monthLong={facts.monthLong} />
-            </Flag>
-          ))}
-        </Flags>
-      ) : null}
+      <TechniciansBand facts={facts} payload={payload} />
       {drillRow ? (
         <TechnicianDrill row={drillRow} facts={facts} payload={payload} onBack={() => setDrillId(null)} />
       ) : (
         <>
-          <CapacityCard rows={rows} />
-          <div className="g75">
-            <EfficiencyCard rows={rows} facts={facts} />
-            <PunctualityCard payload={payload} facts={facts} />
+          <div className="grid12">
+            <CapacityCard rows={rows} onOpen={(row) => setDrillId(row.employeeId)} />
           </div>
-          <ScorecardCard rows={rows} facts={facts} rosterApplied={payload.rosterApplied} onOpen={(row) => setDrillId(row.employeeId)} />
+          <div className="grid12">
+            <EfficiencyCard rows={rows} facts={facts} />
+            <PunctualityCard payload={payload} facts={facts} onOpenDetail={() => setPunctOpen(true)} />
+          </div>
+          <div className="grid12">
+            <ScorecardCard rows={rows} facts={facts} rosterApplied={payload.rosterApplied} onOpen={(row) => setDrillId(row.employeeId)} />
+          </div>
         </>
       )}
-      <EconomicsCard payload={payload} rows={rows} archivedRows={archivedRows} facts={facts} />
+      <div className="grid12">
+        <EconomicsCard payload={payload} rows={rows} archivedRows={archivedRows} facts={facts} />
+      </div>
+      <Drawer
+        open={punctOpen}
+        onClose={() => setPunctOpen(false)}
+        ariaLabel="Punctuality by technician"
+        title="Punctuality by technician"
+        sub="On-time share of verified visits · lowest first"
+      >
+        <PunctualityDrawerBody payload={payload} facts={facts} />
+      </Drawer>
     </>
   );
 }
 
-/* ── Hero ──────────────────────────────────────────────── */
+/* ── Row 1: KPI band ───────────────────────────────────── */
 
-function TechniciansHero({ facts }: { facts: TechnicianTeamFacts }) {
+function TechniciansBand({ facts, payload }: { facts: TechnicianTeamFacts; payload: TechnicianPerformanceReadModel }) {
   const { monthLong } = facts;
-  const scale = Math.max(facts.rec, facts.cap);
-  const jobW = scale > 0 ? (facts.job / scale) * 100 : 0;
-  const unbW = scale > 0 ? (facts.unb / scale) * 100 : 0;
-  const capLeft = scale > 0 && facts.cap > 0 ? (facts.cap / scale) * 100 : null;
-  const targetLeft = scale > 0 && facts.rec > 0 ? (EXAMPLE_TARGET_PCT / 100) * (facts.rec / scale) * 100 : null;
-  const overHours = facts.rec - facts.cap;
-  const capacityRule = facts.flatCapacityRule
-    ? `capacity 8h/day (Mon–Fri 8:30–5:00, 30-min lunch) = ${fmt.hrs(facts.cap)}`
-    : `capacity 8h per eligible workday, prorated for hire dates = ${fmt.hrs(facts.cap)}`;
-  const unbilledDef = `All recorded hours minus job-assigned hours — travel, shop, training and unassigned time.${
-    facts.rec > 0 && facts.unb / facts.rec >= 0.3
-      ? ` At ${((facts.unb / facts.rec) * 100).toFixed(1)}% of recorded time, this is the team’s biggest leak.`
-      : ""
-  }`;
-  const capacityDef = facts.flatCapacityRule
-    ? `All recorded hours ÷ available capacity. Capacity = ${facts.workdays} workdays × 8 productive hours × ${facts.rosterCount} technicians = ${fmt.hrs(facts.cap)}.`
-    : `All recorded hours ÷ available capacity. Capacity totals ${fmt.hrs(facts.cap)} across ${facts.rosterCount} technicians — 8h per eligible workday, prorated for hire dates.`;
+  const prevName = shiftedSeriesName(payload.periodStart, -1);
+  const lyName = shiftedSeriesName(payload.periodStart, -12);
+  const utilDef = `Job-assigned timesheet hours ÷ all recorded hours, using timesheets dated in ${monthLong}, across the ${facts.rosterCount}-person recorded-work roster only.`;
+  const unbilledDef = `All recorded hours minus job-assigned hours — the split lists every recorded activity type from the ${monthLong} timesheets.`;
   const effStatDef = `Σ estimated ÷ Σ actual hours on quote-linked ${monthLong} jobs where both are present: ${fmt.hrs(facts.teamEffEstHours)} ÷ ${fmt.hrs(facts.teamEffActHours)}. Above 1.00× beats the estimate${
     facts.effMissingEstimate > 0 ? `; ${facts.effMissingEstimate} more jobs have actuals but no estimate` : ""
   }.`;
   const onTimeDef =
     "Arrival within 15 minutes of planned start — early arrivals count on-time — over visits with a verified mobile arrival event; missing events are uncovered, never counted late.";
+  const utilValue = facts.utilPct !== null ? pctInt(facts.utilPct) : "—";
 
-  return (
-    <Hero>
-      <Focal style={{ paddingBottom: 24 }}>
-        <FocalLabel>
-          <Def def={`Job-assigned timesheet hours ÷ all recorded hours, using timesheets dated in ${monthLong}, across the ${facts.rosterCount}-person recorded-work roster only.`}>
-            Productive Utilization
-          </Def>
-          {" · "}
-          {monthLong}
-        </FocalLabel>
-        <FocalValue>{facts.utilPct !== null ? pctInt(facts.utilPct) : "—"}</FocalValue>
-        <FocalMeta>
-          <Mgn>
-            {fmt.hrs(facts.job)} on jobs of {fmt.hrs(facts.rec)} recorded
-          </Mgn>
-          {facts.capPct !== null ? (
-            overHours > 0 ? (
-              <Chipd
-                tone="neutral"
-                style={{ background: "rgba(230,192,122,.15)", color: HERO_TARGET, borderColor: "rgba(230,192,122,.35)" }}
-              >
-                {pctInt(facts.capPct)} of capacity · {fmt.hrs(overHours)} over
-              </Chipd>
-            ) : (
-              <Chipd tone="neutral">{pctInt(facts.capPct)} of capacity</Chipd>
-            )
-          ) : null}
-        </FocalMeta>
-        <FocalCov>
-          {facts.rosterCount} technicians · {facts.workdays} workdays · {capacityRule}
-        </FocalCov>
-        <FocalCov>No prior-period comparison yet — timesheet history verification is pending.</FocalCov>
-        <div style={{ marginTop: "auto", paddingTop: 20 }}>
-          <div style={{ position: "relative", height: 14, borderRadius: 7, background: "rgba(255,255,255,.08)" }}>
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: 0,
-                width: `${jobW}%`,
-                background: HERO_JOB,
-                borderRadius: "7px 0 0 7px",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: `${jobW}%`,
-                width: `${unbW}%`,
-                background: "rgba(255,255,255,.3)",
-                borderRadius: "0 7px 7px 0",
-              }}
-            />
-            {capLeft !== null ? (
-              <div
-                style={{
-                  position: "absolute",
-                  top: -3,
-                  bottom: -3,
-                  left: `${Math.min(capLeft, 100)}%`,
-                  width: 2,
-                  background: "rgba(255,255,255,.9)",
-                  borderRadius: 1,
-                }}
-                title={`Capacity ${fmt.hrs(facts.cap)}`}
-              />
-            ) : null}
-            {targetLeft !== null ? (
-              <div
-                style={{
-                  position: "absolute",
-                  top: -3,
-                  bottom: -3,
-                  left: `${Math.min(targetLeft, 100)}%`,
-                  width: 2,
-                  background: HERO_TARGET,
-                  borderRadius: 1,
-                }}
-                title="Utilization target (example)"
-              />
-            ) : null}
-          </div>
-          <div className="herolegend">
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <i style={{ width: 9, height: 9, borderRadius: 3, background: HERO_JOB, display: "inline-block" }} />
-              Job-assigned · {fmt.hrs(facts.job)}
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <i style={{ width: 9, height: 9, borderRadius: 3, background: "rgba(255,255,255,.3)", display: "inline-block" }} />
-              Unbilled · {fmt.hrs(facts.unb)}
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <i style={{ width: 2, height: 10, borderRadius: 1, background: "rgba(255,255,255,.9)", display: "inline-block" }} />
-              Capacity · {fmt.hrs(facts.cap)}
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <i style={{ width: 2, height: 10, borderRadius: 1, background: HERO_TARGET, display: "inline-block" }} />
-              Target {EXAMPLE_TARGET_PCT}% (example)
-            </span>
-          </div>
-        </div>
-      </Focal>
-      <div className="stats">
-        <div className="stat">
-          <div className="l">
-            <Def def={unbilledDef}>Unbilled Hours</Def>
-          </div>
-          <div className="v tnum">{fmt.hrs(facts.unb)}</div>
-          <div className="r">
-            <span className="dl tnum">
-              <span className="c">{facts.rec > 0 ? `${((facts.unb / facts.rec) * 100).toFixed(1)}% of recorded` : "no recorded basis"}</span>
-            </span>
-          </div>
-        </div>
-        <div className="stat">
-          <div className="l">
-            <Def def={capacityDef}>Capacity Used</Def>
-          </div>
-          <div className="v tnum">{facts.capPct !== null ? pctInt(facts.capPct) : "—"}</div>
-          <div className="r">
-            {facts.over115Count > 0 ? (
-              <span className="dl tnum" style={{ color: AMBER }}>
-                {facts.over115Count} {facts.over115Count === 1 ? "tech" : "techs"} <span className="c">above 115%</span>
-              </span>
-            ) : (
-              <span className="dl tnum">
-                <span className="c">none above 115%</span>
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="stat">
-          <div className="l">
-            <Def def={effStatDef}>Quote Labor Efficiency</Def>
-          </div>
-          <div className="v tnum">{facts.teamEff !== null ? ratioX(facts.teamEff) : "—"}</div>
-          <div className="r">
-            <span className="dl tnum">
-              <span className="c">
-                team · {facts.effCoveredJobs} of {facts.effTotalJobs} quote-linked jobs
-              </span>
-            </span>
-          </div>
-        </div>
-        <div className="stat">
-          <div className="l">
-            <Def def={onTimeDef}>On-Time Arrival</Def>
-          </div>
-          <div className="v tnum">
-            {facts.otPct !== null ? (
-              <span className="repr" data-def={otDef(facts)}>
-                {pctInt(facts.otPct)}
-              </span>
-            ) : (
-              "—"
-            )}
-          </div>
-          <div className="r">
-            <span className="dl tnum">
-              <span className="c">
-                {facts.verifiedVisits > 0 ? `${facts.onTimeVisits} of ${facts.verifiedVisits} verified visits` : "no verified visits"}
-              </span>
-            </span>
-          </div>
-        </div>
-      </div>
-    </Hero>
-  );
-}
-
-/* ── Exception flags ───────────────────────────────────── */
-
-function FlagBody({ flag, monthLong }: { flag: TechnicianExceptionFlag; monthLong: string }) {
-  if (flag.kind === "over_capacity") {
-    return (
-      <>
-        <b>{flag.name}</b> recorded {fmt.hrs(flag.recordedHours)} vs {fmt.hrs(flag.capacityHours)} capacity —{" "}
-        <b>+{fmt.hrs(flag.overHours)} over</b>
-      </>
-    );
-  }
-  if (flag.kind === "low_hours") {
-    return (
-      <>
-        <b>{flag.name}</b> is an active technician with <b>{fmt.hrs(flag.recordedHours)}</b> recorded in {monthLong}
-      </>
-    );
-  }
   return (
     <>
-      <b>{flag.name}</b> is archived but worked{" "}
-      {flag.allocatedJobs > 0
-        ? `${flag.allocatedJobs} ${monthLong} ${flag.allocatedJobs === 1 ? "job" : "jobs"}`
-        : `${fmt.hrs(flag.recordedHours)} in ${monthLong}`}{" "}
-      — history kept, no current capacity
+      <KpiBand ariaLabel={`${monthLong} key metrics`}>
+        <a className="kpi primary" href="#capacity">
+          <span className="lblrow">
+            <span className="lbl">
+              <span className="def" data-def={utilDef}>Productive utilization</span>
+            </span>
+          </span>
+          <span className="val">{utilValue}</span>
+          <span className="sub">
+            {fmt.hrs(facts.job)} on jobs of {fmt.hrs(facts.rec)} recorded
+          </span>
+          <div
+            className="bullet"
+            data-viz=""
+            aria-label={`Productive utilization ${utilValue}; prior-period ticks pending timesheet verification`}
+          >
+            <div className="btrack">
+              <i style={{ width: `${Math.min(100, Math.max(facts.utilPct ?? 0, 0))}%` }} />
+            </div>
+            <div className="bcap">
+              <span className="bkey">
+                {prevName} · {lyName} ticks pending timesheet verification
+              </span>
+            </div>
+          </div>
+        </a>
+        <KpiTiles>
+          <div className="kpi wide" style={{ gridColumn: "span 2" }}>
+            <span className="lbl">
+              <span className="def" data-def={unbilledDef}>Unbilled hours</span>
+            </span>
+            <span className="val">{fmt.hrs(facts.unb)}</span>
+            <span className="sub">{activitySplitText(facts.activity)}</span>
+          </div>
+          <KpiTile
+            label="Quote labor efficiency"
+            labelDef={effStatDef}
+            value={facts.teamEff !== null ? ratioX(facts.teamEff) : "—"}
+            sub={`team · ${facts.effCoveredJobs} of ${facts.effTotalJobs} quote-linked jobs`}
+          />
+          <KpiTile
+            label="On-Time Arrival"
+            labelDef={onTimeDef}
+            value={
+              facts.otPct !== null ? (
+                <span className="repr" data-def={otDef(facts)}>
+                  {pctInt(facts.otPct)}
+                </span>
+              ) : (
+                "—"
+              )
+            }
+            sub={
+              facts.verifiedVisits > 0
+                ? `${facts.onTimeVisits} of ${facts.verifiedVisits} verified visits`
+                : "no verified visits"
+            }
+          />
+        </KpiTiles>
+      </KpiBand>
+      <KpiBandNote>No prior-period comparison yet — timesheet history verification is pending.</KpiBandNote>
     </>
   );
 }
 
-/* ── Scorecard ─────────────────────────────────────────── */
+/* ── Row 2: Recorded Time (primary visualization) ──────── */
+
+function capacityRowTip(row: TechnicianScoreRow): string {
+  const buckets = activityBuckets(row.tech);
+  const travel = buckets.find((bucket) => bucket.label === "Travel");
+  const others = buckets.filter((bucket) => bucket.label !== "Travel");
+  return (
+    tipRow(ACC, "Job-assigned", fmt.hrs(row.job)) +
+    (travel ? tipRow(SERIES2, "Travel", fmt.hrs(travel.hours)) : "") +
+    others.map((bucket) => tipRow(GREY, bucket.label, fmt.hrs(bucket.hours))).join("")
+  );
+}
+
+function CapacityCard({ rows, onOpen }: { rows: TechnicianScoreRow[]; onOpen: (row: TechnicianScoreRow) => void }) {
+  const sorted = useMemo(() => [...rows].sort((a, b) => b.job - a.job), [rows]);
+  const scale = Math.max(1, ...sorted.map((row) => row.rec)) * 1.04;
+  return (
+    <Card
+      className="span12"
+      style={{ scrollMarginTop: 70 }}
+      title={<span id="capacity">Recorded Time vs Capacity</span>}
+      subtitle="Job-assigned vs travel vs other unbilled · sorted by job hours · click a row for the full activity split"
+      aside={
+        <Legend
+          style={{ padding: 0 }}
+          items={[
+            { label: "Job-assigned", color: ACC },
+            { label: "Travel", color: SERIES2 },
+            { label: "Other unbilled", color: GREY },
+          ]}
+        />
+      }
+    >
+      <CardBody>
+        {sorted.length > 0 ? (
+          <div className="caprows" data-viz="" data-primary-viz="">
+            {sorted.map((row) => {
+              const travel = Math.min(row.tech.travelHours, row.unb);
+              const other = Math.max(row.unb - travel, 0);
+              const jobW = (row.job / scale) * 100;
+              const travW = (travel / scale) * 100;
+              const otherW = (other / scale) * 100;
+              const meta = row.inactive
+                ? `inactive · ${fmt.hrs(row.rec)}`
+                : `${fmt.hrs(row.job)} · ${row.util !== null ? Math.round(row.util) : "—"}% on jobs`;
+              return (
+                <div
+                  key={row.employeeId}
+                  className={row.inactive ? "crow inactive drillable" : "crow drillable"}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${row.name} — open the full ${row.name} drilldown`}
+                  onClick={() => onOpen(row)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onOpen(row);
+                    }
+                  }}
+                  onPointerEnter={(event) => tipShow(tipTitle(row.name) + capacityRowTip(row), event.clientX, event.clientY)}
+                  onPointerLeave={tipHide}
+                >
+                  <span className="cname">{row.name}</span>
+                  <div className="ctrack">
+                    {jobW > 0.15 ? <span className="job" style={{ width: `${jobW.toFixed(2)}%` }} /> : null}
+                    {travW > 0.15 ? (
+                      <span className="unb trav" style={{ left: `${jobW.toFixed(2)}%`, width: `${travW.toFixed(2)}%` }} />
+                    ) : null}
+                    {otherW > 0.15 ? (
+                      <span className="unb" style={{ left: `${(jobW + travW).toFixed(2)}%`, width: `${otherW.toFixed(2)}%` }} />
+                    ) : null}
+                  </div>
+                  <span className="cmeta">{meta}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <StateEmpty>No roster technicians recorded time this month.</StateEmpty>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+/* ── Row 3: Labor Efficiency ───────────────────────────── */
+
+function EfficiencyCard({ rows, facts }: { rows: TechnicianScoreRow[]; facts: TechnicianTeamFacts }) {
+  const [mode, setMode] = useState<"quote" | "recurring">("quote");
+  const EFF_DEF = effDef(facts);
+  const barRows = useMemo(
+    () =>
+      rows
+        .filter((row) => row.jobs > 0)
+        .map((row) => ({ name: row.name, v: mode === "recurring" ? row.effR : row.effQ }))
+        .sort((a, b) => (b.v ?? -9) - (a.v ?? -9)),
+    [rows, mode],
+  );
+  return (
+    <Card
+      className="span6"
+      title="Labor Efficiency"
+      subtitle={
+        <>
+          Estimated ÷ actual hours — above 1.00× beats the estimate ·{" "}
+          <span className="repr" data-def={EFF_DEF}>
+            per-tech split representative
+          </span>
+        </>
+      }
+      aside={
+        <Seg
+          dataSeg="effmode"
+          ariaLabel="Labor efficiency mode"
+          options={[
+            { val: "quote", label: "Quote-linked" },
+            { val: "recurring", label: "Recurring" },
+          ]}
+          value={mode}
+          onChange={(val) => setMode(val === "recurring" ? "recurring" : "quote")}
+        />
+      }
+    >
+      <CardBody>
+        {barRows.length > 0 ? (
+          <DevBars
+            rows={barRows}
+            refValue={1}
+            min={0.7}
+            max={1.3}
+            labelW={132}
+            refLabel="1.00× — estimate met exactly"
+            fmt={ratioX}
+            pos={POS}
+            neg={NEG}
+          />
+        ) : (
+          <StateEmpty>No covered {mode === "recurring" ? "recurring" : "quote-linked"} jobs for the roster this month.</StateEmpty>
+        )}
+        <Fnote>
+          <span style={{ color: POS }}>●</span> right of the line = beat the estimate{"  "}
+          <span style={{ color: NEG }}>●</span> left = over · {facts.effCoveredJobs} covered jobs (team)
+          {facts.teamEff !== null ? <> — the team’s {ratioX(facts.teamEff)} is verified, the per-tech split is not yet.</> : "."}
+        </Fnote>
+        {mode === "recurring" ? (
+          <Fnote style={{ borderTop: "none", paddingTop: 0 }}>
+            Recurring-work efficiency is{" "}
+            <span
+              className="repr"
+              data-def="Recurring estimates are copied templates in Simpro; per-technician recurring ratios are directional until those estimates are re-verified."
+            >
+              representative
+            </span>{" "}
+            until recurring estimates are re-verified per technician.
+          </Fnote>
+        ) : null}
+      </CardBody>
+    </Card>
+  );
+}
+
+/* ── Row 3: Punctuality (click → ranked per-tech list) ─── */
+
+function PunctualityCard({
+  payload,
+  facts,
+  onOpenDetail,
+}: {
+  payload: TechnicianPerformanceReadModel;
+  facts: TechnicianTeamFacts;
+  onOpenDetail: () => void;
+}) {
+  const buckets = punctualityBuckets(payload.punctuality);
+  const coveragePct = facts.scheduledVisits > 0 ? (facts.verifiedVisits / facts.scheduledVisits) * 100 : 0;
+  return (
+    <Card
+      className="span6"
+      title="Punctuality"
+      subtitle={
+        <>
+          Verified arrivals vs planned start ·{" "}
+          <span
+            className="repr"
+            data-def={`Verified-arrival coverage is ${facts.verifiedVisits} of ${facts.scheduledVisits} ${facts.monthLong} visits; per-technician rates are representative until mobile-event matching is re-verified.`}
+          >
+            representative until mobile-event matching is re-verified
+          </span>
+          {" "}· click for per-technician detail
+        </>
+      }
+    >
+      <CardBody>
+        {facts.verifiedVisits > 0 ? (
+          <>
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label="Arrival distribution — open per-technician punctuality"
+              style={{ cursor: "pointer" }}
+              onClick={onOpenDetail}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onOpenDetail();
+                }
+              }}
+            >
+              <Histogram buckets={buckets} h={300} seriesName="Visits" style={{ maxWidth: 620, margin: "0 auto" }} />
+            </div>
+            <div
+              className="tnum"
+              style={{ maxWidth: 620, margin: "2px auto 0", textAlign: "center", fontSize: 12, color: "var(--subtle)" }}
+            >
+              <Def def="Buckets are minutes between the verified arrival and the planned start; arriving early counts as on-time.">
+                minutes vs planned start
+              </Def>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, fontSize: 12.5, color: "var(--muted)" }}>
+              <span style={{ flex: "none" }}>Coverage</span>
+              <span style={{ flex: 1, height: 6, borderRadius: 4, background: "#f1f2f6", overflow: "hidden" }}>
+                <span style={{ display: "block", width: `${Math.min(coveragePct, 100)}%`, height: "100%", background: GREY }} />
+              </span>
+              <b className="tnum" style={{ flex: "none" }}>
+                {facts.verifiedVisits} of {facts.scheduledVisits} verified
+              </b>
+            </div>
+            <Fnote>{punctualityFnote(payload.punctuality, facts)}</Fnote>
+          </>
+        ) : (
+          <StateEmpty>
+            No verified arrivals in {facts.monthLong} — punctuality has no coverage
+            {facts.scheduledVisits > 0 ? ` across ${facts.scheduledVisits} scheduled visits` : ""}.
+          </StateEmpty>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+export function punctualityFnote(punctuality: TechnicianPunctualityDistribution, facts: TechnicianTeamFacts): string {
+  if (facts.otPct === null) return `No verified arrivals in ${facts.monthLong}.`;
+  const floor = facts.otFloorPct !== null ? ` (${pctInt(facts.otFloorPct)} if every uncovered visit were late)` : "";
+  const tail =
+    punctuality.lateOver30 > punctuality.late16To30
+      ? ` — the ${punctuality.lateOver30}-visit 30+ tail outweighs the 16–30 band`
+      : punctuality.late16To30 > punctuality.lateOver30
+        ? ` — the ${punctuality.late16To30}-visit 16–30 band outweighs the 30+ tail`
+        : "";
+  return `On-time is ${pctInt(facts.otPct)} of verified visits${floor}${tail}.`;
+}
+
+/** Ranked per-technician on-time list — real data from technicians[].onTimeRate, lowest first. */
+function PunctualityDrawerBody({ payload, facts }: { payload: TechnicianPerformanceReadModel; facts: TechnicianTeamFacts }) {
+  const ranked = payload.technicians
+    .filter((tech) => tech.arrivalCoveredVisits > 0 && tech.onTimeRate !== null)
+    .sort((a, b) => (a.onTimeRate ?? 0) - (b.onTimeRate ?? 0));
+  const uncovered = payload.technicians.filter((tech) => tech.arrivalCoveredVisits === 0 || tech.onTimeRate === null);
+  if (ranked.length === 0) {
+    return <DNote>No verified arrivals in {facts.monthLong} — no per-technician punctuality yet.</DNote>;
+  }
+  return (
+    <>
+      {ranked.map((tech) => (
+        <DNote
+          key={tech.employeeId}
+          style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: "1px solid var(--hair-2)" }}
+        >
+          <span style={{ minWidth: 0 }}>{tech.displayName}</span>
+          <b className="tnum" style={{ flex: "none", color: "var(--ink)" }}>
+            {pctInt(tech.onTimeRate ?? 0)} · {tech.onTimeVisits} of {tech.arrivalCoveredVisits}
+          </b>
+        </DNote>
+      ))}
+      {uncovered.length > 0 ? (
+        <Fnote>
+          {listJoin(uncovered.map((tech) => tech.displayName))} {uncovered.length === 1 ? "has" : "have"} no verified visits in{" "}
+          {facts.monthLong} — no rate is shown, never 0% or 100%.
+        </Fnote>
+      ) : null}
+      <Fnote>
+        Rates are the on-time share of verified visits only — team coverage is {facts.verifiedVisits} of {facts.scheduledVisits}{" "}
+        {facts.monthLong} visits.
+      </Fnote>
+    </>
+  );
+}
+
+/* ── Row 4: Scorecard ──────────────────────────────────── */
 
 const FOOT_TD: CSSProperties = {
   fontWeight: 700,
@@ -723,7 +848,7 @@ function ScorecardCard({
   const sorted = useMemo(() => sortScoreRows(rows, sortKey, sortDir), [rows, sortKey, sortDir]);
   const EFF_DEF = effDef(facts);
   const OT_DEF = otDef(facts);
-  const unbColDef = `All recorded hours minus job-assigned hours — travel, shop, training and unassigned time. The team total is ${fmt.hrs(facts.unb)} this ${facts.monthLong}.`;
+  const unbColDef = `All recorded hours minus job-assigned hours — travel, holiday, lunch and the other recorded activity types. The team total is ${fmt.hrs(facts.unb)} this ${facts.monthLong}.`;
 
   const onSort = (key: ScoreSortKey) => {
     if (sortKey === key) setSortDir((dir) => (dir === 1 ? -1 : 1));
@@ -747,6 +872,7 @@ function ScorecardCard({
 
   return (
     <Card
+      className="span12"
       title="Technician Scorecard"
       subtitle="The month in one table — hours, utilization, efficiency, punctuality · click a technician for the full drilldown"
       footer={
@@ -775,7 +901,6 @@ function ScorecardCard({
                   <span className="show-sm">Util.</span>
                 </>,
               )}
-              {th("cap", "hide-sm", "Capacity Use")}
               {th(
                 "effQ",
                 "",
@@ -790,7 +915,7 @@ function ScorecardCard({
           <tbody id="scoreRows">
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ color: "var(--muted)" }}>
+                <td colSpan={6} style={{ color: "var(--muted)" }}>
                   No technicians on the effective roster for {facts.monthLong}.
                 </td>
               </tr>
@@ -813,27 +938,13 @@ function ScorecardCard({
                     <div className="id1">{row.name}</div>
                     <div className="id2 tnum">
                       {row.jobs}
-                      {" "}jobs
+                      {" "}jobs
                       {row.inactive ? <span style={{ whiteSpace: "nowrap" }}> · inactive</span> : null}
                     </div>
                   </td>
                   <td className="num tnum">{fmt.hrs(row.job)}</td>
                   <td className="num tnum">{fmt.hrs(row.unb)}</td>
-                  <td className="num">
-                    {row.util === null ? (
-                      <b className="tnum">—</b>
-                    ) : (
-                      <Meter pct={Math.min(row.util, 100)} style={{ justifyContent: "flex-end" }}>
-                        {row.util.toFixed(0)}%
-                      </Meter>
-                    )}
-                  </td>
-                  <td
-                    className="num tnum hide-sm"
-                    style={row.capUse !== null && row.capUse > 115 ? { color: AMBER, fontWeight: 700 } : undefined}
-                  >
-                    {row.capUse === null ? "—" : `${row.capUse.toFixed(0)}%`}
-                  </td>
+                  <td className="num tnum">{row.util === null ? "—" : `${row.util.toFixed(0)}%`}</td>
                   <td className="num tnum">
                     {row.effQ === null ? (
                       "—"
@@ -868,9 +979,6 @@ function ScorecardCard({
                 </td>
                 <td className="num tnum" style={FOOT_TD}>
                   {facts.utilPct !== null ? pctInt(facts.utilPct) : "—"}
-                </td>
-                <td className="num tnum hide-sm" style={FOOT_TD}>
-                  {facts.capPct !== null ? pctInt(facts.capPct) : "—"}
                 </td>
                 <td className="num tnum" style={FOOT_TD}>
                   {facts.teamEff !== null ? ratioX(facts.teamEff) : "—"}
@@ -914,6 +1022,7 @@ export function TechnicianDrill({
   const EFF_DEF = effDef(facts);
   const OT_DEF = otDef(facts);
   const hired = hireLabel(row.dateOfHire);
+  const buckets = activityBuckets(row.tech);
   const covered = useMemo(
     () =>
       payload.allocations.filter(
@@ -932,7 +1041,7 @@ export function TechnicianDrill({
           <div className="ti">{row.name}</div>
           <div className="st">
             {hired ? `hired ${hired} · ` : ""}viewing {facts.monthLong} {facts.year}
-            {row.archived ? " · archived — history kept, no current capacity" : ""}
+            {row.archived ? " · archived — history kept" : ""}
           </div>
         </div>
         <button type="button" className="ctl" style={{ height: 34 }} onClick={onBack}>
@@ -945,7 +1054,6 @@ export function TechnicianDrill({
           <KVCell label="Unbilled" value={fmt.hrs(row.unb)} />
           <KVCell label="Recorded" value={fmt.hrs(row.rec)} />
           <KVCell label="Utilization" value={row.util === null ? "—" : `${row.util.toFixed(0)}%`} />
-          <KVCell label="Capacity use" value={row.capUse === null ? "—" : `${row.capUse.toFixed(0)}%`} />
           <KVCell
             label="Quote eff."
             value={
@@ -972,6 +1080,32 @@ export function TechnicianDrill({
           />
           <KVCell label={`${facts.monthLong} jobs`} value={String(row.jobs)} />
         </KV>
+        <div style={{ marginTop: 20 }}>
+          <DSec>{facts.monthLong} unbilled activity — per recorded type</DSec>
+        </div>
+        {buckets.length > 0 ? (
+          <div style={{ maxWidth: 460 }}>
+            {buckets.map((bucket) => (
+              <DNote
+                key={bucket.label}
+                style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "4px 0", borderBottom: "1px solid var(--hair-2)" }}
+              >
+                <span>{bucket.label}</span>
+                <b className="tnum" style={{ color: "var(--ink)" }}>
+                  {fmt.hrs(bucket.hours)}
+                </b>
+              </DNote>
+            ))}
+            <DNote style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "4px 0" }}>
+              <span>Total unbilled</span>
+              <b className="tnum" style={{ color: "var(--ink)" }}>
+                {fmt.hrs(row.unb)}
+              </b>
+            </DNote>
+          </div>
+        ) : (
+          <DNote>No unbilled activity recorded in {facts.monthLong}.</DNote>
+        )}
         <div style={{ marginTop: 20 }}>
           <DSec>{facts.monthLong} efficiency — quote-linked jobs</DSec>
         </div>
@@ -1064,228 +1198,7 @@ function DrillJobRow({ allocation }: { allocation: TechnicianJobAllocationDetail
   );
 }
 
-/* ── Recorded Time vs Capacity ─────────────────────────── */
-
-function capacityTickHours(rows: TechnicianScoreRow[]): number {
-  const counts = new Map<number, number>();
-  for (const row of rows) {
-    if (row.cap > 0) counts.set(row.cap, (counts.get(row.cap) ?? 0) + 1);
-  }
-  let best = 0;
-  let bestCount = 0;
-  for (const [cap, count] of counts) {
-    if (count > bestCount || (count === bestCount && cap > best)) {
-      best = cap;
-      bestCount = count;
-    }
-  }
-  return best;
-}
-
-function CapacityCard({ rows }: { rows: TechnicianScoreRow[] }) {
-  const sorted = useMemo(() => [...rows].sort((a, b) => b.job - a.job), [rows]);
-  const tick = capacityTickHours(rows);
-  const hRows: HStackRow[] = sorted.map((row) => {
-    const capPct = row.cap > 0 ? Math.round((row.rec / row.cap) * 100) : null;
-    const jobShare = row.rec > 0 ? Math.round((row.job / row.rec) * 100) : null;
-    return {
-      name: row.name,
-      segs: [
-        { v: row.job, color: ACC },
-        { v: row.unb, color: GREY },
-      ],
-      cap: row.cap > 0 ? row.cap : undefined,
-      over: false,
-      noteColor: row.inactive ? INACTIVE_GREY : capPct !== null && capPct > OVER_CAPACITY_SHARE * 100 ? AMBER : undefined,
-      note: row.inactive
-        ? `inactive · ${fmt.hrs(row.rec)}`
-        : capPct !== null && jobShare !== null
-          ? `${capPct}% · ${jobShare}% jobs`
-          : `${fmt.hrs(row.rec)} recorded`,
-      noteShort: row.inactive ? "inactive" : capPct !== null ? `${capPct}%` : fmt.hrs(row.rec),
-      tip:
-        `<div style="display:flex;flex-direction:column;gap:3px">` +
-        [
-          ["Job-assigned", fmt.hrs(row.job), ACC],
-          ["Unbilled", fmt.hrs(row.unb), GREY],
-          ["Capacity", row.cap > 0 ? fmt.hrs(row.cap) : "—", CAP_TICK],
-        ]
-          .map(
-            ([label, value, color]) =>
-              `<div style="display:flex;align-items:center;gap:7px"><i style="width:8px;height:8px;border-radius:3px;background:${color}"></i><span style="color:#5c6474">${label}</span><b style="margin-left:auto;padding-left:16px">${value}</b></div>`,
-          )
-          .join("") +
-        `</div>`,
-    };
-  });
-  return (
-    <Card
-      title="Recorded Time vs Capacity"
-      subtitle={`Sorted by job hours · dark tick = ${tick > 0 ? `${fmt.hrs(tick)} monthly capacity` : "monthly capacity"} · amber = above 115% · hover or tap any row`}
-      aside={
-        <Legend
-          style={{ padding: 0 }}
-          items={[
-            { label: "Job-assigned", color: ACC },
-            { label: "Unbilled", color: GREY },
-            { label: "Capacity", color: CAP_TICK, swatchStyle: { height: 10, width: 2.5 } },
-          ]}
-        />
-      }
-    >
-      <CardBody>
-        {hRows.length > 0 ? (
-          <HStack rows={hRows} labelW={132} rowH={40} noteW={162} />
-        ) : (
-          <StateEmpty>No roster technicians recorded time this month.</StateEmpty>
-        )}
-      </CardBody>
-    </Card>
-  );
-}
-
-/* ── Labor Efficiency ──────────────────────────────────── */
-
-function EfficiencyCard({ rows, facts }: { rows: TechnicianScoreRow[]; facts: TechnicianTeamFacts }) {
-  const [mode, setMode] = useState<"quote" | "recurring">("quote");
-  const EFF_DEF = effDef(facts);
-  const barRows = useMemo(
-    () =>
-      rows
-        .filter((row) => row.jobs > 0)
-        .map((row) => ({ name: row.name, v: mode === "recurring" ? row.effR : row.effQ }))
-        .sort((a, b) => (b.v ?? -9) - (a.v ?? -9)),
-    [rows, mode],
-  );
-  return (
-    <Card
-      title="Labor Efficiency"
-      subtitle={
-        <>
-          Estimated ÷ actual hours — above 1.00× beats the estimate ·{" "}
-          <span className="repr" data-def={EFF_DEF}>
-            per-tech split representative
-          </span>
-        </>
-      }
-      aside={
-        <Seg
-          dataSeg="effmode"
-          ariaLabel="Labor efficiency mode"
-          options={[
-            { val: "quote", label: "Quote-linked" },
-            { val: "recurring", label: "Recurring" },
-          ]}
-          value={mode}
-          onChange={(val) => setMode(val === "recurring" ? "recurring" : "quote")}
-        />
-      }
-    >
-      <CardBody>
-        {barRows.length > 0 ? (
-          <DevBars
-            rows={barRows}
-            refValue={1}
-            min={0.7}
-            max={1.3}
-            labelW={132}
-            refLabel="1.00× — estimate met exactly"
-            fmt={ratioX}
-            pos={POS}
-            neg={NEG}
-          />
-        ) : (
-          <StateEmpty>No covered {mode === "recurring" ? "recurring" : "quote-linked"} jobs for the roster this month.</StateEmpty>
-        )}
-        <Fnote>
-          <span style={{ color: POS }}>●</span> right of the line = beat the estimate{"  "}
-          <span style={{ color: NEG }}>●</span> left = over · {facts.effCoveredJobs} covered jobs (team)
-          {facts.teamEff !== null ? <> — the team’s {ratioX(facts.teamEff)} is verified, the per-tech split is not yet.</> : "."}
-        </Fnote>
-        {mode === "recurring" ? (
-          <Fnote style={{ borderTop: "none", paddingTop: 0 }}>
-            Recurring-work efficiency is{" "}
-            <span
-              className="repr"
-              data-def="Recurring estimates are copied templates in Simpro; per-technician recurring ratios are directional until those estimates are re-verified."
-            >
-              representative
-            </span>{" "}
-            until recurring estimates are re-verified per technician.
-          </Fnote>
-        ) : null}
-      </CardBody>
-    </Card>
-  );
-}
-
-/* ── Punctuality ───────────────────────────────────────── */
-
-function PunctualityCard({ payload, facts }: { payload: TechnicianPerformanceReadModel; facts: TechnicianTeamFacts }) {
-  const buckets = punctualityBuckets(payload.punctuality);
-  const coveragePct = facts.scheduledVisits > 0 ? (facts.verifiedVisits / facts.scheduledVisits) * 100 : 0;
-  return (
-    <Card
-      title="Punctuality"
-      subtitle={
-        <>
-          Verified arrivals vs planned start ·{" "}
-          <span
-            className="repr"
-            data-def={`Verified-arrival coverage is ${facts.verifiedVisits} of ${facts.scheduledVisits} ${facts.monthLong} visits; per-technician rates are representative until mobile-event matching is re-verified.`}
-          >
-            representative until mobile-event matching is re-verified
-          </span>
-        </>
-      }
-    >
-      <CardBody>
-        {facts.verifiedVisits > 0 ? (
-          <>
-            <Histogram buckets={buckets} h={300} seriesName="Visits" style={{ maxWidth: 620, margin: "0 auto" }} />
-            <div
-              className="tnum"
-              style={{ maxWidth: 620, margin: "2px auto 0", textAlign: "center", fontSize: 12, color: "var(--subtle)" }}
-            >
-              <Def def="Buckets are minutes between the verified arrival and the planned start; arriving early counts as on-time.">
-                minutes vs planned start
-              </Def>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, fontSize: 12.5, color: "var(--muted)" }}>
-              <span style={{ flex: "none" }}>Coverage</span>
-              <span style={{ flex: 1, height: 6, borderRadius: 4, background: "#f1f2f6", overflow: "hidden" }}>
-                <span style={{ display: "block", width: `${Math.min(coveragePct, 100)}%`, height: "100%", background: GREY }} />
-              </span>
-              <b className="tnum" style={{ flex: "none" }}>
-                {facts.verifiedVisits} of {facts.scheduledVisits} verified
-              </b>
-            </div>
-            <Fnote>{punctualityFnote(payload.punctuality, facts)}</Fnote>
-          </>
-        ) : (
-          <StateEmpty>
-            No verified arrivals in {facts.monthLong} — punctuality has no coverage
-            {facts.scheduledVisits > 0 ? ` across ${facts.scheduledVisits} scheduled visits` : ""}.
-          </StateEmpty>
-        )}
-      </CardBody>
-    </Card>
-  );
-}
-
-export function punctualityFnote(punctuality: TechnicianPunctualityDistribution, facts: TechnicianTeamFacts): string {
-  if (facts.otPct === null) return `No verified arrivals in ${facts.monthLong}.`;
-  const floor = facts.otFloorPct !== null ? ` (${pctInt(facts.otFloorPct)} if every uncovered visit were late)` : "";
-  const tail =
-    punctuality.lateOver30 > punctuality.late16To30
-      ? ` — the ${punctuality.lateOver30}-visit 30+ tail outweighs the 16–30 band`
-      : punctuality.late16To30 > punctuality.lateOver30
-        ? ` — the ${punctuality.late16To30}-visit 16–30 band outweighs the 30+ tail`
-        : "";
-  return `On-time is ${pctInt(facts.otPct)} of verified visits${floor}${tail}.`;
-}
-
-/* ── Completed-Job Economics ───────────────────────────── */
+/* ── Row 5: Completed-Job Economics ────────────────────── */
 
 function EconomicsCard({
   payload,
@@ -1305,7 +1218,7 @@ function EconomicsCard({
         .sort((a, b) => (b.np ?? Number.NEGATIVE_INFINITY) - (a.np ?? Number.NEGATIVE_INFINITY)),
     [rows],
   );
-  const maxSell = Math.max(0, ...ranked.map((row) => row.sell));
+  const maxNp = Math.max(0, ...ranked.map((row) => row.np ?? 0));
   const teamNp = ranked.reduce((sum, row) => sum + (row.np ?? 0), 0);
   const outsideTotal = payload.coverage.outsideRosterAllocatedSellValue;
   const outsideNames = payload.outsideRoster.map((entry) => `${entry.displayName} (${fmt.money(entry.allocatedSellValue)})`);
@@ -1313,6 +1226,7 @@ function EconomicsCard({
   const noAllocation = rows.filter((row) => row.sell <= 0);
   return (
     <Card
+      className="span12"
       title="Completed-Job Economics"
       subtitle={`Ranked by allocated net profit · ${facts.monthLong}-completed jobs, including pre-${facts.monthLong} hours on those jobs · hatched = interim allocation · hover or tap a row`}
       aside={
@@ -1320,14 +1234,13 @@ function EconomicsCard({
           style={{ padding: 0 }}
           items={[
             { label: "Net profit", color: ACC, swatchClassName: "hatch", swatchStyle: { width: 12, height: 12, borderRadius: 4 } },
-            { label: "Revenue", color: GREY, swatchClassName: "hatch", swatchStyle: { width: 12, height: 12, borderRadius: 4 } },
           ]}
         />
       }
     >
       <CardBody>
         {ranked.length > 0 ? (
-          <div>
+          <div data-viz="">
             {ranked.map((row) => (
               <div
                 key={row.employeeId}
@@ -1345,26 +1258,14 @@ function EconomicsCard({
               >
                 <span className="ename">{row.name}</span>
                 <div className="ebar">
-                  <div
-                    className="hatch"
-                    style={{
-                      width: `${maxSell > 0 ? (row.sell / maxSell) * 100 : 0}%`,
-                      height: "100%",
-                      backgroundColor: GREY,
-                      borderRadius: 5,
-                    }}
-                  />
-                  {row.np !== null && row.np > 0 ? (
+                  {row.np !== null && row.np > 0 && maxNp > 0 ? (
                     <div
                       className="hatch"
                       style={{
-                        width: `${maxSell > 0 ? (row.np / maxSell) * 100 : 0}%`,
+                        width: `${(row.np / maxNp) * 100}%`,
                         height: "100%",
                         backgroundColor: ACC,
                         borderRadius: 5,
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
                       }}
                     />
                   ) : null}

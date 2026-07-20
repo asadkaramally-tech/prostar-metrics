@@ -1258,3 +1258,43 @@ a.kpi:hover{border-color:var(--border-strong)}
   .kpi.primary .lblrow{flex-wrap:wrap}
   .kpi.primary .lblrow .pills{flex-wrap:wrap;flex-shrink:1;justify-content:flex-start;margin-left:0}
 }
+
+/* === approved-redesign: technicians + commissions === */
+/* Append-only layer for the /technicians and /commissions rebuilds
+   (docs/approved-design/mockups/{technicians,commissions}.html).
+   Ported from mockups/assets/tokens.css; tokens only, no new hex. */
+
+/* cents styling on KPI values (commissions primary card) */
+.kpi .val .cents{font-size:20px;font-weight:700;align-self:flex-start;margin-left:-6px}
+/* wide tile: spans both columns of the 2×2 tile grid (technicians UNBILLED) */
+.kpis.hero .ktiles .kpi.wide{grid-column:span 2}
+@media (max-width:767px){.kpis.hero .ktiles .kpi.wide{grid-column:auto}}
+
+/* per-tech recorded-time rows (mockup .caprows): job / travel / other unbilled,
+   2px surface gaps between fills, no capacity tick anywhere */
+.caprows .crow{display:grid;grid-template-columns:150px 1fr 150px;gap:14px;align-items:center;padding:6px 0}
+.caprows .crow.drillable{cursor:pointer}
+.caprows .crow.drillable:hover{background:var(--surface-soft)}
+.caprows .cname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.caprows .ctrack{position:relative;height:20px;border-radius:5px;background:var(--n100);overflow:visible}
+.caprows .ctrack .job{position:absolute;left:0;top:0;bottom:0;background:var(--acc);border-radius:5px 0 0 5px}
+.caprows .ctrack .unb{position:absolute;top:0;bottom:0;background:var(--series-weak);border-left:2px solid var(--surface)}
+.caprows .ctrack .unb.trav{background:var(--series-2)}
+.caprows .cmeta{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.caprows .crow.inactive .cname,.caprows .crow.inactive .cmeta{color:var(--faint)}
+.caprows .crow.inactive .job{background:var(--n300)}
+@media (max-width:1023px){.caprows .crow{grid-template-columns:110px 1fr 120px}}
+
+/* inline stat strip (brief §3.4 — commissions Summary header) */
+.strip{display:flex;align-items:center;gap:22px;min-height:40px;flex-wrap:wrap}
+.strip .s{display:flex;align-items:baseline;gap:7px}
+.strip .s .l{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.strip .s .v{font-size:14px;font-weight:650;font-variant-numeric:tabular-nums}
+@media (max-width:767px){.strip{gap:14px}}
+
+/* worksheet leaderboard: 2px gaps between base/boost fills (mark spec);
+   zero-work directory rows collapse and mute */
+.lrow .lbar{gap:2px}
+.lrow.zerorow{padding-top:6px;padding-bottom:6px}
+.lrow.zerorow .id1{color:var(--muted)}
+.lrow.zerorow .lamt{font-weight:500;color:var(--faint)}
