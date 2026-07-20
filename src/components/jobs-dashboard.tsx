@@ -432,7 +432,6 @@ function TrendCard({ model }: { model: JobDashboardReadModel }) {
 
   return (
     <Card
-      data-primary-viz=""
       className="span12"
       style={{ scrollMarginTop: 70 }}
       title={<span id="trend">Monthly Trend</span>}
@@ -447,7 +446,9 @@ function TrendCard({ model }: { model: JobDashboardReadModel }) {
       }
     >
       <CardBody>
+        <div data-primary-viz="">
         <TrendBody model={model} metrics={metrics} sel={sel} />
+      </div>
       </CardBody>
     </Card>
   );

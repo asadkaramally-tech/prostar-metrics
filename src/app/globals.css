@@ -1190,7 +1190,9 @@ a.kpi:hover{border-color:var(--border-strong)}
 .bullet .tick.m2{background:var(--acc-2)}
 
 /* ── 12-col grid + stacked columns (cards hug content, never stretch) ── */
-.grid12{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:16px;align-items:start}
+.grid12{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:16px}
+.grid12>.card,.colstack>.card{display:flex;flex-direction:column;justify-content:space-between}
+.grid12>.card>.bd,.colstack>.card>.bd{flex:1 1 auto}
 .grid12>.card,.grid12 .colstack>.card{margin-top:0}
 .span6{grid-column:span 6}
 .span12{grid-column:span 12}
