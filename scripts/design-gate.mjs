@@ -146,26 +146,23 @@ for (const [name, cfg] of Object.entries(PAGES)) {
   // band must appear exactly once outside svg/table/[data-viz]
   const figList = await page.evaluate(() => {
     const els = document.querySelectorAll('.kpi .val, .focal .big, .stat .v');
-    return [...new Set([...els].map((e) => e.textContent.trim()).filter((t) => /\d/.test(t) && t.length >= 2))];
+    return [...new Set([...els].map((e) => e.textContent.trim()).filter((t) => /\d/.test(t) && /[$%×]/.test(t)))];
   });
   const counts = await page.evaluate((figs) => {
-    // node-aware: count text NODES containing each figure with in-node digit boundaries,
-    // so JSX-adjacent numbers ("…vs Jul ’25$216,186") can't mask a legitimate figure
     const clone = document.body.cloneNode(true);
     clone.querySelectorAll('svg, table, [data-viz], script').forEach((n) => n.remove());
+    const text = clone.textContent;
     const out = {};
-    for (const f of figs) out[f] = 0;
-    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
-    while (walker.nextNode()) {
-      const text = walker.currentNode.textContent;
-      for (const f of figs) {
-        let i = -1;
-        while ((i = text.indexOf(f, i + 1)) !== -1) {
-          const pre = text[i - 1] || ' ';
-          const post = text[i + f.length] || ' ';
-          if (!/[\d.,$]/.test(pre) && !/[\d]/.test(post)) out[f]++;
-        }
+    for (const f of figs) {
+      let c2 = 0, i = -1;
+      const dollar = f.startsWith('$');
+      while ((i = text.indexOf(f, i + 1)) !== -1) {
+        const pre = text[i - 1] || ' ';
+        const post = text[i + f.length] || ' ';
+        const preOk = dollar ? pre !== '$' : !/[\d.,$]/.test(pre);
+        if (preOk && !/\d/.test(post)) c2++;
       }
+      out[f] = c2;
     }
     return out;
   }, figList);

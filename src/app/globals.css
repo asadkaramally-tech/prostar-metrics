@@ -685,7 +685,7 @@ summary:focus-visible {
 }
 
 /* ── Header ────────────────────────────────────────────── */
-.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:26px}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px}
 .eyebrow{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--subtle);margin-bottom:9px}
 .h1{font-size:26px;font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--ink)}
 .sub{font-size:14px;color:var(--muted);margin-top:8px;max-width:600px;line-height:1.5}
@@ -1190,7 +1190,7 @@ a.kpi:hover{border-color:var(--border-strong)}
 .bullet .tick.m2{background:var(--acc-2)}
 
 /* ── 12-col grid + stacked columns (cards hug content, never stretch) ── */
-.grid12{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:16px}
+.grid12{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:12px}
 .grid12>.card,.colstack>.card{display:flex;flex-direction:column;justify-content:space-between}
 .grid12>.card>.bd,.colstack>.card>.bd{flex:1 1 auto}
 .grid12>.card,.grid12 .colstack>.card{margin-top:0}
