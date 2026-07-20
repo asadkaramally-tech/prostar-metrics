@@ -204,10 +204,7 @@ test("unsupported and unmapped jobs remain in work value and pool with complete 
     jobs: [
       job("supported", 1000, [{ employeeId: "1", hours: 2 }]),
       job("uncovered", 500, []),
-      job("unmapped", 250, [
-        { employeeId: null, hours: 3 },
-        { employeeId: "office", hours: 2, fieldTechnician: false },
-      ]),
+      job("unmapped", 250, [{ employeeId: null, hours: 3 }]),
       job("zero-value", 0, [{ employeeId: "1", hours: 1 }]),
     ],
   });
@@ -221,7 +218,7 @@ test("unsupported and unmapped jobs remain in work value and pool with complete 
   assert.equal(model.coverage.excludedWorkValue, 750);
   assert.equal(model.coverage.nonPositiveValueJobs, 1);
   assert.equal(model.coverage.unmappedHours, 3);
-  assert.equal(model.coverage.nonFieldTechnicianHours, 2);
+  assert.equal(model.coverage.nonFieldTechnicianHours, 0);
   assert.deepEqual(model.coverage.excludedJobDetails.map((entry) => entry.jobId), ["uncovered", "unmapped"]);
   assert.ok(!model.jobAllocations.some((allocation) => allocation.jobId === "uncovered" || allocation.jobId === "unmapped"));
   assert.ok(model.diagnostics.some((entry) => entry.code === "EXCLUDED_JOB_NO_MAPPED_HOURS"));
@@ -229,13 +226,55 @@ test("unsupported and unmapped jobs remain in work value and pool with complete 
   assertReconciles(model);
 });
 
-test("ineligible work stays allocated and disclosed while the full pool redistributes over eligible weights", () => {
+/* FINAL OWNER RULE: membership and shares come ONLY from recorded hours —
+   anyone with mapped hours on a period job is a row, included by default,
+   and ALL recorded hours count in the job's denominator. */
+
+test("a technician with mapped hours and no roster or override row is included with the correct hours-share", () => {
+  const model = build({
+    roster: roster(["1"]),
+    jobs: [job("shared", 1000, [
+      { employeeId: "1", hours: 2, fieldTechnician: true },
+      { employeeId: "77", hours: 2, fieldTechnician: false },
+    ])],
+  });
+
+  // All-hours denominator: 4h total, 2h each ⇒ 50% shares of $1,000.
+  assert.equal(model.jobAllocations.find((entry) => entry.employeeId === "77")?.share, 0.5);
+  assert.equal(model.jobAllocations.find((entry) => entry.employeeId === "77")?.allocatedValue, 500);
+  assert.equal(model.jobAllocations.find((entry) => entry.employeeId === "1")?.allocatedValue, 500);
+  // Included by default — the former non-field flag never gates membership.
+  assert.equal(technician(model, "77").included, true);
+  assert.equal(technician(model, "77").allocatedWorkValue, 500);
+  assert.equal(model.coverage.technicianWork.find((entry) => entry.employeeId === "77")?.included, true);
+  assert.equal(model.coverage.nonFieldTechnicianHours, 0);
+  assert.ok(!model.diagnostics.some((entry) => entry.code === "NON_FIELD_TECHNICIAN_WORK"));
+  assertReconciles(model);
+});
+
+test("roster inclusion flags are ignored — hours alone decide membership", () => {
   const model = build({
     roster: roster(["1"], ["2", false]),
+    jobs: [job("shared", 1000, [
+      { employeeId: "1", hours: 3 },
+      { employeeId: "2", hours: 1 },
+    ])],
+  });
+
+  assert.equal(technician(model, "2").included, true);
+  assert.equal(technician(model, "2").allocatedWorkValue, 250);
+  assert.ok(model.diagnostics.some((entry) => entry.code === "ROSTER_INCLUSION_IGNORED"));
+  assertReconciles(model);
+});
+
+test("operator-excluded work stays allocated and disclosed while the full pool redistributes over included weights", () => {
+  const model = build({
+    roster: roster(["1"], ["2"]),
     jobs: [
-      job("eligible-job", 1000, [{ employeeId: "1", hours: 2 }]),
-      job("ineligible-job", 1000, [{ employeeId: "2", hours: 2 }]),
+      job("included-job", 1000, [{ employeeId: "1", hours: 2 }]),
+      job("excluded-job", 1000, [{ employeeId: "2", hours: 2 }]),
     ],
+    overrides: [{ employeeId: "2", field: "included", value: false, poolTreatment: "neutral", reason: "Operator uncheck" }],
   });
 
   assert.equal(model.totalWorkValue, 2000);
@@ -250,16 +289,22 @@ test("ineligible work stays allocated and disclosed while the full pool redistri
   assertReconciles(model);
 });
 
-test("coverage retains zero-work roster members for inclusion editing", () => {
+test("zero-hour directory rows stay visible for inclusion editing but never enter allocation math", () => {
   const model = build({
     roster: roster(["1"], ["2", false]),
     jobs: [job("only-one", 1000, [{ employeeId: "1", hours: 1 }])],
   });
 
+  // The zero-hour person renders as a row (included by default, checkbox
+  // present) but earns nothing and changes no denominator.
   assert.deepEqual(
     model.coverage.technicianWork.map((entry) => [entry.employeeId, entry.included, entry.allocatedWorkValue]),
-    [["1", true, 1000], ["2", false, 0]],
+    [["1", true, 1000], ["2", true, 0]],
   );
+  assert.equal(model.technicians.some((entry) => entry.employeeId === "2"), false);
+  assert.deepEqual(model.jobAllocations.map((entry) => [entry.employeeId, entry.share]), [["1", 1]]);
+  assert.equal(technician(model, "1").finalBonus, model.poolAmount);
+  assertReconciles(model);
 });
 
 test("ranks derive Gold, Silver, Bronze, and Standard from effective work instead of roster tiers", () => {
@@ -663,15 +708,18 @@ test("override conflicts reject final-lock overflow, mutual fields, unabsorbable
   );
 });
 
-test("payout overrides on ineligible employees fail instead of being silently ignored", () => {
+test("payout overrides on operator-excluded employees fail instead of being silently ignored", () => {
   assertCalculationError(
     () => build({
-      jobs: [job("ineligible-override", 1000, [{ employeeId: "1", hours: 1 }, { employeeId: "2", hours: 1 }])],
-      roster: roster(["1"], ["2", false]),
-      overrides: [{ employeeId: "2", field: "outside_pool_adjustment", value: 1, poolTreatment: "outside_pool", reason: "Invalid target" }],
+      jobs: [job("excluded-override", 1000, [{ employeeId: "1", hours: 1 }, { employeeId: "2", hours: 1 }])],
+      roster: roster(["1"], ["2"]),
+      overrides: [
+        { employeeId: "2", field: "included", value: false, poolTreatment: "neutral", reason: "Operator uncheck" },
+        { employeeId: "2", field: "outside_pool_adjustment", value: 1, poolTreatment: "outside_pool", reason: "Invalid target" },
+      ],
     }),
     "OVERRIDE_CONFLICT",
-    /ineligible or zero-basis/,
+    /excluded or zero-basis/,
   );
 });
 
