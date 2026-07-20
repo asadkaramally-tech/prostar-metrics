@@ -8,7 +8,7 @@ The release evidence boundary uses three fixed, event-triggered Azure Container 
 | Browser artifact validation | `job-psm-evidence-browser` | `id-prostar-release-browser-prod` | `release-evidence-browser` |
 | External review report validation | `job-psm-evidence-reviewer` | `id-prostar-release-reviewer-prod` | `release-evidence-reviewer` |
 
-These jobs remain outside the routine application plus 23-job deployment target. They are deployed only after the candidate image and source hash are pinned.
+These jobs remain outside the routine application plus 24-job deployment target. They are deployed only after the candidate image and source hash are pinned.
 
 ## Provisioning Contract
 

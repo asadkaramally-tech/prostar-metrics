@@ -46,7 +46,7 @@ The owner action group contains Asad and Laila. Their addresses are Bicep parame
 
 `npm run telemetry:operational` obtains its health model through the same single bounded aggregate query as the owner Data Health drawer, then atomically claims any new durable sequence/dead-letter signals. It emits a summary event and one event per active alert with `event = prostar_metrics_operational_health`, severity, stable alert ID, queue/dead-letter totals, reconciliation/freshness detail, and backfill progress. Separate warning and critical scheduled-query rules notify the owner action group. This covers complete-source freshness state, queue age, dead letters, failed work, reconciliation drift, suspect/stale pages, and historical-backfill incompleteness without performing any Simpro request.
 
-The native Container Apps metric rule remains deliberately conservative: one failed execution for any of the 23 jobs alerts. It does not claim that three logical ingestion attempts failed consecutively. That sequence belongs to application state and must be emitted by `job-psm-operational-health` only after durable ingestion history proves three adjacent failed attempts for the same source family, with no intervening success:
+The native Container Apps metric rule remains deliberately conservative: one failed execution for any of the 24 jobs alerts. It does not claim that three logical ingestion attempts failed consecutively. That sequence belongs to application state and must be emitted by `job-psm-operational-health` only after durable ingestion history proves three adjacent failed attempts for the same source family, with no intervening success:
 
 ```json
 {

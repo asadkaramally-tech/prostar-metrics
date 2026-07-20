@@ -1,0 +1,213 @@
+import assert from "node:assert/strict";
+import { readdir, readFile } from "node:fs/promises";
+import test from "node:test";
+import { PGlite } from "@electric-sql/pglite";
+import type { PostgresQuery } from "../../src/lib/store/postgres";
+import {
+  finishMaterialsMonthWalk,
+  recordMaterialsMonthWalkFailure,
+  replaceJobMaterialLines,
+  upsertCatalogGroups,
+  getCatalogGroupCache,
+  type MaterialsIngestQuery,
+  type MaterialsIngestTransaction,
+} from "../../src/lib/store/materials-ingest";
+import {
+  buildMaterialsReadModelPayload,
+  getPersistedMaterialsReadModel,
+  loadMaterialLineInputs,
+  type MaterialsRowsQuery,
+} from "../../src/lib/store/materials-read-model";
+
+const migrationDirectory = new URL("../../infra/db/migrations/", import.meta.url);
+
+async function migratedDatabase(): Promise<PGlite> {
+  const db = new PGlite();
+  const files = (await readdir(migrationDirectory)).filter((file) => file.endsWith(".sql")).sort();
+  for (const file of files) await db.exec(await readFile(new URL(file, migrationDirectory), "utf8"));
+  return db;
+}
+
+function pgliteQuery(db: PGlite): MaterialsRowsQuery & MaterialsIngestQuery {
+  return async <T>(text: string, values?: unknown[]) => {
+    const result = await db.query<T>(text, values);
+    return { rows: result.rows };
+  };
+}
+
+function pgliteTransaction(db: PGlite): MaterialsIngestTransaction {
+  const query: PostgresQuery = async <T>(text: string, values?: unknown[]) => {
+    const result = await db.query<T>(text, values);
+    return { rows: result.rows, rowCount: result.affectedRows ?? null };
+  };
+  return async (callback) => callback(query);
+}
+
+function walkedLine(overrides: Record<string, unknown> = {}) {
+  return {
+    sectionId: 1,
+    costCenterId: 2,
+    lineType: "catalog" as const,
+    lineId: 501,
+    catalogId: 10,
+    prebuildId: null,
+    name: "Igniter",
+    partNo: "007400F",
+    qty: 2,
+    extendedExTax: 232,
+    basePrice: 58,
+    oneOffType: null,
+    ...overrides,
+  };
+}
+
+test("materials mirror round trip: replace, group join, aggregation, and walk sealing", async () => {
+  const db = await migratedDatabase();
+  const query = pgliteQuery(db);
+  const transaction = pgliteTransaction(db);
+  try {
+    await upsertCatalogGroups([
+      { catalogId: 10, name: "IGNITER HSI 120V-KIT", partNo: "007400F", groupName: "Ignition", parentGroupName: "Raypak Cheat Sheet" },
+      { catalogId: 11, name: "Contract Visit", partNo: null, groupName: "Service Contract", parentGroupName: null },
+    ], query);
+    const cache = await getCatalogGroupCache([10, 11, 999], query);
+    assert.equal(cache.size, 2);
+    assert.equal(cache.get(10)?.parentGroupName, "Raypak Cheat Sheet");
+
+    await replaceJobMaterialLines({
+      jobId: 7001,
+      periodStart: "2026-07-01",
+      completedDate: "2026-07-10",
+      lines: [
+        walkedLine(),
+        walkedLine({ lineId: 502, catalogId: 11, name: null, partNo: null, qty: 1, extendedExTax: 5000 }),
+        walkedLine({ lineId: 503, lineType: "one_off", catalogId: null, name: "Replacement Heater", partNo: null, qty: 1, extendedExTax: 7627.5, basePrice: null, oneOffType: "Material" }),
+        walkedLine({ lineId: 504, lineType: "prebuild", catalogId: null, prebuildId: 9, name: '3/4" Gas', partNo: null, qty: 8, extendedExTax: 2000, basePrice: null }),
+      ],
+      fetchedAt: new Date(),
+    }, transaction);
+    await replaceJobMaterialLines({
+      jobId: 7002,
+      periodStart: "2026-06-01",
+      completedDate: "2026-06-20",
+      lines: [walkedLine({ lineId: 601, qty: 24, extendedExTax: 2784 })],
+      fetchedAt: new Date(),
+    }, transaction);
+    await replaceJobMaterialLines({
+      jobId: 7003,
+      periodStart: "2025-07-01",
+      completedDate: "2025-07-25",
+      lines: [walkedLine({ lineId: 701, qty: 1, extendedExTax: 999 })],
+      fetchedAt: new Date(),
+    }, transaction);
+
+    await finishMaterialsMonthWalk({ periodStart: "2026-07-01", walkStartedAt: new Date(Date.now() - 60_000), jobCount: 1, lineCount: 4, requestsUsed: 12 }, transaction);
+    await finishMaterialsMonthWalk({ periodStart: "2026-06-01", walkStartedAt: new Date(Date.now() - 60_000), jobCount: 1, lineCount: 1, requestsUsed: 5 }, transaction);
+    await recordMaterialsMonthWalkFailure({ periodStart: "2025-07-01", error: new Error("simulated outage") }, query);
+
+    const inputs = await loadMaterialLineInputs(["2026-07-01", "2026-06-01", "2025-07-01"], query);
+    const july = inputs.get("2026-07-01") ?? [];
+    assert.equal(july.length, 4);
+    const contractLine = july.find((row) => row.catalogId === 11);
+    // Name and group facts come from the persistent catalog cache when the
+    // line itself carries none.
+    assert.equal(contractLine?.name, "Contract Visit");
+    assert.equal(contractLine?.groupName, "Service Contract");
+
+    const payload = await buildMaterialsReadModelPayload("2026-07-01", {
+      query,
+      now: new Date("2026-07-18T20:00:00Z"),
+    });
+    // The Service Contract catalog line is excluded from the total.
+    assert.equal(payload.totals.current, 232 + 7627.5 + 2000);
+    assert.equal(payload.totals.priorMonth, 2784);
+    // 2025-07-25 falls outside the day-18 aligned window.
+    assert.equal(payload.totals.priorYearSameDay, 0);
+    assert.equal(payload.coverage.selectedMonth.status, "complete");
+    assert.equal(payload.coverage.priorYearMonth.status, "failed");
+    assert.equal(payload.coverage.excludedServiceContractLineCount, 1);
+    const igniter = payload.items.find((item) => item.key === "catalog:10");
+    assert.equal(igniter?.category, "Raypak Parts");
+    assert.equal(igniter?.priorMonthQty, 24);
+    assert.deepEqual(igniter?.jobIds, [7001]);
+
+    // Replacing a job's walk drops lines the source no longer has.
+    await replaceJobMaterialLines({
+      jobId: 7001,
+      periodStart: "2026-07-01",
+      completedDate: "2026-07-10",
+      lines: [walkedLine()],
+      fetchedAt: new Date(),
+    }, transaction);
+    const rows = await query<{ line_id: string }>(
+      `select line_id::text from metrics.metrics_material_lines where job_id = 7001 order by line_id`,
+    );
+    assert.deepEqual(rows.rows.map((row) => row.line_id), ["501"]);
+  } finally {
+    await db.close();
+  }
+});
+
+test("sealing a month walk removes lines the walk did not observe", async () => {
+  const db = await migratedDatabase();
+  const query = pgliteQuery(db);
+  const transaction = pgliteTransaction(db);
+  try {
+    await replaceJobMaterialLines({
+      jobId: 8001,
+      periodStart: "2026-07-01",
+      completedDate: "2026-07-02",
+      lines: [walkedLine()],
+      fetchedAt: new Date("2026-07-01T00:00:00Z"),
+    }, transaction);
+    const walkStartedAt = new Date("2026-07-15T00:00:00Z");
+    await replaceJobMaterialLines({
+      jobId: 8002,
+      periodStart: "2026-07-01",
+      completedDate: "2026-07-03",
+      lines: [walkedLine({ lineId: 777 })],
+      fetchedAt: new Date("2026-07-15T01:00:00Z"),
+    }, transaction);
+    await finishMaterialsMonthWalk({ periodStart: "2026-07-01", walkStartedAt, jobCount: 1, lineCount: 1, requestsUsed: 3 }, transaction);
+
+    const rows = await query<{ job_id: string }>(
+      `select job_id::text from metrics.metrics_material_lines where period_start = '2026-07-01' order by job_id`,
+    );
+    // Job 8001 left the completion window, so its stale lines are gone.
+    assert.deepEqual(rows.rows.map((row) => row.job_id), ["8002"]);
+
+    const walk = await query<{ status: string; job_count: number }>(
+      `select status, job_count from metrics.materials_month_walks where period_start = '2026-07-01'`,
+    );
+    assert.equal(walk.rows[0]?.status, "complete");
+  } finally {
+    await db.close();
+  }
+});
+
+test("persisted materials read model round-trips through dashboard_read_models", async () => {
+  const db = await migratedDatabase();
+  const query = pgliteQuery(db);
+  try {
+    const payload = await buildMaterialsReadModelPayload("2026-07-01", {
+      query,
+      now: new Date("2026-07-18T20:00:00Z"),
+    });
+    await db.query(
+      `insert into metrics.dashboard_read_models (
+         metric_family, period_grain, period_start, dimensions_json, values_json, status, rebuilt_at
+       ) values ('materials', 'month', '2026-07-01', '{}'::jsonb, $1::jsonb, 'ready', now())`,
+      [JSON.stringify(payload)],
+    );
+
+    const persisted = await getPersistedMaterialsReadModel("2026-07-01", query);
+    assert.ok(persisted);
+    assert.equal(persisted.periodStart, "2026-07-01");
+    assert.deepEqual(persisted.totals, payload.totals);
+
+    // A different month never serves the persisted July payload.
+    assert.equal(await getPersistedMaterialsReadModel("2026-06-01", query), null);
+  } finally {
+    await db.close();
+  }
+});

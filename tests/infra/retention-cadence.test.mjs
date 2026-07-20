@@ -61,6 +61,7 @@ test("scheduled Container Apps job cadence remains locked", () => {
     "job-psm-reconcile-trailing-24m": "0 8 * * *",
     "job-psm-reconcile-stable-history": "0 9 1 * *",
     "job-psm-commissions-nightly": "0 * * * *",
+    "job-psm-materials": "40 1,7,13,19 * * *",
   });
   assert.doesNotMatch(metricsBicep, /job-psm-invoice|customer_invoice_logs|'--entity', 'invoices'/);
 });

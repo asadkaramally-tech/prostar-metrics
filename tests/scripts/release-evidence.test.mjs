@@ -238,7 +238,7 @@ test("rejects a deployment missing any app or scheduled-job contract", async () 
   try {
     fixture.deployment.targets.pop();
     await writeJsonAt(fixture.root, fixture.paths.deploymentManifestPath, fixture.deployment);
-    await assert.rejects(validateRaw(fixture), /Production targets must match the immutable app plus exact 23-job allowlist/);
+    await assert.rejects(validateRaw(fixture), /Production targets must match the immutable app plus exact 24-job allowlist/);
   } finally {
     await fixture.cleanup();
   }

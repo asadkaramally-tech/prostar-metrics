@@ -33,6 +33,13 @@ The existing 05:30 UTC current-month reconciliation and ten-minute rollup drain 
 - Exact input: `{ timeZone: "America/Los_Angeles", localHour: 3, scope: "commissions", limit: 1 }`.
 - Required behavior: no-op unless the current Los Angeles hour is 03, derive that local date's current month, enqueue and drain one commission rebuild, and use the Pacific local date as an idempotency key. The hook must produce exactly one rebuild across retries and both daylight-saving offsets (10:00 UTC during PDT and 11:00 UTC during PST).
 
+### Materials month walk
+
+- Job: `job-psm-materials`.
+- Trigger: `40 1,7,13,19 * * *` UTC (four walks a day).
+- Required hook: the `main` entrypoint of `workers/ingest-materials.ts` with `--months-back 1 --request-limit 8000`.
+- Required behavior: walk the current Pacific month and the prior month live from Simpro (jobs completed in the window, then sections, cost centers, catalogs, Material one-offs, and prebuilds), replace each job's mirrored material lines atomically, refresh the persistent `metrics.catalog_groups` cache, seal each month walk in `metrics.materials_month_walks`, then enqueue and drain `materials` rollup rebuilds so `dashboard_read_models` serves `/materials` without request-time Simpro traffic. A failed month records `status = 'failed'` and retains the last complete mirror.
+
 ## Deployment Checklist
 
 1. Run worker tests covering cursor resume, request/runtime exhaustion, month boundaries, DST transitions, retries, and same-local-date idempotency.

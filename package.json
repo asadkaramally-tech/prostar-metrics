@@ -21,6 +21,7 @@
     "guard:no-mirror": "node scripts/no-mirror-guard.mjs",
     "phase0:check": "npm run plan:check && npm run reference:check && npm run guard:no-mirror && npm run test && npm run test:scripts && npm run test:infra",
     "ingest:worker": "tsx workers/ingest-simpro.ts",
+    "materials:worker": "tsx workers/ingest-materials.ts",
     "rollups:worker": "tsx workers/rebuild-rollups.ts",
     "reconcile:worker": "tsx workers/reconcile-simpro.ts",
     "reconcile:all-months": "tsx workers/reconcile-simpro.ts --scope all --mode all-months --batch-months 60 --runtime-minutes 15 --request-budget 1000",

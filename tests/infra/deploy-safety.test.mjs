@@ -68,7 +68,7 @@ test("production ARM create uses its operation name for release identity without
   assert.match(source, /"--name",\s*params\.deploymentName/);
 });
 
-test("production target convergence retries the exact app and 23-job state before accepting it", async () => {
+test("production target convergence retries the exact app and 24-job state before accepting it", async () => {
   let calls = 0;
   const expected = { targets: [{ name: "ready" }] };
   const actual = await waitForDeploymentState({}, "pinned-image", {
@@ -797,22 +797,22 @@ test("Key Vault preflight requires exact versionless references and UAMI with no
   }
 });
 
-test("production app and exact 23 jobs share one immutable target contract", () => {
+test("production app and exact 24 jobs share one immutable target contract", () => {
   const jobs = monitoringParameters.parameters.containerAppsJobNames.value;
   assert.deepEqual(assertExactProductionJobNames(jobs), [...PRODUCTION_JOB_NAMES].sort());
-  assert.equal(PRODUCTION_JOB_NAMES.length, 23);
-  assert.equal(PRODUCTION_TARGETS.length, 24);
+  assert.equal(PRODUCTION_JOB_NAMES.length, 24);
+  assert.equal(PRODUCTION_TARGETS.length, 25);
   assert.ok(PRODUCTION_JOB_NAMES.includes("job-prostar-timesheet-jobs"));
   assert.ok(Object.isFrozen(PRODUCTION_JOB_NAMES));
   assert.ok(Object.isFrozen(PRODUCTION_TARGETS));
   assert.equal(productionTargetsForApp("aca-prostar-metrics-prod"), PRODUCTION_TARGETS);
   assert.throws(() => productionTargetsForApp("aca-wrong"), /must be exactly/);
-  assert.equal(validateMonitoringTargetParameters(monitoringParameters).jobNames.length, 23);
+  assert.equal(validateMonitoringTargetParameters(monitoringParameters).jobNames.length, 24);
   const wrongMonitoringApp = structuredClone(monitoringParameters);
   wrongMonitoringApp.parameters.containerAppName.value = "aca-wrong";
   assert.throws(() => validateMonitoringTargetParameters(wrongMonitoringApp), /containerAppName must be exactly/);
   for (const invalid of [jobs.slice(1), [...jobs, "job-extra"], [...jobs.slice(0, -1), jobs[0]]]) {
-    assert.throws(() => assertExactProductionJobNames(invalid), /immutable exact 23-job/);
+    assert.throws(() => assertExactProductionJobNames(invalid), /immutable exact 24-job/);
   }
   assert.match(source, /assertExactProductionJobNames/);
   assert.match(migrationSource, /assertExactProductionTargets\(PRODUCTION_TARGETS\)/);
@@ -916,7 +916,7 @@ function monitoringWhatIfChanges(postgresId) {
   }));
 }
 
-test("monitoring preflight locks the exact PostgreSQL target and exact 70-resource change set", () => {
+test("monitoring preflight locks the exact PostgreSQL target and exact 72-resource change set", () => {
   const id = "/subscriptions/sub/resourceGroups/prostar-payroll/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-prostar-metrics-prod";
   assert.equal(validatePostgresServerTarget({
     id, name: "pg-prostar-metrics-prod", resourceGroup: "prostar-payroll",
@@ -927,7 +927,7 @@ test("monitoring preflight locks the exact PostgreSQL target and exact 70-resour
   ]) assert.throws(() => validatePostgresServerTarget(target), /must be exactly/);
 
   const contract = monitoringManagedResourceContract(id);
-  assert.equal(contract.length, 70);
+  assert.equal(contract.length, 72);
   assert.ok(contract.some((resource) => resource.resourceId.endsWith("/metricAlerts/alert-prostar-metrics-postgres-longest-query".toLowerCase())));
   assert.ok(contract.some((resource) => resource.resourceId.endsWith("/scheduledQueryRules/alert-prostar-metrics-dead-letter-immediate".toLowerCase())));
   assert.ok(contract.some((resource) => resource.resourceId.includes("/jobs/job-prostar-metrics-ingest/providers/microsoft.insights/diagnosticsettings/diag-job-prostar-metrics-ingest")));
@@ -939,7 +939,7 @@ test("monitoring preflight locks the exact PostgreSQL target and exact 70-resour
     changeType: "Ignore",
     resourceId: "/subscriptions/sub/resourceGroups/prostar-payroll/providers/Microsoft.Storage/storageAccounts/unrelated-existing-resource",
   });
-  assert.deepEqual(validateMonitoringWhatIf({ properties: { changes } }, id), { changes: 71 });
+  assert.deepEqual(validateMonitoringWhatIf({ properties: { changes } }, id), { changes: 73 });
 });
 
 test("monitoring what-if rejects every unrelated mutation and malformed representation", () => {
@@ -1230,10 +1230,10 @@ test("what-if semantic validation rejects non-image drift and malformed evidence
   assert.deepEqual(validateDeploymentWhatIf({ changes }, {
     expectedImage,
     subscriptionId: TEST_SUBSCRIPTION_ID,
-  }), { managedResourceCount: 24, supportResourceCount: 6 });
+  }), { managedResourceCount: 25, supportResourceCount: 6 });
   const targetContract = productionDeploymentTargetContract(TEST_SUBSCRIPTION_ID);
   const supportContract = productionDeploymentSupportContract(TEST_SUBSCRIPTION_ID);
-  assert.equal(targetContract.length, 24);
+  assert.equal(targetContract.length, 25);
   assert.equal(supportContract.length, 6);
   assert.ok(supportContract.every((resourceId) => resourceId.startsWith(
     `/subscriptions/${TEST_SUBSCRIPTION_ID}/resourcegroups/prostar-payroll/providers/`,
@@ -1311,7 +1311,7 @@ test("image-only comparison keeps secondary and init container images and member
     side.properties.template.containers.push(auxiliaryContainer("sidecar", "registry.example/sidecar@sha256:stable"));
     side.properties.template.initContainers.push(auxiliaryContainer("setup", "registry.example/setup@sha256:stable"));
   }
-  assert.deepEqual(validate(stable), { managedResourceCount: 24, supportResourceCount: 6 });
+  assert.deepEqual(validate(stable), { managedResourceCount: 25, supportResourceCount: 6 });
 
   const mutations = [
     {
@@ -1410,7 +1410,7 @@ test("production what-if accepts Azure nested image deltas and the app running-s
   assert.deepEqual(validateDeploymentWhatIf({ changes }, {
     expectedImage,
     subscriptionId: TEST_SUBSCRIPTION_ID,
-  }), { managedResourceCount: 24, supportResourceCount: 6 });
+  }), { managedResourceCount: 25, supportResourceCount: 6 });
 });
 
 test("production what-if rejects duplicate, misplaced, mistyped, missing, destructive, and unrelated targets", () => {
@@ -1473,7 +1473,7 @@ test("production what-if rejects duplicate, misplaced, mistyped, missing, destru
       changeType,
       resourceId: `/subscriptions/${TEST_SUBSCRIPTION_ID}/resourceGroups/prostar-payroll/providers/Microsoft.Storage/storageAccounts/unrelated`,
     });
-    assert.deepEqual(validate(harmlessSharedResource), { managedResourceCount: 24, supportResourceCount: 6 });
+    assert.deepEqual(validate(harmlessSharedResource), { managedResourceCount: 25, supportResourceCount: 6 });
   }
 
   const unrelated = structuredClone(valid);

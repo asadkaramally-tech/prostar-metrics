@@ -14,7 +14,7 @@ const [bicep, metricsBicep, parameters, dockerfile] = await Promise.all([
 ]);
 const parameterDocument = JSON.parse(parameters);
 
-test("three isolated event jobs remain outside the app plus 23 routine deployment contract", () => {
+test("three isolated event jobs remain outside the app plus 24 routine deployment contract", () => {
   const jobs = ["job-psm-evidence-gate", "job-psm-evidence-browser", "job-psm-evidence-reviewer"];
   for (const name of jobs) {
     assert.match(bicep, new RegExp(`jobName: '${name}'`));

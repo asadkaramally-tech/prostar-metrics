@@ -295,6 +295,6 @@ test("monitoring parameters cover every job declared by metrics.bicep", () => {
     ...monitoringParameters.parameters.containerAppsJobNames.value,
   ].sort();
 
-  assert.equal(deployedJobNames.length, 23);
+  assert.equal(deployedJobNames.length, 24);
   assert.deepEqual(monitoredJobNames, deployedJobNames);
 });

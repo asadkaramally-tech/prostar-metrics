@@ -582,6 +582,11 @@ var scheduledSourceJobs = [
     cron: '0 * * * *'
     args: ['run', 'rollups:worker', '--', '--nightly-commissions', '--local-hour', '3', '--limit', '1']
   }
+  {
+    name: 'job-psm-materials'
+    cron: '40 1,7,13,19 * * *'
+    args: ['run', 'materials:worker', '--', '--months-back', '1', '--request-limit', '8000']
+  }
 ]
 
 resource webApp 'Microsoft.App/containerApps@2023-05-01' = {
