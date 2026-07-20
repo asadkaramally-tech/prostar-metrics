@@ -1,29 +1,32 @@
-# Pro Star Metrics Dashboard
+# Pro Star Metrics
 
-Phase 0 implementation scaffold for the locked Pro Star Metrics Dashboard plan.
+Production owner dashboard for Pro Star Mechanical. The Next.js application serves the Today, Quotes, Jobs, Technicians, and Commissions views from an app-owned Azure PostgreSQL read store.
 
-The app is intentionally isolated from the existing lead/dispatch platform so the metrics dashboards do not inherit legacy mirror reads or request-time Simpro fan-out. Dashboard routes read the app-owned PostgreSQL serving store. Simpro access belongs to bounded ingestion workers.
+Simpro is read by bounded background workers, not by dashboard requests. The repository includes the complete web app, API routes, ingestion and rollup workers, database migrations, Azure infrastructure, monitoring definitions, release tooling, tests, and visual design references.
 
-## V1 Scope
+## Local Build
 
-- Quote Metrics
-- Job Metrics
-- Technician Performance
-- Technician Commissions
-
-The old pending/active job queue, dispatch timeline, and old job detail modal are not part of this app.
-
-## Phase 0 Commands
+Use Node.js 24:
 
 ```bash
-npm run guard:no-mirror
-npm run test
-npm run phase0:check
-npm run ingest:worker -- --dry-run --entity quotes --from 2025-01-01 --to 2025-01-31
+npm ci
+npm run build
 ```
 
-## Data Model
+To run against data, provide the required variable names from `.env.example` through your local secret manager or an ignored environment file:
 
-Run the migrations in `infra/db/migrations` against the app-owned Azure PostgreSQL database. The schema includes raw snapshots, rollups, ingestion queue/run state, freshness state, quote and commission overrides, commission calculation runs, exports, roles, audit events, and reconciliation checks.
+```bash
+npm run dev
+```
 
-No production path should depend on demo data, preexisting mirror tables, or broad Simpro calls during page/API requests.
+Production credentials are not stored in this repository. Runtime secrets are Azure Key Vault references configured on the Container App and scheduled jobs.
+
+## Production
+
+The only routine production release entry point is:
+
+```bash
+npm run deploy:prod
+```
+
+Do not deploy the Bicep files, web app, or individual jobs separately. See [DEPLOY.md](./DEPLOY.md) for prerequisites, the exact invocation, automated migration behavior, and release provenance.

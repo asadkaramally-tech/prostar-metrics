@@ -55,27 +55,22 @@ Simpro (field-service SaaS, source of truth)
 
 - Subscription `d7a98155-9693-4c6b-ad27-39e945c0f751`, resource group `prostar-payroll`, environment `cae-prostar-dispatch-prod`.
 - Web app: Container App `aca-prostar-metrics-prod`. Ingress 3000, single-revision mode. Hostnames: default `aca-prostar-metrics-prod.thankfulmushroom-31ebfcb1.westus2.azurecontainerapps.io` + custom **`https://metrics.psm.photos`** (managed cert `mc-cae-prostar-di-metrics-psm-phot-4893`; DNS at Spaceship: CNAME `metrics` → default host, TXT `asuid.metrics`). Container CPU/memory/replica settings: **not yet catalogued — inspect them.**
-- 24 scheduled jobs (`az containerapp job list -g prostar-payroll`), same image as web, each running a worker entrypoint. Cadence: `job-psm-{quote,job,schedule,mobile}-logs` */15min; `job-psm-timesheets-hourly`, `job-psm-employees-daily` (hourly), `job-psm-commissions-nightly` (hourly), `job-psm-ts-jobs-hourly`; `job-prostar-metrics-{ingest,jobs}` */6h; `job-psm-rollup-drain` 7,22,37,52 * * * *; `job-psm-candidate-drain` 2,17,32,47; `job-psm-operational-health` 10,25,40,55; `job-psm-backfill-hourly` 20,50; `job-prostar-metrics-reconcile` daily 05:30; `job-psm-reconcile-trailing-24m` daily 08:00; `job-psm-reconcile-stable-history` monthly; plus manual-trigger variants and `aca-job-verizon-gps-sync-prod` (*/15, separate system).
+- 23 metrics jobs (`az containerapp job list -g prostar-payroll`), using the same digest-pinned image as the web app and running the worker entrypoints declared in `infra/azure/metrics.bicep`. `aca-job-verizon-gps-sync-prod` is a separate system and is not part of this deployment target.
 - Registry: ACR `acrprostardispatchprod` (`repository prostar-metrics`).
 - IaC: `infra/azure/metrics.bicep` (+ `main.parameters.prod.example.json` — the file the deploy actually uses; now declares `customDomains`), `monitoring` Bicep with a 70-resource contract; deploys are what-if-gated against drift, so **all infra changes must go through Bicep**.
 - Monitoring/logs: Log Analytics workspace customerId **`154bf9e9-1d9d-488e-b38a-7dabfb2b7497`**; tables `ContainerAppConsoleLogs_CL`, `ContainerAppSystemLogs_CL` (query: `az monitor log-analytics query -w <id> --analytics-query "…"`). Alert action group with Asad + Laila receivers.
 - Key Vault **`kv-prostar-metrics-prod`**: secrets `azure-postgres-connection-string`, `simpro-bearer-token`, `microsoft-provider-authentication-secret`. App + jobs consume via versionless Key Vault references with managed identity.
 - Entra app registration clientId `369bef95-48a6-45db-bad6-1e16278fa229`; web redirect URIs: both hosts' `/.auth/login/aad/callback`.
 
-## 2. Credentials & access (everything you may need)
+## 2. Credentials & access
 
-- **Azure CLI:** already signed in as `asad@prostarmechanical.com` (subscription **Owner**). All `az` reads work. Container App secrets are readable via `az containerapp secret show` if Key Vault paths fail.
-- **Database:** `export AZURE_POSTGRES_CONNECTION_STRING="$(az keyvault secret show --vault-name kv-prostar-metrics-prod --name azure-postgres-connection-string --query value -o tsv)"` — load into env only, never echo. Node `pg` connects with `ssl:{rejectUnauthorized:false}` for ad-hoc analysis; app code uses the verified-TLS helper. A firewall rule **`psm-claude-migrate`** currently allows this machine's IP (76.170.194.168) on `pg-prostar-metrics-prod`; manage rules via `az postgres flexible-server firewall-rule {create,delete}`.
-- **Simpro API:** base `https://prostarmechanical.simprosuite.com/api/v1.0`, bearer token in Key Vault secret `simpro-bearer-token`, 5 req/s, page size 250. Read-only against Simpro always. A Simpro MCP toolset may also be available in-session.
-- **Production app:** `https://metrics.psm.photos` (or default host). Authenticated via the owner's existing Entra browser session (works in the in-session Chrome). `curl` unauthenticated gets 401/redirect at ingress; `/api/health` is anonymous-reachable and returns JSON.
-- **Logs:** Log Analytics workspace above; live tails via `az containerapp logs show` (only while replicas exist).
-- **Build & deploy:**
-  - Image build (remote, no local Docker needed): `az acr build --registry acrprostardispatchprod --image prostar-metrics:<tag> --file Dockerfile .`
-  - Direct deploy: `az containerapp update -n aca-prostar-metrics-prod -g prostar-payroll --image <ref>`; jobs: `az containerapp job update -n <job> -g prostar-payroll --image <ref>`. **Invariant: web + all 23 metrics jobs must run the same image.**
-  - Guarded orchestrator: `npm run deploy:prod` (`scripts/deploy-prod.mjs`) — full gate suite, ARM deploy of app+jobs together, DB-aware health gate, auto-rollback, provenance manifest. Local prerequisites: `pg_dump`/`pg_restore` 17 on PATH (`/Applications/Postgres.app/Contents/Versions/17/bin`), Docker running, `az acr login --name acrprostardispatchprod`, `AZURE_POSTGRES_MIGRATION_CONNECTION_STRING` in env, ~3 GB free disk.
-  - Rollback reference: pre-redesign production image digest `sha256:72e523e32c790d6cc326af2e74c974cc06dddb30c1ca3fa2434f96270740ae12`.
-  - Trigger a job manually: `az containerapp job start -n <job> -g prostar-payroll`.
-- **Local dev:** `npm run dev` + `METRICS_DEV_AUTH_BYPASS=true`; with the DB env var set you get real data locally; without it, pages render degraded states.
+- **Azure CLI:** authenticate through an approved writable Azure CLI profile and select the production subscription. Never commit tokens, cached profiles, or command output containing secret values.
+- **Database:** load connection strings from the approved secret source into the process environment only and keep TLS certificate and hostname verification enabled. The guarded deploy creates and removes its own temporary exact-IP firewall rule; do not rely on a persistent workstation rule.
+- **Simpro API:** the bearer token remains in Key Vault secret `simpro-bearer-token`. Simpro access is read-only and bounded by the shared rate limiter.
+- **Production app:** `https://metrics.psm.photos` authenticates through Entra Easy Auth. `/api/health` is the only anonymous application endpoint.
+- **Logs:** use the production Log Analytics workspace or bounded Container App log reads without persisting secret-bearing output.
+- **Build and deploy:** `npm run deploy:prod` is the only routine production release command. Direct ACR builds, direct Container App updates, individual job updates, and direct Bicep deployments are prohibited because they bypass the app-plus-23-jobs transaction, migration gates, rollback, and provenance checks. See `DEPLOY.md`.
+- **Local development:** use `METRICS_DEV_AUTH_BYPASS` only on a local workstation. Never enable it in production.
 - **Repo:** `/Users/asadkaramally/Documents/New project/prostar-metrics-dashboard` (git, branch main). Authority docs: `CLAUDE-PROJECT-TAKEOVER-BRIEF.md` (owner's standard; §6 locked business rules), `redesign-handoff/product-reset/` (approved design + contract map + defect ledger).
 
 ## 3. Recent changes (2026-07-16, facts only)

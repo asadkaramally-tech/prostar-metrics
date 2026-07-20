@@ -1,12 +1,14 @@
 node_modules
 .next
 .git
-.env
-.env.local
+.env*
+!.env.example
+.DS_Store
 *.log
 coverage
 dist
 tmp
+output
 tsconfig.tsbuildinfo
 .playwright-cli
 .work
