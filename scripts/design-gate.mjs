@@ -149,18 +149,23 @@ for (const [name, cfg] of Object.entries(PAGES)) {
     return [...new Set([...els].map((e) => e.textContent.trim()).filter((t) => /\d/.test(t) && t.length >= 2))];
   });
   const counts = await page.evaluate((figs) => {
+    // node-aware: count text NODES containing each figure with in-node digit boundaries,
+    // so JSX-adjacent numbers ("…vs Jul ’25$216,186") can't mask a legitimate figure
     const clone = document.body.cloneNode(true);
     clone.querySelectorAll('svg, table, [data-viz], script').forEach((n) => n.remove());
-    const text = clone.textContent;
     const out = {};
-    for (const f of figs) {
-      let c = 0, i = -1;
-      while ((i = text.indexOf(f, i + 1)) !== -1) {
-        // reject matches embedded in a longer number (e.g. "88%" inside "188%")
-        const pre = text[i - 1] || ' ';
-        if (!/[\d.,$]/.test(pre)) c++;
+    for (const f of figs) out[f] = 0;
+    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const text = walker.currentNode.textContent;
+      for (const f of figs) {
+        let i = -1;
+        while ((i = text.indexOf(f, i + 1)) !== -1) {
+          const pre = text[i - 1] || ' ';
+          const post = text[i + f.length] || ' ';
+          if (!/[\d.,$]/.test(pre) && !/[\d]/.test(post)) out[f]++;
+        }
       }
-      out[f] = c;
     }
     return out;
   }, figList);

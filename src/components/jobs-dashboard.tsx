@@ -432,12 +432,20 @@ function TrendCard({ model }: { model: JobDashboardReadModel }) {
 
   return (
     <Card
+      data-primary-viz=""
       className="span12"
       style={{ scrollMarginTop: 70 }}
       title={<span id="trend">Monthly Trend</span>}
       subtitle={`${rangeLabel} · pick up to four metrics · hover or tap for detail`}
+      aside={
+        <MetricPicker
+          style={{ padding: 0, justifyContent: "flex-end" }}
+          groups={groups}
+          selected={sel}
+          onToggle={(key) => setSel(nextTrendSelection(sel, key))}
+        />
+      }
     >
-      <MetricPicker groups={groups} selected={sel} onToggle={(key) => setSel(nextTrendSelection(sel, key))} />
       <CardBody>
         <TrendBody model={model} metrics={metrics} sel={sel} />
       </CardBody>
