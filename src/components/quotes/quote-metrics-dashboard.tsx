@@ -10,8 +10,11 @@ import {
   KpiBandNote,
   KpiTile,
   KpiTiles,
+  moneyK,
   PrimaryStatCard,
 } from "@/components/band";
+
+export { moneyK };
 import {
   Card,
   CardBody,
@@ -925,15 +928,6 @@ function percentChange(current: number | null, prior: number | null): number | n
 
 function rateText(v: number | null | undefined): string {
   return v === null || v === undefined ? "N/A" : `${v.toFixed(1)}%`;
-}
-
-/** Bullet caption money: "$149.9K" / "$1.96M" / "$444". */
-export function moneyK(v: number): string {
-  const a = Math.abs(v);
-  const s = v < 0 ? "−$" : "$";
-  if (a >= 1e6) return `${s}${(a / 1e6).toFixed(2)}M`;
-  if (a >= 1e3) return `${s}${(a / 1e3).toFixed(1)}K`;
-  return s + Math.round(a).toLocaleString();
 }
 
 /** "$1,963,611" spans read full-$; card subtitles use $X.XXM once ≥ $1M. */

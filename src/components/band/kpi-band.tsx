@@ -3,6 +3,15 @@ import type { CSSProperties, ReactNode } from "react";
 /* Approved KPI band (brief §3.1, mockups .kpis.hero): a primary dark stat
    card (204px) beside a 2×2 grid of 96px tiles. Presentational only. */
 
+/** Bullet-caption money: "$149.9K" / "$1.96M" / "$444". */
+export function moneyK(v: number): string {
+  const a = Math.abs(v);
+  const s = v < 0 ? "−$" : "$";
+  if (a >= 1e6) return `${s}${(a / 1e6).toFixed(2)}M`;
+  if (a >= 1e3) return `${s}${(a / 1e3).toFixed(1)}K`;
+  return s + Math.round(a).toLocaleString();
+}
+
 export function KpiBand({ ariaLabel, children, style }: { ariaLabel?: string; children?: ReactNode; style?: CSSProperties }) {
   return (
     <section className="kpis hero" aria-label={ariaLabel} style={style}>

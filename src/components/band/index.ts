@@ -1,4 +1,5 @@
 export {
+  moneyK,
   KpiBand,
   KpiTiles,
   KpiBandNote,

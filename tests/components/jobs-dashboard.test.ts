@@ -25,9 +25,11 @@ import type { JobDashboardReadModel } from "../../src/lib/store/job-dashboard-re
 
 /* Fixture: a small June 2026 cohort with every approved surface exercised —
    quote-linked labor with overruns, a recurring plan visit plus a no-estimate
-   exclusion, diagnostic-fee and execution losses, direct-service follow-up
-   quotes, prior-month/prior-year months for the deltas, and a Dec ’25 high
-   for the bullet. Every rendered number must flow from this payload. */
+   exclusion, losses (reachable only via the completed-jobs table now),
+   direct-service work, prior-month/prior-year months for the deltas, and a
+   Dec ’25 high for the trend annotations. Every rendered number must flow
+   from this payload. The composition under test is the owner-approved
+   docs/approved-design/mockups/jobs.html. */
 
 const JUNE_JOBS: NormalizedJobSnapshot[] = [
   {
@@ -224,45 +226,48 @@ function render(model: JobDashboardReadModel, showStates = false): string {
   return renderToStaticMarkup(createElement(JobsDashboard, { model, showStates }));
 }
 
-/* ── Hero ──────────────────────────────────────────────── */
+/* ── Row 1: KPI band ───────────────────────────────────── */
 
-test("hero focal renders net profit, margin, deltas, target line and dgrid from the payload", () => {
+test("primary card leads with net profit, labeled pills, target sub and one bullet bar", () => {
   const html = render(buildModel());
+  assert.match(html, /class="kpi primary" href="#trend"/);
   // Headline: Σ NetProfit Actual = 35000+2000-1000+500-2000-800+100.
-  assert.match(html, /\$33,800/);
-  assert.match(html, /46\.8% net margin/);
-  // Margin-pts delta vs Jun ’25 (50.0% → 46.8%).
-  assert.match(html, /↓ 3\.2 pts vs Jun ’25/);
-  // Dollar deltas: YoY green chip and MoM neutral chip.
+  assert.match(html, /<span class="val">\$33,800<\/span>/);
+  assert.match(html, /46\.8% net margin · 3\.2 pts below 50% target \(example\)/);
+  // Labeled pills — every comparison named.
   assert.match(html, /↑ 576\.0% vs Jun ’25/);
   assert.match(html, /↑ 322\.5% vs May/);
-  // Example target line stays labelled as an example.
-  assert.match(html, /3\.2 pts below the 50% target/);
-  assert.match(html, /\(example\)/);
-  // dgrid values + YoY deltas.
-  assert.match(html, /\$72,198/);
-  assert.match(html, /↑ 622\.0%/);
-  assert.match(html, /\$45,199/);
-  assert.match(html, /62\.6% gross margin/);
-  assert.match(html, /↑ 600\.0%/);
-  assert.match(html, /\$10,314/);
-  // MoM lives in the defs.
-  assert.match(html, /Vs May: \+261\.0%\./);
-  // Coverage line.
-  assert.match(html, /Green deltas vs Jun ’25 · vs-May in each tile’s tooltip/);
+  // Bullet: ticks keyed to prior year and prior month with honest windows.
+  assert.match(html, /Jun ’25 · full <b>\$5\.0K<\/b>/);
+  assert.match(html, /May ’26 · full <b>\$8\.0K<\/b>/);
 });
 
-test("hero bullet compares the month against last year and the representative 12-mo high", () => {
+test("tiles chain revenue − expenses = gross and gross − overhead = net, from the payload", () => {
   const html = render(buildModel());
-  assert.match(html, /June · \$34K/);
-  assert.match(html, /Jun ’25 · \$5,000/);
-  // Dec ’25 high is unreconciled → carries the repr grammar inside the bullet.
-  assert.match(html, /class="repr">Dec ’25<\/span> · \$50K/);
+  // GROSS PROFIT with margin sub and labeled pill.
+  assert.match(html, /Gross profit/);
+  assert.match(html, /<span class="val">\$45,199<\/span>/);
+  assert.match(html, /62\.6% margin/);
+  assert.match(html, /↑ 545\.7% vs Jun ’25/);
+  // CALCULATED EXPENSES = materials + labor (largest-remainder split).
+  assert.match(html, /Calculated expenses/);
+  assert.match(html, /<span class="val">\$26,999<\/span>/);
+  assert.match(html, /materials \$14,896 · labor \$12,103/);
+  // CALCULATED OVERHEAD = gross − net, with the chain sub.
+  assert.match(html, /Calculated overhead/);
+  assert.match(html, /<span class="val">\$11,399<\/span>/);
+  assert.match(html, /gross − overhead = net/);
+  // REVENUE with jobs count + avg sub.
+  assert.match(html, /<span class="val">\$72,198<\/span>/);
+  assert.match(html, /↑ 622\.0% vs Jun ’25/);
+  assert.match(html, /7 completed jobs · avg \$10,314/);
+  // Band footnote states the windows and the chain.
+  assert.match(html, /All vs-comparisons are full-month\. The tiles chain: revenue − expenses = gross · gross − overhead = net\./);
 });
 
-/* ── Monthly trend ─────────────────────────────────────── */
+/* ── Row 2: Monthly Trend (stacked single-axis panels) ─── */
 
-test("trend card renders grouped metric chips, the selected-month band label and the repr footnote", () => {
+test("trend card renders all eight chips, stacked $ and margin panels, and honest annotations", () => {
   const html = render(buildModel());
   for (const chip of [
     "Revenue",
@@ -277,28 +282,35 @@ test("trend card renders grouped metric chips, the selected-month band label and
     assert.ok(html.includes(chip), `missing metric chip ${chip}`);
   }
   assert.match(html, /Jan ’25 – Jun ’26 · pick up to four metrics/);
-  // Default selection is Net profit + Net margin → net band label.
+  // Net margin % chip carries the validated --series-2 color.
+  assert.match(html, /style="--c:#0e9aae"/);
+  // Stacked panels: the margin strip announces its own axis under the $ panel.
+  assert.match(html, /class="striphead"/);
+  assert.match(html, /Net margin %<\/span>/);
+  assert.match(html, /own axis — mixed-unit picks always split into stacked panels, never share a \$ axis/);
+  // Annotations from the payload: Dec ’25 high, Jun ’25 slowdown, current month.
+  assert.match(html, /Dec ’25 · \$50K/);
   assert.match(html, /Jun · \$34K net/);
-  // Profit history is representative until reconciled; the footnote says so.
-  assert.match(html, /Dashed = <span class="repr">representative<\/span> history, solid = verified/);
+  // Prior-year net reference (label truncates at the em dash on narrow SSR width).
+  assert.match(html, /Jun ’25 · \$5,000/);
+  // Provenance footnote survives.
+  assert.match(html, /Profit and margin series are <span class="repr">representative<\/span> pending Simpro verification/);
   assert.match(html, /Simpro-verified for all 18 months/);
 });
 
-test("metric-picker selection semantics match the approved script", () => {
-  // yoy is exclusive both ways.
+test("metric-picker semantics: yoy exclusive, minimum one, mixed units allowed, cap four", () => {
   assert.deepEqual(nextTrendSelection(["np", "nm"], "yoy"), ["yoy"]);
   assert.deepEqual(nextTrendSelection(["yoy"], "yoy"), ["np", "nm"]);
   assert.deepEqual(nextTrendSelection(["yoy"], "rev"), ["rev"]);
-  // Minimum one chip.
   assert.deepEqual(nextTrendSelection(["np"], "np"), ["np"]);
   assert.deepEqual(nextTrendSelection(["np", "nm"], "nm"), ["np"]);
-  // Unit-compatibility: picking a count metric drops pct metrics but keeps money.
-  assert.deepEqual(nextTrendSelection(["np", "nm"], "jobs"), ["np", "jobs"]);
+  // Mixed units are allowed — they render as stacked single-axis panels.
+  assert.deepEqual(nextTrendSelection(["np", "nm"], "jobs"), ["np", "nm", "jobs"]);
   // Cap at four via shift.
   assert.deepEqual(nextTrendSelection(["rev", "gp", "np", "ajv"], "gm"), ["gp", "np", "ajv", "gm"]);
 });
 
-/* ── Money band ────────────────────────────────────────── */
+/* ── Cost chain math ───────────────────────────────────── */
 
 test("bridge steps display-round with largest remainder so the chain sums exactly", () => {
   const steps = buildBridgeSteps(
@@ -320,62 +332,64 @@ test("bridge steps display-round with largest remainder so the chain sums exactl
   assert.equal(buildBridgeSteps({ revenue: 0, materials: 0, labor: 0 }, 0, 0, false), null);
 });
 
-test("money band renders the compact bridge and source-mix visual", () => {
+/* ── Row 3: revenue story + work source ────────────────── */
+
+test("Where Revenue Went renders ONE segmented bar with 2px gaps and the net label inline", () => {
   const html = render(buildModel());
-  assert.match(html, /Revenue to Net Profit/);
-  assert.match(html, /June cost components · one revenue bar, net labeled directly/);
-  assert.match(html, /\$33,800 net profit/);
-  assert.match(html, /\$72,198 revenue/);
-  assert.match(html, /<span>Materials<\/span><b class="tnum">\$14,896<\/b>/);
-  assert.match(html, /<span>Labor<\/span><b class="tnum">\$12,103<\/b>/);
+  assert.match(html, /Where June Revenue Went/);
+  assert.match(html, /one bar · segments sum to June revenue/);
+  assert.match(html, /class="stacked tall"/);
+  // Legend carries materials/labor/overhead dollars + shares.
+  assert.match(html, /Materials \$14,896 · 20\.6%/);
+  assert.match(html, /Labor \$12,103 · 16\.8%/);
+  assert.match(html, /Overhead \$11,399 · 15\.8%/);
+  // The net segment labels inline; segment widths are the revenue shares.
+  assert.match(html, /Net profit \$33\.8K · 46\.8%/);
+  assert.match(html, /width:20\.6/);
+  assert.match(html, /width:46\.8/);
+  assert.match(html, /Gross profit = revenue − materials − labor\./);
+});
+
+test("work source mix is a bar-list by revenue share with margin metas", () => {
+  const html = render(buildModel());
   assert.match(html, /Work Source Mix/);
-  assert.match(html, /June completed jobs by source · labels show margin and revenue/);
+  assert.match(html, /June completed jobs by source · bar = revenue share/);
   assert.match(html, /Quote-generated/);
-  assert.match(html, /\$69,275 · \$37,000 net · 53\.4%/);
-  assert.match(html, /−21\.7%/);
+  assert.match(html, /2 <small>jobs<\/small>/);
+  assert.match(html, /\$69,275 · \$37,000 net · 53\.4% margin/);
   assert.match(html, /Direct service/);
-  assert.match(html, /\$618 · −\$2,700 net · −436\.9%/);
+  assert.match(html, /\$618 · −\$2,700 net · −436\.9% margin/);
+  assert.match(html, /Work source is classification only\. Negative rows elsewhere on this page require actual Simpro net profit below zero\./);
   assert.doesNotMatch(html, /diagnostic-fee|direct-service calls produced|jobsWithQuoteWithin30Days/);
 });
 
-/* ── Loss module ───────────────────────────────────────── */
+/* ── Row 3: labor + overruns ───────────────────────────── */
 
-test("net-negative module uses actual Simpro net profit only", () => {
-  const html = render(buildModel());
-  assert.match(html, /Net-Negative Jobs/);
-  assert.match(html, /−\$3,800/);
-  assert.match(html, /3 of 7 June jobs finished below zero actual net profit/);
-  assert.match(html, /42\.9% of completed jobs/);
-  assert.match(html, /only uses Simpro NetProfit Actual/);
-  assert.match(html, /Job 105 · Creekwood at River Run · Jeffrey Perry · 13\.5h recorded/);
-  assert.match(html, /All 3 net-negative jobs shown · also in the completed-jobs drilldown/);
-  assert.doesNotMatch(html, /diagnostic-fee|class="srcpill diag"|direct-service calls produced|The 1 execution loss is job\s*control/);
-});
-
-test("ticket article matches the approved kit grammar", () => {
-  assert.equal(ticketArticle(863), "an");
-  assert.equal(ticketArticle(59), "a");
-});
-
-/* ── Labor ─────────────────────────────────────────────── */
-
-test("quote-linked labor renders sums, coverage line, variance strip title and top overruns", () => {
+test("quote-linked labor renders sums, coverage line, variance strip and headline", () => {
   const html = render(buildModel());
   assert.match(html, /Estimated vs Actual Labor/);
-  // Σest 54.75h, Σact 94h (39+8.75+7 vs 52+34.5+7.25).
+  // Σest 54.75h, Σact 93.75h (39+8.75+7 vs 52+34.5+7.25).
   assert.match(html, /54\.8h/);
   assert.match(html, /93\.8h/);
   assert.match(html, /\+71\.2%/);
+  assert.match(html, /over estimate/i);
   assert.match(html, /3 of 4 quote-linked jobs covered/);
   assert.match(html, /1 more has actuals but no estimate/);
-  assert.match(html, /Per-job variance — 3 covered jobs, sorted · 3 over \(\+39\.0h, red\) · 0 under \(−0\.0h\) · 0 on estimate/);
-  // Largest overrun row grammar.
-  assert.match(html, /102 · St Andrews Gardens — MH-10, MB-2/);
-  assert.match(html, /8\.75h quoted · 34\.5h actual/);
-  assert.match(html, /\+25\.75h/);
+  assert.match(html, /Per-job variance — 3 covered jobs · 3 over \(\+39\.0h\) · 0 under \(−0\.0h\) · 0 on estimate/);
+  assert.match(html, /Per-job hours variance, sorted/);
   // The def separates quote-linked from work-source Quote-generated.
   assert.match(html, /Quote-linked \(4\) counts every June job converted from a quote/);
   assert.match(html, /Quote-generated \(2\) excludes recurring conversions/);
+});
+
+test("largest overruns is its own card with red shared-scale bars", () => {
+  const html = render(buildModel());
+  assert.match(html, /Largest Overruns/);
+  assert.match(html, /top 3 by hours over estimate · bars scaled to the largest \(\+25\.75h\)/);
+  assert.match(html, /102 · St Andrews Gardens — MH-10, MB-2/);
+  assert.match(html, /\+25\.75h/);
+  assert.match(html, /8\.75h quoted · 34\.5h actual/);
+  assert.match(html, /<i class="bad" style="width:100%"><\/i>/);
 });
 
 test("recurring labor facts are estimate-covered only, with honest exclusions", () => {
@@ -390,19 +404,19 @@ test("recurring labor facts are estimate-covered only, with honest exclusions", 
   assert.equal(facts.exclusions[0].actualHours, 29.8);
 });
 
-/* ── Profitability by site ─────────────────────────────── */
+/* ── Row 4: profitability by site ──────────────────────── */
 
-test("site profitability ranks by net profit with margins and shares from the payload", () => {
+test("site profitability is a two-column bar list ranked by net profit", () => {
   const html = render(buildModel());
   assert.match(html, /Profitability by Site/);
   assert.match(html, /bars scaled to the largest row/);
-  // Top site is Holiday Inn Express #1955 with 54.3% margin and its share of net.
+  assert.match(html, /class="barlist cols2"/);
   assert.match(html, /Holiday Inn Express #1955/);
   assert.match(html, /54\.3% margin · 103\.6% of net/);
   assert.match(html, /All 7 sites by net profit/);
 });
 
-test("site list beyond eight rows collapses into a no-bar remainder with the long-tail footer", () => {
+test("site list beyond eight rows collapses into a bar-less total row with the long-tail footer", () => {
   const extraSites: NormalizedJobSnapshot[] = Array.from({ length: 10 }, (_, i) => ({
     jobId: 500 + i,
     jobNo: `J${500 + i}`,
@@ -418,10 +432,14 @@ test("site list beyond eight rows collapses into a no-bar remainder with the lon
   const html = render(buildModel({ jobs: [...JUNE_JOBS, ...CONTEXT_JOBS, ...extraSites] }));
   assert.match(html, /Remaining 9 sites/);
   assert.match(html, /Top 8 of 17 sites by net profit · the long tail still carries [−\d.]+% of net/);
-  assert.match(html, /class="brow brem"/);
+  assert.match(html, /class="blrow total"/);
+  assert.match(html, /long-tail aggregate, not on the per-site bar scale/);
+  // The total row carries no bar.
+  const totalRow = html.slice(html.indexOf('class="blrow total"'), html.indexOf("long-tail aggregate"));
+  assert.doesNotMatch(totalRow, /class="bar"/);
 });
 
-/* ── Completed jobs table ──────────────────────────────── */
+/* ── Row 5: completed jobs table ───────────────────────── */
 
 test("completed jobs table renders sell-ordered rows, filters with the full roster, pager and CSV button", () => {
   const html = render(buildModel());
@@ -437,11 +455,11 @@ test("completed jobs table renders sell-ordered rows, filters with the full rost
     assert.ok(html.includes(tech), `missing technician option ${tech}`);
   }
   assert.match(html, /Showing 1–7 of 7 by sell value/);
-  // Sell-ordered: the $64,419 job leads the table body.
   const body = html.slice(html.indexOf("<tbody"));
   assert.ok(body.indexOf("Consolidated water heating system replacement") < body.indexOf("MH-10, MB-2"));
-  // The n/m grammar protects fee-ticket margins in the margin column.
+  // The n/m grammar protects fee-ticket margins; losses render red in-table.
   assert.match(body, />n\/m</);
+  assert.match(body, /−\$2,000/);
 });
 
 test("client-side filtering and sell-value ordering operate on the drilldown cohort", () => {
@@ -524,12 +542,16 @@ test("net-margin display uses the n/m treatment for fee tickets and N/A without 
   assert.deepEqual(netMarginDisplay(0, -100), { kind: "na" });
 });
 
+test("ticket article matches the approved kit grammar", () => {
+  assert.equal(ticketArticle(863), "an");
+  assert.equal(ticketArticle(59), "a");
+});
+
 /* ── Honest states ─────────────────────────────────────── */
 
 test("empty months state the fact instead of fabricating zeros", () => {
   const html = render(buildModel({ selectedMonth: "2026-04" }));
   assert.match(html, /No jobs were completed in this month\./);
-  assert.doesNotMatch(html, /Net-Negative Jobs/);
   assert.doesNotMatch(html, /\$33,800/);
   // The trend card still serves history.
   assert.match(html, /Monthly Trend/);
@@ -541,7 +563,6 @@ test("load errors render the honest error treatment instead of figures", () => {
   assert.match(html, /Job data could not be loaded\./);
   assert.match(html, /Try again/);
   assert.doesNotMatch(html, /\$33,800/);
-  assert.doesNotMatch(html, /Net-Negative Jobs/);
 });
 
 test("unsupported financial values render as N/A, never as zero dollars", () => {
@@ -563,10 +584,14 @@ test("unsupported financial values render as N/A, never as zero dollars", () => 
     }),
   );
   assert.match(html, /N\/A/);
-  assert.doesNotMatch(html, /\$0<\/div>/);
+  assert.match(html, /net margin unavailable/);
+  assert.match(html, /no supported cost basis/);
+  assert.match(html, /revenue n\/a/);
+  assert.match(html, /no supported revenue and net-profit totals to split/);
+  // The band never fabricates a $0 figure — every unsupported value reads N/A.
+  const band = html.slice(html.indexOf('class="kpis hero"'), html.indexOf("kpiband-note"));
+  assert.doesNotMatch(band, /\$0/);
   assert.doesNotMatch(html, /\$0 net/);
-  assert.match(html, /net n\/a/);
-  assert.match(html, /no supported revenue and net-profit totals to bridge/);
   assert.doesNotMatch(html, /NaN|Infinity/);
 });
 
@@ -580,7 +605,16 @@ test("states strip renders only behind the ?states=1 gate", () => {
   assert.match(shown, /Updated 3 hrs ago/);
 });
 
-/* ── Removed surfaces (brief §15.9) ────────────────────── */
+/* ── Removed surfaces (owner rulings) ──────────────────── */
+
+test("the net-negative card/tile is removed; losses stay reachable via the table only", () => {
+  const html = render(buildModel());
+  assert.doesNotMatch(html, /Net-Negative Jobs/);
+  assert.doesNotMatch(html, /finished below zero actual net profit/);
+  assert.doesNotMatch(html, /% of completed jobs/);
+  // The loss rows themselves are still in the completed-jobs table.
+  assert.match(html, /Expansion Tanks for recent Installs/);
+});
 
 test("rejected owner-facing surfaces stay deleted", () => {
   const html = render(buildModel());
@@ -595,6 +629,8 @@ test("rejected owner-facing surfaces stay deleted", () => {
     "jobs-metric-hero",
     "Gross-To-Net Job-Cost Waterfall",
     "nestedItemsComplete",
+    "Revenue to Net Profit", // the old bridge card
+    'class="focal"', // the 751px hero slab
   ]) {
     assert.ok(!html.includes(removed), `rejected surface leaked back into the owner UI: ${removed}`);
   }
