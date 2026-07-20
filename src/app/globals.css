@@ -1298,3 +1298,10 @@ a.kpi:hover{border-color:var(--border-strong)}
 .lrow.zerorow{padding-top:6px;padding-bottom:6px}
 .lrow.zerorow .id1{color:var(--muted)}
 .lrow.zerorow .lamt{font-weight:500;color:var(--faint)}
+
+/* AA sweep fixes (design gate, brief §7.9): canvas-level footnotes and the
+   page eyebrow read in --muted (not --faint/--subtle); the warm bronze chip
+   fg darkens ~15% via color-mix per the convergence note. */
+.footline{color:var(--muted)}
+.eyebrow{color:var(--muted)}
+.tierchip.bronze{color:color-mix(in srgb,#96603a,#000 15%)}

@@ -428,7 +428,8 @@ function TechniciansContent({
           <div className="grid12">
             <CapacityCard rows={rows} onOpen={(row) => setDrillId(row.employeeId)} />
           </div>
-          <div className="grid12">
+          {/* Stretch this pair so the row ends flush (gate: multi-card rows within 28px). */}
+          <div className="grid12" style={{ alignItems: "stretch" }}>
             <EfficiencyCard rows={rows} facts={facts} />
             <PunctualityCard payload={payload} facts={facts} onOpenDetail={() => setPunctOpen(true)} />
           </div>
@@ -675,8 +676,8 @@ function EfficiencyCard({ rows, facts }: { rows: TechnicianScoreRow[]; facts: Te
           <StateEmpty>No covered {mode === "recurring" ? "recurring" : "quote-linked"} jobs for the roster this month.</StateEmpty>
         )}
         <Fnote>
-          <span style={{ color: POS }}>●</span> right of the line = beat the estimate{"  "}
-          <span style={{ color: NEG }}>●</span> left = over · {facts.effCoveredJobs} covered jobs (team)
+          <span style={{ color: "var(--success-fg)" }}>●</span> right of the line = beat the estimate{"  "}
+          <span style={{ color: "var(--state-failed-fg)" }}>●</span> left = over · {facts.effCoveredJobs} covered jobs (team)
           {facts.teamEff !== null ? <> — the team figure is verified, the per-tech split is not yet.</> : "."}
         </Fnote>
         {mode === "recurring" ? (
@@ -798,7 +799,7 @@ function PunctualityDrawerBody({ payload, facts }: { payload: TechnicianPerforma
     return <DNote>No verified arrivals in {facts.monthLong} — no per-technician punctuality yet.</DNote>;
   }
   return (
-    <>
+    <div data-viz="">
       {ranked.map((tech) => (
         <DNote
           key={tech.employeeId}
@@ -820,7 +821,7 @@ function PunctualityDrawerBody({ payload, facts }: { payload: TechnicianPerforma
         Rates are the on-time share of verified visits only — team coverage is {facts.verifiedVisits} of {facts.scheduledVisits}{" "}
         {facts.monthLong} visits.
       </Fnote>
-    </>
+    </div>
   );
 }
 

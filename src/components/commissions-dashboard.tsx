@@ -705,7 +705,7 @@ function WorksheetTab({
             }}
           />
           <span>
-            Efficiency adjustment · <span style={{ color: "var(--subtle)" }}>{eff ? "on" : "off"}</span>
+            Efficiency adjustment · <span style={{ color: "var(--muted)" }}>{eff ? "on" : "off"}</span>
           </span>
         </label>
         <label
@@ -732,7 +732,7 @@ function WorksheetTab({
             style={{ width: 130 }}
             onChange={(event) => onControls({ ...controls, maxAdjustmentPercent: Number(event.target.value) })}
           />
-          <b className="tnum" style={{ color: eff ? "var(--ink-2)" : "var(--faint)" }}>
+          <b className="tnum" style={{ color: eff ? "var(--ink-2)" : "var(--muted)" }}>
             ±{controls.maxAdjustmentPercent}%
           </b>
         </label>
