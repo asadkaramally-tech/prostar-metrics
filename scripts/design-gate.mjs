@@ -1,7 +1,12 @@
 // Objective gate for the metrics redesign mockups (adversarial-ui-review harness).
 // Run: node docs/design/metrics-mockups/review-workspace/gate.mjs
 // Exits non-zero on any violation. Screenshots land in review-workspace/shots/.
-import { chromium } from 'playwright';
+// playwright is not (yet) a repo dependency; fall back to a sibling checkout's install.
+let chromium;
+try { ({ chromium } = await import('playwright')); }
+catch {
+  ({ chromium } = await import('file:///Users/asadkaramally/Documents/Codex/2026-05-28/prostar-quote-workflow-completion/node_modules/playwright/index.mjs'));
+}
 import { mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
