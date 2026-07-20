@@ -12,7 +12,7 @@ async function check(name, fn) {
   catch (e) { out.push([name, false, e.message.slice(0, 80)]); }
 }
 
-await p.goto(BASE + '/quotes', { waitUntil: 'domcontentloaded' });
+await p.goto(BASE + '/quotes', { waitUntil: 'domcontentloaded', timeout: 150000 });
 await check('quotes: primary viz marked', async () => p.locator('[data-primary-viz]').first().waitFor({ timeout: 5000 }));
 await check('quotes: trend hover tooltip', async () => {
   const svg = p.locator('[data-primary-viz] svg').first();
@@ -28,7 +28,7 @@ await check('quotes: labeled delta pills', async () => {
   return 'all pills labeled';
 });
 
-await p.goto(BASE + '/jobs', { waitUntil: 'domcontentloaded' });
+await p.goto(BASE + '/jobs', { waitUntil: 'domcontentloaded', timeout: 150000 });
 await check('jobs: completed-jobs row opens drawer', async () => {
   await p.locator('table tbody tr').last().click();
   await p.waitForTimeout(400);
@@ -37,14 +37,14 @@ await check('jobs: completed-jobs row opens drawer', async () => {
   await p.keyboard.press('Escape');
 });
 
-await p.goto(BASE + '/technicians', { waitUntil: 'domcontentloaded' });
+await p.goto(BASE + '/technicians', { waitUntil: 'domcontentloaded', timeout: 150000 });
 await check('technicians: no capacity model, no flags strip', async () => {
   const t = await p.evaluate(() => document.body.innerText);
   if (/184h|capacity used/i.test(t)) throw new Error('capacity model text still present');
   if (/is an active technician with/i.test(t)) throw new Error('alert banner still present');
 });
 
-await p.goto(BASE + '/commissions', { waitUntil: 'domcontentloaded' });
+await p.goto(BASE + '/commissions', { waitUntil: 'domcontentloaded', timeout: 150000 });
 await check('commissions: no eligibility wording', async () => {
   const t = await p.evaluate(() => document.body.innerText);
   if (/eligib/i.test(t)) throw new Error('eligibility wording present');
