@@ -494,7 +494,7 @@ export function monitoringManagedResourceContract(postgresTargetId) {
   ]) add(topLevel("microsoft.insights/metricalerts", `alert-prostar-metrics-postgres-${suffix}`), "microsoft.insights/metricalerts");
   add(topLevel("microsoft.insights/metricalerts", "alert-prostar-metrics-export-storage-failures"), "microsoft.insights/metricalerts");
 
-  if (resources.size !== 70) throw new Error(`Monitoring resource contract must contain exactly 70 resources; received ${resources.size}.`);
+  if (resources.size !== 72) throw new Error(`Monitoring resource contract must contain exactly 72 resources; received ${resources.size}.`);
   return Object.freeze(Array.from(resources, ([resourceId, resourceType]) => Object.freeze({ resourceId, resourceType })));
 }
 
@@ -984,7 +984,7 @@ function verifyProductionKeyVaultPreflight(contract) {
       name,
     );
   }
-  log(`verified versionless Key Vault references for ${CONTAINER_APP_NAME} and 23 jobs`);
+  log(`verified versionless Key Vault references for ${CONTAINER_APP_NAME} and 24 jobs`);
 }
 
 export function validateEvidenceSigningKeyIds(keyIds, vaultName) {

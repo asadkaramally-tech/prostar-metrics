@@ -1273,7 +1273,7 @@ export async function runKeyVaultMigrationWorkflow({
   const migrationRunId = args.writerFreezeId == null
     ? null
     : canonicalMigrationRunId(args.writerFreezeId, "Workflow writer-freeze ID must be a UUIDv4");
-  if (targets.length !== 24) throw new Error("Key Vault migration requires the exact 24 production targets");
+  if (targets.length !== 25) throw new Error("Key Vault migration requires the exact 25 production targets");
   const identity = await operations.readIdentity();
   if (!identity?.id || !identity?.principalId) throw new Error("The existing production user-assigned identity was not found");
   const vault = await operations.readVault();

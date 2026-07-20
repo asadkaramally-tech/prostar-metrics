@@ -20,6 +20,7 @@ export const PRODUCTION_JOB_NAMES = Object.freeze([
   "job-psm-reconcile-trailing-24m",
   "job-psm-reconcile-stable-history",
   "job-psm-commissions-nightly",
+  "job-psm-materials",
   "job-prostar-metrics-reconcile",
   "job-prostar-metrics-employees",
   "job-prostar-metrics-timesheets",
@@ -41,7 +42,7 @@ export function assertExactProductionJobNames(actualNames, label = "production j
   const actual = [...actualNames].sort();
   const expected = [...PRODUCTION_JOB_NAMES].sort();
   if (new Set(actual).size !== actual.length || JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error(`${label} must match the immutable exact 23-job production target set.`);
+    throw new Error(`${label} must match the immutable exact 24-job production target set.`);
   }
   return actual;
 }
@@ -59,7 +60,7 @@ export function assertExactProductionTargets(actualTargets) {
   const actual = actualTargets.map(canonical).sort();
   const expected = PRODUCTION_TARGETS.map(canonical).sort();
   if (new Set(actual).size !== actual.length || JSON.stringify(actual) !== JSON.stringify(expected)) {
-    throw new Error("Production targets must match the immutable app plus exact 23-job allowlist.");
+    throw new Error("Production targets must match the immutable app plus exact 24-job allowlist.");
   }
   return PRODUCTION_TARGETS;
 }

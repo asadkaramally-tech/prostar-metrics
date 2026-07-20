@@ -45,7 +45,7 @@ const browser = await chromium.launch();
 for (const [name, cfg] of Object.entries(PAGES)) {
   if (ONLY.length && !ONLY.includes(name)) continue;
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await page.goto(BASE + cfg.url, { waitUntil: 'networkidle' });
+  await page.goto(BASE + cfg.url, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(400);
 
   // 1. no horizontal overflow at several widths — page-level AND card-level
@@ -239,12 +239,12 @@ for (const [name, cfg] of Object.entries(PAGES)) {
   // screenshots
   await page.screenshot({ path: resolve(shots, `${name}-1440.png`), fullPage: true });
   const fold = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await fold.goto(BASE + cfg.url, { waitUntil: 'networkidle' });
+  await fold.goto(BASE + cfg.url, { waitUntil: 'domcontentloaded' });
   await fold.waitForTimeout(400);
   await fold.screenshot({ path: resolve(shots, `${name}-fold-1440x900.png`) });
   await fold.close();
   const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await mob.goto(BASE + cfg.url, { waitUntil: 'networkidle' });
+  await mob.goto(BASE + cfg.url, { waitUntil: 'domcontentloaded' });
   await mob.waitForTimeout(400);
   await mob.screenshot({ path: resolve(shots, `${name}-390.png`), fullPage: true });
   await mob.close();
