@@ -44,7 +44,7 @@ function ratio(a, b) {
 const browser = await chromium.launch();
 for (const [name, cfg] of Object.entries(PAGES)) {
   if (ONLY.length && !ONLY.includes(name)) continue;
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
   await page.goto(BASE + cfg.url, { waitUntil: 'domcontentloaded', timeout: 150000 });
   // streamed SSR: wait for the KPI band's values before measuring anything
   await page.waitForSelector('.kpi .val, .focal .big', { timeout: 150000 });
@@ -183,6 +183,7 @@ for (const [name, cfg] of Object.entries(PAGES)) {
         const cs = getComputedStyle(node);
         if (cs.backgroundImage !== 'none' && cs.backgroundImage.includes('gradient')) {
           if (cs.backgroundImage.includes('23, 26, 38')) return [16, 19, 32, 1]; // hero
+          if (node.classList && node.classList.contains('main')) return [242, 244, 247, 1]; // canvas gradient
           if (cs.backgroundImage.includes('repeating')) {
             // hatch overlay: worst-case = own bg shifted toward the stripe color
             // (light bands use 12% white stripes, dark bands 14% black)
