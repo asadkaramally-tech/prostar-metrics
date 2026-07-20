@@ -378,13 +378,17 @@ function TrendCard({ model, months, initialVolume }: { model: QuoteMetricsReadMo
       style={{ scrollMarginTop: 70 }}
       title={<span id="trend">Acceptance Trend</span>}
       subtitle={`${full[0] ?? ""} – ${full[n - 1] ?? ""} · hover or tap for monthly detail`}
+      aside={
+        <MetricPicker
+          style={{ padding: 0 }}
+          groups={[TREND_CHIPS.map((c) => ({ key: c.key, label: c.label, color: c.color }))]}
+          selected={modes}
+          onToggle={(key) => setModes((prev) => nextTrendModes(prev, key as TrendMode))}
+        />
+      }
     >
-      <MetricPicker
-        groups={[TREND_CHIPS.map((c) => ({ key: c.key, label: c.label, color: c.color }))]}
-        selected={modes}
-        onToggle={(key) => setModes((prev) => nextTrendModes(prev, key as TrendMode))}
-      />
       <CardBody>
+        <div data-primary-viz="">
         <LineChart
           labels={labels}
           series={series}
@@ -417,6 +421,7 @@ function TrendCard({ model, months, initialVolume }: { model: QuoteMetricsReadMo
             />
           </>
         ) : null}
+      </div>
       </CardBody>
     </Card>
   );

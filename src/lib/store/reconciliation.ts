@@ -186,6 +186,11 @@ async function reconcileScope(
       return reconcileTechnicians(period, dependencies);
     case "commissions":
       return reconcileCommissions(period, dependencies);
+    case "materials":
+      // The materials mirror is authored by full live month walks
+      // (workers/ingest-materials.ts); there is no sampled reconciliation and
+      // the scope is never scheduled here (allScopes excludes it).
+      throw new Error("Materials has no sampled reconciliation; rerun the materials month walk instead.");
     default:
       assertNever(scope);
   }

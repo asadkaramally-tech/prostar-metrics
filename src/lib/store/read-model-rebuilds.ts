@@ -7,8 +7,10 @@ import {
   type JobMetricsDashboardReadModel,
   type NormalizedJobSnapshot,
 } from "@/lib/metrics/jobs";
+import type { MaterialsReadModel } from "@/lib/metrics/materials";
 import { buildQuoteMonthlyReadModel, type NormalizedQuoteSnapshot, type QuoteMonthlyReadModel } from "@/lib/metrics/quotes";
 import { buildTechnicianPerformanceReadModel } from "@/lib/metrics/technicians";
+import { buildMaterialsReadModelPayload } from "@/lib/store/materials-read-model";
 import { BACKFILL_START_MONTH, businessCurrentMonth } from "@/lib/backfill/plan";
 import { queryPostgres, withPostgresTransaction, type PostgresQuery } from "@/lib/store/postgres";
 import {
@@ -34,7 +36,8 @@ export type JobDashboardReadModelPayload = ReturnType<typeof buildJobMonthlyRead
 export type ReadModelPayload = QuoteDashboardReadModelPayload
   | JobDashboardReadModelPayload
   | ReturnType<typeof buildTechnicianPerformanceReadModel>
-  | CommissionReadModel;
+  | CommissionReadModel
+  | MaterialsReadModel;
 
 export type RollupRebuildJob = {
   id: number;
@@ -499,6 +502,8 @@ async function buildPayload(scope: RollupScope, periodStart: string, periodEnd: 
       return buildJobDashboardPayload(periodStart, periodEnd);
     case "technicians":
       return buildTechnicianPerformanceReadModel(await getTechnicianPerformanceInputs(periodStart, periodEnd));
+    case "materials":
+      return buildMaterialsReadModelPayload(periodStart);
     case "commissions":
       throw new Error("Commission rebuilds require the owner-fenced transactional publication workflow.");
     default:

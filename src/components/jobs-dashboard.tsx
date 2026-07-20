@@ -572,7 +572,7 @@ function TrendBody({ model, metrics, sel }: { model: JobDashboardReadModel; metr
         key="money"
         labels={labels}
         series={moneyDrawn.map((m): LineSeries => ({ name: m.label, vals: m.values, color: m.color, width: 2 }))}
-        h={onlyPanel ? 300 : 226}
+        h={onlyPanel ? 300 : 210}
         ymin={ymin}
         ymax={ymax}
         ticks={4}

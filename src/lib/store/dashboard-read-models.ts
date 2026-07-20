@@ -41,6 +41,11 @@ const metricLabels: Record<RollupScope, Record<string, string>> = {
     commission_pool: "Commission pool",
     active_technicians: "Active technicians",
   },
+  materials: {
+    total_sold_value: "Materials sold",
+    category_count: "Categories",
+    item_count: "Items",
+  },
 };
 
 export async function getDashboardReadModel(scope: RollupScope, options: { periodStart?: string } = {}): Promise<DashboardReadModel> {
