@@ -149,20 +149,19 @@ for (const [name, cfg] of Object.entries(PAGES)) {
     return [...new Set([...els].map((e) => e.textContent.trim()).filter((t) => /\d/.test(t) && /[$%×]/.test(t)))];
   });
   const counts = await page.evaluate((figs) => {
+    // count DEEPEST elements whose own trimmed text equals the figure — immune to
+    // JSX node adjacency; catches tile/stat restatement (the real violation)
     const clone = document.body.cloneNode(true);
     clone.querySelectorAll('svg, table, [data-viz], script').forEach((n) => n.remove());
-    const text = clone.textContent;
     const out = {};
-    for (const f of figs) {
-      let c2 = 0, i = -1;
-      const dollar = f.startsWith('$');
-      while ((i = text.indexOf(f, i + 1)) !== -1) {
-        const pre = text[i - 1] || ' ';
-        const post = text[i + f.length] || ' ';
-        const preOk = dollar ? pre !== '$' : !/[\d.,$]/.test(pre);
-        if (preOk && !/\d/.test(post)) c2++;
-      }
-      out[f] = c2;
+    for (const f of figs) out[f] = 0;
+    const all = clone.querySelectorAll('*');
+    for (const el of all) {
+      const t = el.textContent.trim();
+      if (!(t in out)) continue;
+      let deepest = true;
+      for (const ch of el.children) if (ch.textContent.trim() === t) { deepest = false; break; }
+      if (deepest) out[t]++;
     }
     return out;
   }, figList);
