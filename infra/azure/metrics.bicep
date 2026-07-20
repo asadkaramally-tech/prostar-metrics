@@ -83,7 +83,7 @@ param jobCpu string = '0.5'
 param jobMemory string = '1Gi'
 
 @description('Cron expression for bounded Simpro ingestion.')
-param ingestionCronExpression string = '0 */6 * * *'
+param ingestionCronExpression string = '*/20 * * * *'
 
 @description('Cron expression for rollup/snapshot reconciliation.')
 param reconciliationCronExpression string = '30 5 * * *'
