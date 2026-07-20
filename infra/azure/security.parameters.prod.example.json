@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "westus2"
+    },
+    "environmentName": {
+      "value": "prod"
+    },
+    "keyVaultName": {
+      "value": "kv-prostar-metrics-prod"
+    },
+    "deployNewKeyVault": {
+      "value": true
+    },
+    "managedIdentityName": {
+      "value": "id-prostar-dispatch-prod"
+    },
+    "gateEvidenceSignerIdentityName": {
+      "value": "id-prostar-release-gate-prod"
+    },
+    "browserEvidenceSignerIdentityName": {
+      "value": "id-prostar-release-browser-prod"
+    },
+    "reviewerEvidenceSignerIdentityName": {
+      "value": "id-prostar-release-reviewer-prod"
+    },
+    "writeSecretValues": {
+      "value": false
+    },
+    "azurePostgresConnectionStringSecretName": {
+      "value": "azure-postgres-connection-string"
+    },
+    "simproBearerTokenSecretName": {
+      "value": "simpro-bearer-token"
+    },
+    "microsoftProviderAuthenticationSecretName": {
+      "value": "microsoft-provider-authentication-secret"
+    },
+    "postgresSslCaCertBase64SecretName": {
+      "value": "postgres-ssl-ca-cert-base64"
+    }
+  }
+}

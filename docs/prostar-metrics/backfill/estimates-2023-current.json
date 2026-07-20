@@ -1,0 +1,2152 @@
+{
+  "2023-01:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-01:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-01:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-01:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-01:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-01:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-01:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-01:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-01:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-01:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-02:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-02:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-02:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-02:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-02:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-02:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-02:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-02:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-02:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-02:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-03:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-03:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-03:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-03:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-03:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-03:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-03:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-03:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-03:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-03:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-04:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-04:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-04:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-04:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-04:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-04:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-04:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-04:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-04:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-04:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-05:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-05:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-05:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-05:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-05:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-05:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-05:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-05:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-05:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-05:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-06:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-06:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-06:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-06:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-06:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-06:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-06:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-06:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-06:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-06:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-07:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-07:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-07:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-07:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-07:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-07:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-07:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-07:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-07:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-07:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-08:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-08:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-08:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-08:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-08:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-08:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-08:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-08:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-08:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-08:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-09:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-09:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-09:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-09:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-09:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-09:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-09:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-09:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-09:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-09:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-10:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-10:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-10:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-10:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-10:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-10:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-10:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-10:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-10:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-10:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-11:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-11:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-11:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-11:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-11:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-11:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-11:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-11:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-11:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-11:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2023-12:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-12:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-12:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2023-12:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2023-12:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2023-12:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2023-12:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-12:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2023-12:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2023-12:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-01:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-01:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-01:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-01:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-01:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-01:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-01:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-01:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-01:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-01:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-02:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-02:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-02:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-02:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-02:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-02:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-02:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-02:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-02:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-02:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-03:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-03:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-03:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-03:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-03:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-03:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-03:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-03:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-03:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-03:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-04:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-04:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-04:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-04:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-04:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-04:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-04:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-04:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-04:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-04:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-05:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-05:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-05:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-05:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-05:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-05:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-05:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-05:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-05:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-05:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-06:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-06:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-06:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-06:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-06:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-06:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-06:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-06:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-06:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-06:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-07:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-07:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-07:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-07:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-07:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-07:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-07:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-07:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-07:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-07:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-08:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-08:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-08:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-08:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-08:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-08:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-08:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-08:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-08:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-08:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-09:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-09:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-09:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-09:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-09:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-09:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-09:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-09:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-09:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-09:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-10:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-10:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-10:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-10:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-10:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-10:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-10:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-10:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-10:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-10:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-11:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-11:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-11:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-11:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-11:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-11:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-11:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-11:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-11:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-11:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2024-12:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-12:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-12:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2024-12:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2024-12:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2024-12:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2024-12:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-12:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2024-12:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2024-12:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-01:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-01:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-01:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-01:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-01:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-01:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-01:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-01:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-01:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-01:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-02:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-02:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-02:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-02:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-02:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-02:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-02:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-02:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-02:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-02:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-03:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-03:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-03:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-03:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-03:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-03:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-03:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-03:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-03:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-03:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-04:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-04:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-04:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-04:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-04:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-04:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-04:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-04:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-04:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-04:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-05:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-05:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-05:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-05:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-05:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-05:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-05:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-05:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-05:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-05:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-06:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-06:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-06:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-06:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-06:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-06:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-06:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-06:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-06:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-06:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-07:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-07:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-07:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-07:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-07:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-07:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-07:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-07:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-07:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-07:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-08:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-08:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-08:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-08:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-08:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-08:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-08:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-08:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-08:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-08:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-09:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-09:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-09:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-09:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-09:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-09:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-09:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-09:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-09:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-09:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-10:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-10:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-10:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-10:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-10:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-10:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-10:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-10:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-10:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-10:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-11:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-11:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-11:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-11:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-11:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-11:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-11:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-11:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-11:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-11:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2025-12:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-12:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-12:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2025-12:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2025-12:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2025-12:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2025-12:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-12:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2025-12:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2025-12:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2026-01:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-01:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-01:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2026-01:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2026-01:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2026-01:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2026-01:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-01:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-01:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-01:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2026-02:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-02:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-02:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2026-02:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2026-02:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2026-02:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2026-02:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-02:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-02:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-02:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2026-03:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-03:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-03:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2026-03:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2026-03:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2026-03:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2026-03:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-03:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-03:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-03:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2026-04:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-04:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-04:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2026-04:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2026-04:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2026-04:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2026-04:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-04:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-04:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-04:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2026-05:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-05:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-05:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2026-05:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2026-05:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2026-05:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2026-05:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-05:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-05:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-05:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2026-06:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-06:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-06:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2026-06:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2026-06:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2026-06:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2026-06:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-06:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-06:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-06:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  },
+  "2026-07:quotes": {
+    "expectedPages": 62,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-07:jobs": {
+    "expectedPages": 31,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-07:employees": {
+    "expectedPages": 1,
+    "expectedRecords": 20,
+    "estimatedNestedRequests": 0
+  },
+  "2026-07:quote_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 5000
+  },
+  "2026-07:job_nested": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 10500
+  },
+  "2026-07:timesheets": {
+    "expectedPages": 20,
+    "expectedRecords": 3000,
+    "estimatedNestedRequests": 0
+  },
+  "2026-07:jobs_from_timesheets": {
+    "expectedPages": 0,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-07:schedules": {
+    "expectedPages": 2,
+    "expectedRecords": 350,
+    "estimatedNestedRequests": 0
+  },
+  "2026-07:invoices": {
+    "expectedPages": 4,
+    "expectedRecords": 200,
+    "estimatedNestedRequests": 0
+  },
+  "2026-07:mobile_status": {
+    "expectedPages": 0,
+    "expectedRecords": 0,
+    "estimatedNestedRequests": 0
+  }
+}

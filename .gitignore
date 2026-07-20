@@ -1,0 +1,15 @@
+node_modules
+.next
+.env
+.env.local
+*.log
+coverage
+dist
+tmp
+.DS_Store
+.mcp.json
+.tools/
+.venv/
+.work/
+output/
+tsconfig.tsbuildinfo

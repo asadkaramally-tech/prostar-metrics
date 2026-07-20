@@ -1,0 +1,17 @@
+FROM node:24-bookworm-slim AS node-runtime
+
+FROM mcr.microsoft.com/azure-cli:2.76.0-azurelinux3.0
+
+COPY --from=node-runtime /usr/local/ /usr/local/
+
+WORKDIR /app
+ENV NODE_ENV=test
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN chown -R 10001:10001 /app
+
+USER 10001:10001
+ENTRYPOINT ["node", "scripts/run-release-evidence-job.mjs"]

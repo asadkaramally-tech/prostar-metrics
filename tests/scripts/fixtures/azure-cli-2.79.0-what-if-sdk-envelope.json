@@ -1,0 +1,24 @@
+{
+  "changes": [
+    {
+      "after": {
+        "apiVersion": "2023-05-01",
+        "id": "/subscriptions/d7a98155-9693-4c6b-ad27-39e945c0f751/resourceGroups/prostar-payroll/providers/Microsoft.Storage/storageAccounts/stprostarmetricsexports/blobServices/default/containers/release-evidence-gate",
+        "name": "stprostarmetricsexports/default/release-evidence-gate",
+        "properties": {
+          "immutableStorageWithVersioning": {
+            "enabled": false
+          },
+          "publicAccess": "None"
+        },
+        "type": "Microsoft.Storage/storageAccounts/blobServices/containers"
+      },
+      "before": null,
+      "changeType": "Create",
+      "delta": null,
+      "resourceId": "/subscriptions/d7a98155-9693-4c6b-ad27-39e945c0f751/resourceGroups/prostar-payroll/providers/Microsoft.Storage/storageAccounts/stprostarmetricsexports/blobServices/default/containers/release-evidence-gate"
+    }
+  ],
+  "error": null,
+  "status": "Succeeded"
+}

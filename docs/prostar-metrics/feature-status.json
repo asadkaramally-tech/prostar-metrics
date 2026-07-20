@@ -1,0 +1,6538 @@
+{
+  "schemaVersion": 4,
+  "planRevision": "2026-07-13",
+  "planSha256": "7392ad68fb810b840175604291a9b43cb57a3a4dce23de546f3e1c057abca3e5",
+  "deploymentManifestPath": null,
+  "deploymentManifestSha256": null,
+  "e2eReportPath": null,
+  "e2eReportSha256": null,
+  "a11yReportPath": null,
+  "a11yReportSha256": null,
+  "reviewerAttestationPath": null,
+  "reviewerAttestationSha256": null,
+  "allowedStatuses": [
+    "VERIFIED DONE",
+    "IN PROGRESS",
+    "PARTIAL",
+    "NOT STARTED",
+    "TECHNICALLY BLOCKED",
+    "DEFERRED BY ASAD",
+    "REMOVED BY OWNER DECISION"
+  ],
+  "features": [
+    {
+      "id": "F-01",
+      "requirement": "Next.js/TypeScript application contains all four v1 routes",
+      "baselineStatus": "VERIFIED DONE",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-00",
+      "acceptingGate": "G-0",
+      "owner": "Codex Integration/Verification Owner",
+      "worktree": "shared main-thread workspace",
+      "dependencies": [],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [],
+      "testIds": {
+        "unit": [
+          "UNIT-F-01-contract"
+        ],
+        "integration": [
+          "INT-F-01-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-01-all-months"
+        ],
+        "e2e": [
+          "E2E-F-01-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-01-desktop",
+          "A11Y-f-01-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-0/F-01/",
+        "docs/prostar-metrics/reconciliation/F-01.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-0/F-01/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-02",
+      "requirement": "Migrations implement the full source, normalized, rollup, override, audit, lifecycle, and export contract",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-02",
+      "acceptingGate": "G-2",
+      "owner": "Data Contract Agent",
+      "worktree": "codex/wp-02-data-contract",
+      "dependencies": [
+        "F-01"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [],
+      "testIds": {
+        "unit": [
+          "UNIT-F-02-contract"
+        ],
+        "integration": [
+          "INT-F-02-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-02-all-months"
+        ],
+        "e2e": [
+          "E2E-F-02-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-02-desktop",
+          "A11Y-f-02-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-2/F-02/",
+        "docs/prostar-metrics/reconciliation/F-02.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-2/F-02/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-03",
+      "requirement": "P0: Entra authentication works and Asad/Laila can open every production page",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P0",
+      "accountableWorkPackage": "WP-01",
+      "acceptingGate": "G-1",
+      "owner": "Plato Production Entry Agent",
+      "worktree": "codex/wp-01-production-entry",
+      "dependencies": [
+        "F-01"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [
+        "/.auth/login/aad",
+        "/.auth/me"
+      ],
+      "databaseTables": [],
+      "testIds": {
+        "unit": [
+          "UNIT-F-03-contract"
+        ],
+        "integration": [
+          "INT-F-03-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-03-all-months"
+        ],
+        "e2e": [
+          "E2E-F-03-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-03-desktop",
+          "A11Y-f-03-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-1/F-03/",
+        "docs/prostar-metrics/reconciliation/F-03.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-1/F-03/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-04",
+      "requirement": "Typed Simpro client implements all required list, detail, nested, schedule, mobile, employee, and timesheet endpoints",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P0",
+      "accountableWorkPackage": "WP-02",
+      "acceptingGate": "G-2",
+      "owner": "Data Contract Agent",
+      "worktree": "codex/wp-02-data-contract",
+      "dependencies": [],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [],
+      "testIds": {
+        "unit": [
+          "UNIT-F-04-contract"
+        ],
+        "integration": [
+          "INT-F-04-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-04-all-months"
+        ],
+        "e2e": [
+          "E2E-F-04-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-04-desktop",
+          "A11Y-f-04-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-2/F-04/",
+        "docs/prostar-metrics/reconciliation/F-04.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-2/F-04/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-05",
+      "requirement": "Queue supports idempotency, locks, retry, continuation, priority, budgets, and safe multi-worker behavior",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-03",
+      "acceptingGate": "G-3",
+      "owner": "Pipeline Agent",
+      "worktree": "codex/wp-03-pipeline",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-06"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [
+        "metrics.ingestion_jobs",
+        "metrics.ingestion_runs",
+        "metrics.ingestion_watermarks"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-F-05-contract"
+        ],
+        "integration": [
+          "INT-F-05-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-05-all-months"
+        ],
+        "e2e": [
+          "E2E-F-05-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-05-desktop",
+          "A11Y-f-05-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-3/F-05/",
+        "docs/prostar-metrics/reconciliation/F-05.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-3/F-05/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-06",
+      "requirement": "Distributed Simpro limiter caps aggregate traffic from every worker/manual run at five requests per second",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-03",
+      "acceptingGate": "G-3",
+      "owner": "Pipeline Agent",
+      "worktree": "codex/wp-03-pipeline",
+      "dependencies": [],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [
+        "metrics.ingestion_jobs",
+        "metrics.ingestion_runs",
+        "metrics.ingestion_watermarks"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-F-06-contract"
+        ],
+        "integration": [
+          "INT-F-06-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-06-all-months"
+        ],
+        "e2e": [
+          "E2E-F-06-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-06-desktop",
+          "A11Y-f-06-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-3/F-06/",
+        "docs/prostar-metrics/reconciliation/F-06.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-3/F-06/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-07",
+      "requirement": "Freshness represents complete source windows and reconciliation, not any successful request",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P0",
+      "accountableWorkPackage": "WP-03",
+      "acceptingGate": "G-3",
+      "owner": "Pipeline Agent",
+      "worktree": "codex/wp-03-pipeline",
+      "dependencies": [
+        "F-02",
+        "F-05",
+        "F-10"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [
+        "GET /api/health"
+      ],
+      "databaseTables": [
+        "metrics.source_freshness",
+        "metrics.reconciliation_runs",
+        "metrics.reconciliation_differences"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-F-07-contract"
+        ],
+        "integration": [
+          "INT-F-07-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-07-all-months"
+        ],
+        "e2e": [
+          "E2E-F-07-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-07-desktop",
+          "A11Y-f-07-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-3/F-07/",
+        "docs/prostar-metrics/reconciliation/F-07.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-3/F-07/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-08",
+      "requirement": "Static guard blocks every legacy mirror/runtime identifier",
+      "baselineStatus": "VERIFIED DONE",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-00",
+      "acceptingGate": "G-0",
+      "owner": "Codex Integration/Verification Owner",
+      "worktree": "shared main-thread workspace",
+      "dependencies": [],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [],
+      "testIds": {
+        "unit": [
+          "UNIT-F-08-contract"
+        ],
+        "integration": [
+          "INT-F-08-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-08-all-months"
+        ],
+        "e2e": [
+          "E2E-F-08-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-08-desktop",
+          "A11Y-f-08-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-0/F-08/",
+        "docs/prostar-metrics/reconciliation/F-08.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-0/F-08/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-09",
+      "requirement": "No production path uses demo, generated, hard-coded, or placeholder business metrics",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-11",
+      "acceptingGate": "G-10",
+      "owner": "Codex Integration/Verification Owner",
+      "worktree": "shared main-thread workspace",
+      "dependencies": [
+        "F-01",
+        "F-08"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [],
+      "testIds": {
+        "unit": [
+          "UNIT-F-09-contract"
+        ],
+        "integration": [
+          "INT-F-09-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-09-all-months"
+        ],
+        "e2e": [
+          "E2E-F-09-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-09-desktop",
+          "A11Y-f-09-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-10/F-09/",
+        "docs/prostar-metrics/reconciliation/F-09.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-10/F-09/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-10",
+      "requirement": "Reconciliation compares upstream IDs/totals to snapshots and rollups with repair behavior",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P0",
+      "accountableWorkPackage": "WP-03",
+      "acceptingGate": "G-3",
+      "owner": "Pipeline Agent",
+      "worktree": "codex/wp-03-pipeline",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-05"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [
+        "GET /api/health"
+      ],
+      "databaseTables": [
+        "metrics.source_freshness",
+        "metrics.reconciliation_runs",
+        "metrics.reconciliation_differences"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-F-10-contract"
+        ],
+        "integration": [
+          "INT-F-10-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-10-all-months"
+        ],
+        "e2e": [
+          "E2E-F-10-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-10-desktop",
+          "A11Y-f-10-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-3/F-10/",
+        "docs/prostar-metrics/reconciliation/F-10.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-3/F-10/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-11",
+      "requirement": "Required schedules and worker-drain behavior meet Section 4.6",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-03",
+      "acceptingGate": "G-3",
+      "owner": "Pipeline Agent",
+      "worktree": "codex/wp-03-pipeline",
+      "dependencies": [
+        "F-05",
+        "F-06"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [
+        "metrics.ingestion_jobs",
+        "metrics.ingestion_runs",
+        "metrics.ingestion_watermarks"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-F-11-contract"
+        ],
+        "integration": [
+          "INT-F-11-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-11-all-months"
+        ],
+        "e2e": [
+          "E2E-F-11-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-11-desktop",
+          "A11Y-f-11-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-3/F-11/",
+        "docs/prostar-metrics/reconciliation/F-11.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-3/F-11/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-12",
+      "requirement": "Resumable 2023-current backfill is complete and period coverage is proven",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P0",
+      "accountableWorkPackage": "WP-04",
+      "acceptingGate": "G-4",
+      "owner": "Pipeline Agent",
+      "worktree": "codex/wp-04-backfill",
+      "dependencies": [
+        "F-04",
+        "F-05",
+        "F-10",
+        "F-11"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [
+        "metrics.ingestion_jobs",
+        "metrics.ingestion_runs",
+        "metrics.ingestion_watermarks"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-F-12-contract"
+        ],
+        "integration": [
+          "INT-F-12-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-12-all-months"
+        ],
+        "e2e": [
+          "E2E-F-12-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-12-desktop",
+          "A11Y-f-12-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-4/F-12/",
+        "docs/prostar-metrics/reconciliation/F-12.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-4/F-12/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-13",
+      "requirement": "Owner-visible queue/freshness/reconciliation diagnostics exist",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-03",
+      "acceptingGate": "G-3",
+      "owner": "Pipeline Agent",
+      "worktree": "codex/wp-03-pipeline",
+      "dependencies": [
+        "F-07",
+        "F-10"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [
+        "GET /api/health"
+      ],
+      "databaseTables": [
+        "metrics.source_freshness",
+        "metrics.reconciliation_runs",
+        "metrics.reconciliation_differences"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-F-13-contract"
+        ],
+        "integration": [
+          "INT-F-13-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-13-all-months"
+        ],
+        "e2e": [
+          "E2E-F-13-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-13-desktop",
+          "A11Y-f-13-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-3/F-13/",
+        "docs/prostar-metrics/reconciliation/F-13.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-3/F-13/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-14",
+      "requirement": "Azure monitoring alerts on freshness, drift, failures, queue age, and infrastructure health",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-10",
+      "acceptingGate": "G-9",
+      "owner": "Infrastructure Agent",
+      "worktree": "codex/wp-10-infrastructure",
+      "dependencies": [
+        "F-07",
+        "F-10",
+        "F-11"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [
+        "metrics.source_freshness",
+        "metrics.reconciliation_runs",
+        "metrics.reconciliation_differences"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-F-14-contract"
+        ],
+        "integration": [
+          "INT-F-14-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-14-all-months"
+        ],
+        "e2e": [
+          "E2E-F-14-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-14-desktop",
+          "A11Y-f-14-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-9/F-14/",
+        "docs/prostar-metrics/reconciliation/F-14.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-9/F-14/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-15",
+      "requirement": "Production operations baseline meets Section 10",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-10",
+      "acceptingGate": "G-9",
+      "owner": "Infrastructure Agent",
+      "worktree": "codex/wp-10-infrastructure",
+      "dependencies": [
+        "F-02"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [],
+      "testIds": {
+        "unit": [
+          "UNIT-F-15-contract"
+        ],
+        "integration": [
+          "INT-F-15-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-15-all-months"
+        ],
+        "e2e": [
+          "E2E-F-15-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-15-desktop",
+          "A11Y-f-15-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-9/F-15/",
+        "docs/prostar-metrics/reconciliation/F-15.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-9/F-15/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-16",
+      "requirement": "Authenticated browser and integration test suite protects critical flows",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-11",
+      "acceptingGate": "G-10",
+      "owner": "Codex Integration/Verification Owner",
+      "worktree": "shared main-thread workspace",
+      "dependencies": [
+        "F-01",
+        "F-03"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [
+        "/.auth/login/aad",
+        "/.auth/me"
+      ],
+      "databaseTables": [],
+      "testIds": {
+        "unit": [
+          "UNIT-F-16-contract"
+        ],
+        "integration": [
+          "INT-F-16-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-16-all-months"
+        ],
+        "e2e": [
+          "E2E-F-16-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-16-desktop",
+          "A11Y-f-16-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-10/F-16/",
+        "docs/prostar-metrics/reconciliation/F-16.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-10/F-16/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-17",
+      "requirement": "Authorized bounded manual refresh/backfill shows queue status, respects rate limits, and writes audit history",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-03",
+      "acceptingGate": "G-3",
+      "owner": "Pipeline Agent",
+      "worktree": "codex/wp-03-pipeline",
+      "dependencies": [
+        "F-03",
+        "F-05",
+        "F-06"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [
+        "metrics.ingestion_jobs",
+        "metrics.ingestion_runs",
+        "metrics.ingestion_watermarks"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-F-17-contract"
+        ],
+        "integration": [
+          "INT-F-17-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-17-all-months"
+        ],
+        "e2e": [
+          "E2E-F-17-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-17-desktop",
+          "A11Y-f-17-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-3/F-17/",
+        "docs/prostar-metrics/reconciliation/F-17.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-3/F-17/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "F-18",
+      "requirement": "Every period/filter selection reads app-owned data and never launches broad synchronous Simpro work",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-11",
+      "acceptingGate": "G-10",
+      "owner": "Codex Integration/Verification Owner",
+      "worktree": "shared main-thread workspace",
+      "dependencies": [
+        "F-02",
+        "F-07"
+      ],
+      "technicalInvestigations": [],
+      "codePaths": [
+        "See docs/prostar-metrics/ownership.md"
+      ],
+      "apiContracts": [],
+      "databaseTables": [],
+      "testIds": {
+        "unit": [
+          "UNIT-F-18-contract"
+        ],
+        "integration": [
+          "INT-F-18-data-path"
+        ],
+        "reconciliation": [
+          "REC-F-18-all-months"
+        ],
+        "e2e": [
+          "E2E-F-18-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-f-18-desktop",
+          "A11Y-f-18-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-10/F-18/",
+        "docs/prostar-metrics/reconciliation/F-18.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-10/F-18/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-01",
+      "requirement": "Snapshot compares Sent, Accepted, count acceptance rate, Total Value, and Accepted Value across selected month, prior month, and prior-year same month; partial periods also show prior-year full-month context",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-01-contract"
+        ],
+        "integration": [
+          "INT-Q-01-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-01-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-01-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-01-desktop",
+          "A11Y-q-01-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-01/",
+        "docs/prostar-metrics/reconciliation/Q-01.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-01/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-02",
+      "requirement": "Provisional alert shows elapsed days, month days, and pace",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-02-contract"
+        ],
+        "integration": [
+          "INT-Q-02-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-02-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-02-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-02-desktop",
+          "A11Y-q-02-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-02/",
+        "docs/prostar-metrics/reconciliation/Q-02.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-02/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-03",
+      "requirement": "Partial-month YoY comparison uses the same elapsed-day cutoff",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-03-contract"
+        ],
+        "integration": [
+          "INT-Q-03-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-03-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-03-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-03-desktop",
+          "A11Y-q-03-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-03/",
+        "docs/prostar-metrics/reconciliation/Q-03.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-03/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-04",
+      "requirement": "Pace strip covers quote count, Accepted count, and quote value",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-04-contract"
+        ],
+        "integration": [
+          "INT-Q-04-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-04-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-04-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-04-desktop",
+          "A11Y-q-04-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-04/",
+        "docs/prostar-metrics/reconciliation/Q-04.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-04/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-05",
+      "requirement": "Trailing-12 Accepted/Not Accepted donut excludes partial month and uses the locked source-backed partition",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-05-contract"
+        ],
+        "integration": [
+          "INT-Q-05-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-05-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-05-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-05-desktop",
+          "A11Y-q-05-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-05/",
+        "docs/prostar-metrics/reconciliation/Q-05.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-05/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-06",
+      "requirement": "YoY table includes sent, Accepted, acceptance rates, values, and average accepted deal",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-06-contract"
+        ],
+        "integration": [
+          "INT-Q-06-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-06-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-06-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-06-desktop",
+          "A11Y-q-06-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-06/",
+        "docs/prostar-metrics/reconciliation/Q-06.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-06/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-07",
+      "requirement": "Tiers are Under $750, $750-$2K, $2K-$10K, and $10K+",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-07-contract"
+        ],
+        "integration": [
+          "INT-Q-07-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-07-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-07-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-07-desktop",
+          "A11Y-q-07-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-07/",
+        "docs/prostar-metrics/reconciliation/Q-07.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-07/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-08",
+      "requirement": "Quote volume by tier stacked bar",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-08-contract"
+        ],
+        "integration": [
+          "INT-Q-08-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-08-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-08-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-08-desktop",
+          "A11Y-q-08-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-08/",
+        "docs/prostar-metrics/reconciliation/Q-08.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-08/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-09",
+      "requirement": "Monthly acceptance rate by tier line chart",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-09-contract"
+        ],
+        "integration": [
+          "INT-Q-09-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-09-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-09-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-09-desktop",
+          "A11Y-q-09-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-09/",
+        "docs/prostar-metrics/reconciliation/Q-09.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-09/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-10",
+      "requirement": "Count acceptance-rate trend includes monthly, three-month rolling, and 12-month reference",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-10-contract"
+        ],
+        "integration": [
+          "INT-Q-10-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-10-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-10-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-10-desktop",
+          "A11Y-q-10-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-10/",
+        "docs/prostar-metrics/reconciliation/Q-10.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-10/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-11",
+      "requirement": "Value acceptance-rate trend includes monthly, three-month rolling, and 12-month reference",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-11-contract"
+        ],
+        "integration": [
+          "INT-Q-11-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-11-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-11-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-11-desktop",
+          "A11Y-q-11-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-11/",
+        "docs/prostar-metrics/reconciliation/Q-11.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-11/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-12",
+      "requirement": "Tier-by-month heatmap shows percentage, Accepted/total, and provisional month",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-12-contract"
+        ],
+        "integration": [
+          "INT-Q-12-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-12-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-12-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-12-desktop",
+          "A11Y-q-12-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-12/",
+        "docs/prostar-metrics/reconciliation/Q-12.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-12/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-13",
+      "requirement": "Trailing-12 KPI row preserves Total Quotes Sent, Total Quote Value, Quotes Accepted, and Overall Acceptance Rate with prior-month deltas, supporting context, and sparklines",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-13-contract"
+        ],
+        "integration": [
+          "INT-Q-13-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-13-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-13-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-13-desktop",
+          "A11Y-q-13-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-13/",
+        "docs/prostar-metrics/reconciliation/Q-13.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-13/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-14",
+      "requirement": "Monthly breakdown contains sent, values, Accepted, average accepted deal, both acceptance rates, provisional marker, and trailing-12 total/average footer",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05B",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05b-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-14-contract"
+        ],
+        "integration": [
+          "INT-Q-14-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-14-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-14-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-14-desktop",
+          "A11Y-q-14-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-14/",
+        "docs/prostar-metrics/reconciliation/Q-14.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-14/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-15",
+      "requirement": "Not Accepted follow-up table contains quote, age, value, category, tier, and missing acceptance-evidence explanation; no owner, salesperson, Stage, or CustomerStage",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05C",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05c-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-15-contract"
+        ],
+        "integration": [
+          "INT-Q-15-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-15-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-15-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-15-desktop",
+          "A11Y-q-15-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-15/",
+        "docs/prostar-metrics/reconciliation/Q-15.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-15/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-16",
+      "requirement": "HVAC/Water Heating/category segmentation uses selected scope and shows unclassified coverage",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05C",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05c-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-16-contract"
+        ],
+        "integration": [
+          "INT-Q-16-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-16-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-16-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-16-desktop",
+          "A11Y-q-16-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-16/",
+        "docs/prostar-metrics/reconciliation/Q-16.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-16/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-17",
+      "requirement": "Methodology footer states the locked acceptance rule, DateApproved basis, provisional behavior, and exclusion count",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05A",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05a-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-17-contract"
+        ],
+        "integration": [
+          "INT-Q-17-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-17-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-17-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-17-desktop",
+          "A11Y-q-17-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-17/",
+        "docs/prostar-metrics/reconciliation/Q-17.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-17/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-18",
+      "requirement": "Audited exclusion/reinstatement override API and UI that cannot manufacture acceptance",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P0",
+      "accountableWorkPackage": "WP-05A",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05a-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-18-contract"
+        ],
+        "integration": [
+          "INT-Q-18-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-18-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-18-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-18-desktop",
+          "A11Y-q-18-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-18/",
+        "docs/prostar-metrics/reconciliation/Q-18.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-18/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-19",
+      "requirement": "Every classification exposes a reason code and evidence basis",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P0",
+      "accountableWorkPackage": "WP-05A",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05a-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-19-contract"
+        ],
+        "integration": [
+          "INT-Q-19-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-19-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-19-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-19-desktop",
+          "A11Y-q-19-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-19/",
+        "docs/prostar-metrics/reconciliation/Q-19.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-19/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-20",
+      "requirement": "Filters for period, category, tier, and acceptance path use app-owned data; no owner, salesperson, Stage, or CustomerStage filter",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05C",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05c-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-20-contract"
+        ],
+        "integration": [
+          "INT-Q-20-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-20-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-20-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-20-desktop",
+          "A11Y-q-20-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-20/",
+        "docs/prostar-metrics/reconciliation/Q-20.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-20/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-21",
+      "requirement": "Classification drilldown identifies source evidence and override history",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05C",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05c-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-21-contract"
+        ],
+        "integration": [
+          "INT-Q-21-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-21-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-21-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-21-desktop",
+          "A11Y-q-21-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-21/",
+        "docs/prostar-metrics/reconciliation/Q-21.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-21/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-22",
+      "requirement": "No canonical open cohort exists; all non-excluded quotes without accepted-online or exact conversion evidence are Not Accepted",
+      "baselineStatus": "REMOVED BY OWNER DECISION",
+      "executionStatus": "REMOVED BY OWNER DECISION",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05C",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05c-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-22-contract"
+        ],
+        "integration": [
+          "INT-Q-22-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-22-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-22-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-22-desktop",
+          "A11Y-q-22-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-22/",
+        "docs/prostar-metrics/reconciliation/Q-22.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-22/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-23",
+      "requirement": "Legacy reviewed exclusions are seeded as audited records; prior PM/Not Accepted decisions are reconciled to exact source evidence without acceptance overrides",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-05A",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05a-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-23-contract"
+        ],
+        "integration": [
+          "INT-Q-23-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-23-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-23-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-23-desktop",
+          "A11Y-q-23-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-23/",
+        "docs/prostar-metrics/reconciliation/Q-23.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-23/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "Q-24",
+      "requirement": "2023-current history and each month reconcile to upstream/snapshot samples",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P0",
+      "accountableWorkPackage": "WP-05A",
+      "acceptingGate": "G-5",
+      "owner": "Quote Metrics Agent",
+      "worktree": "codex/wp-05a-quotes",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-01",
+        "TI-02"
+      ],
+      "codePaths": [
+        "src/lib/metrics/quotes.ts",
+        "src/lib/store/quote-dashboard-read-model.ts",
+        "src/components/quotes/**",
+        "src/app/api/quotes/**"
+      ],
+      "apiContracts": [
+        "GET /api/quotes",
+        "POST /api/quotes/overrides"
+      ],
+      "databaseTables": [
+        "metrics.metrics_quotes",
+        "metrics.metrics_quote_cost_centers",
+        "metrics.quote_classification_overrides",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-Q-24-contract"
+        ],
+        "integration": [
+          "INT-Q-24-data-path"
+        ],
+        "reconciliation": [
+          "REC-Q-24-all-months"
+        ],
+        "e2e": [
+          "E2E-Q-24-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-q-24-desktop",
+          "A11Y-q-24-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-5/Q-24/",
+        "docs/prostar-metrics/reconciliation/Q-24.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-5/Q-24/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-01",
+      "requirement": "Completed jobs KPI is verified for June and still requires full historical evidence",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-01-contract"
+        ],
+        "integration": [
+          "INT-J-01-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-01-all-months"
+        ],
+        "e2e": [
+          "E2E-J-01-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-01-desktop",
+          "A11Y-j-01-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-01/",
+        "docs/prostar-metrics/reconciliation/J-01.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-01/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-02",
+      "requirement": "Total sell value KPI is verified for June and still requires full historical evidence",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-02-contract"
+        ],
+        "integration": [
+          "INT-J-02-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-02-all-months"
+        ],
+        "e2e": [
+          "E2E-J-02-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-02-desktop",
+          "A11Y-j-02-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-02/",
+        "docs/prostar-metrics/reconciliation/J-02.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-02/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-03",
+      "requirement": "Average job value KPI is verified for June and still requires full historical evidence",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-03-contract"
+        ],
+        "integration": [
+          "INT-J-03-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-03-all-months"
+        ],
+        "e2e": [
+          "E2E-J-03-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-03-desktop",
+          "A11Y-j-03-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-03/",
+        "docs/prostar-metrics/reconciliation/J-03.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-03/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-04",
+      "requirement": "Gross profit and margin use Simpro Totals with coverage; June is verified",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-04-contract"
+        ],
+        "integration": [
+          "INT-J-04-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-04-all-months"
+        ],
+        "e2e": [
+          "E2E-J-04-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-04-desktop",
+          "A11Y-j-04-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-04/",
+        "docs/prostar-metrics/reconciliation/J-04.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-04/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-05",
+      "requirement": "Quoted-versus-actual labor variance for quote-sourced jobs",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-05-contract"
+        ],
+        "integration": [
+          "INT-J-05-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-05-all-months"
+        ],
+        "e2e": [
+          "E2E-J-05-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-05-desktop",
+          "A11Y-j-05-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-05/",
+        "docs/prostar-metrics/reconciliation/J-05.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-05/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-06",
+      "requirement": "Labor cohort and exclusion coverage counts",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-06-contract"
+        ],
+        "integration": [
+          "INT-J-06-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-06-all-months"
+        ],
+        "e2e": [
+          "E2E-J-06-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-06-desktop",
+          "A11Y-j-06-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-06/",
+        "docs/prostar-metrics/reconciliation/J-06.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-06/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-07",
+      "requirement": "Material metric remains coverage-only until basis alignment is proven",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-07-contract"
+        ],
+        "integration": [
+          "INT-J-07-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-07-all-months"
+        ],
+        "e2e": [
+          "E2E-J-07-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-07-desktop",
+          "A11Y-j-07-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-07/",
+        "docs/prostar-metrics/reconciliation/J-07.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-07/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-08",
+      "requirement": "Category/cost-center table has real sell value, margin, labor, and counts",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-08-contract"
+        ],
+        "integration": [
+          "INT-J-08-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-08-all-months"
+        ],
+        "e2e": [
+          "E2E-J-08-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-08-desktop",
+          "A11Y-j-08-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-08/",
+        "docs/prostar-metrics/reconciliation/J-08.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-08/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-09",
+      "requirement": "Completion uses CompletedDate plus Stage Complete/Archived only",
+      "baselineStatus": "VERIFIED DONE",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-09-contract"
+        ],
+        "integration": [
+          "INT-J-09-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-09-all-months"
+        ],
+        "e2e": [
+          "E2E-J-09-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-09-desktop",
+          "A11Y-j-09-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-09/",
+        "docs/prostar-metrics/reconciliation/J-09.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-09/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-10",
+      "requirement": "No active/pending dispatch queue UI",
+      "baselineStatus": "VERIFIED DONE",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-10-contract"
+        ],
+        "integration": [
+          "INT-J-10-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-10-all-months"
+        ],
+        "e2e": [
+          "E2E-J-10-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-10-desktop",
+          "A11Y-j-10-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-10/",
+        "docs/prostar-metrics/reconciliation/J-10.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-10/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-11",
+      "requirement": "Multi-month job count, value, margin, and labor trends",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06B",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06b-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-11-contract"
+        ],
+        "integration": [
+          "INT-J-11-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-11-all-months"
+        ],
+        "e2e": [
+          "E2E-J-11-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-11-desktop",
+          "A11Y-j-11-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-11/",
+        "docs/prostar-metrics/reconciliation/J-11.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-11/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-12",
+      "requirement": "Filters for period, category/cost center, and supported technician attribution",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06B",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06b-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-12-contract"
+        ],
+        "integration": [
+          "INT-J-12-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-12-all-months"
+        ],
+        "e2e": [
+          "E2E-J-12-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-12-desktop",
+          "A11Y-j-12-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-12/",
+        "docs/prostar-metrics/reconciliation/J-12.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-12/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-13",
+      "requirement": "Completed-job drilldown explains inclusion, financial basis, and labor coverage",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06B",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06b-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-13-contract"
+        ],
+        "integration": [
+          "INT-J-13-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-13-all-months"
+        ],
+        "e2e": [
+          "E2E-J-13-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-13-desktop",
+          "A11Y-j-13-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-13/",
+        "docs/prostar-metrics/reconciliation/J-13.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-13/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-14",
+      "requirement": "2023-current monthly reconciliation and history coverage",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-14-contract"
+        ],
+        "integration": [
+          "INT-J-14-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-14-all-months"
+        ],
+        "e2e": [
+          "E2E-J-14-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-14-desktop",
+          "A11Y-j-14-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-14/",
+        "docs/prostar-metrics/reconciliation/J-14.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-14/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-15",
+      "requirement": "Out of scope because Pro Star does not invoice in Simpro; no invoice coverage KPI is permitted",
+      "baselineStatus": "REMOVED BY OWNER DECISION",
+      "executionStatus": "REMOVED BY OWNER DECISION",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-15-contract"
+        ],
+        "integration": [
+          "INT-J-15-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-15-all-months"
+        ],
+        "e2e": [
+          "E2E-J-15-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-15-desktop",
+          "A11Y-j-15-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-15/",
+        "docs/prostar-metrics/reconciliation/J-15.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-15/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "J-16",
+      "requirement": "Out of scope because Pro Star does not invoice in Simpro; no invoice-lag or unbilled KPI is permitted",
+      "baselineStatus": "REMOVED BY OWNER DECISION",
+      "executionStatus": "REMOVED BY OWNER DECISION",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-06A",
+      "acceptingGate": "G-6",
+      "owner": "Job Metrics Agent",
+      "worktree": "codex/wp-06a-jobs",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/jobs.ts",
+        "src/components/jobs-dashboard.tsx",
+        "src/app/api/jobs/**"
+      ],
+      "apiContracts": [
+        "GET /api/jobs"
+      ],
+      "databaseTables": [
+        "metrics.metrics_jobs",
+        "metrics.metrics_job_cost_centers",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-J-16-contract"
+        ],
+        "integration": [
+          "INT-J-16-data-path"
+        ],
+        "reconciliation": [
+          "REC-J-16-all-months"
+        ],
+        "e2e": [
+          "E2E-J-16-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-j-16-desktop",
+          "A11Y-j-16-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-6/J-16/",
+        "docs/prostar-metrics/reconciliation/J-16.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-6/J-16/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-01",
+      "requirement": "Completed-job credit shared by actual timesheet hours; June is verified",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-01-contract"
+        ],
+        "integration": [
+          "INT-T-01-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-01-all-months"
+        ],
+        "e2e": [
+          "E2E-T-01-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-01-desktop",
+          "A11Y-t-01-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-01/",
+        "docs/prostar-metrics/reconciliation/T-01.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-01/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-02",
+      "requirement": "Sell value allocated by timesheet share; June is verified",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-02-contract"
+        ],
+        "integration": [
+          "INT-T-02-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-02-all-months"
+        ],
+        "e2e": [
+          "E2E-T-02-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-02-desktop",
+          "A11Y-t-02-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-02/",
+        "docs/prostar-metrics/reconciliation/T-02.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-02/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-03",
+      "requirement": "Actual job hours from timesheets; June is verified",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-03-contract"
+        ],
+        "integration": [
+          "INT-T-03-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-03-all-months"
+        ],
+        "e2e": [
+          "E2E-T-03-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-03-desktop",
+          "A11Y-t-03-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-03/",
+        "docs/prostar-metrics/reconciliation/T-03.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-03/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-04",
+      "requirement": "Utilization uses all recorded timesheet hours as denominator",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-04-contract"
+        ],
+        "integration": [
+          "INT-T-04-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-04-all-months"
+        ],
+        "e2e": [
+          "E2E-T-04-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-04-desktop",
+          "A11Y-t-04-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-04/",
+        "docs/prostar-metrics/reconciliation/T-04.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-04/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-05",
+      "requirement": "Planned-versus-actual and on-time use technician schedule/mobile events",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-05-contract"
+        ],
+        "integration": [
+          "INT-T-05-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-05-all-months"
+        ],
+        "e2e": [
+          "E2E-T-05-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-05-desktop",
+          "A11Y-t-05-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-05/",
+        "docs/prostar-metrics/reconciliation/T-05.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-05/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-06",
+      "requirement": "Quoted-versus-actual labor efficiency uses persisted nested labor",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-06-contract"
+        ],
+        "integration": [
+          "INT-T-06-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-06-all-months"
+        ],
+        "e2e": [
+          "E2E-T-06-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-06-desktop",
+          "A11Y-t-06-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-06/",
+        "docs/prostar-metrics/reconciliation/T-06.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-06/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-07",
+      "requirement": "Every metric discloses source coverage and exclusions",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-07-contract"
+        ],
+        "integration": [
+          "INT-T-07-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-07-all-months"
+        ],
+        "e2e": [
+          "E2E-T-07-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-07-desktop",
+          "A11Y-t-07-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-07/",
+        "docs/prostar-metrics/reconciliation/T-07.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-07/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-08",
+      "requirement": "Multi-technician allocation uses actual job-hour share; June is verified",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-08-contract"
+        ],
+        "integration": [
+          "INT-T-08-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-08-all-months"
+        ],
+        "e2e": [
+          "E2E-T-08-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-08-desktop",
+          "A11Y-t-08-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-08/",
+        "docs/prostar-metrics/reconciliation/T-08.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-08/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-09",
+      "requirement": "No legacy mobile-status mirror dependency",
+      "baselineStatus": "VERIFIED DONE",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-09-contract"
+        ],
+        "integration": [
+          "INT-T-09-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-09-all-months"
+        ],
+        "e2e": [
+          "E2E-T-09-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-09-desktop",
+          "A11Y-t-09-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-09/",
+        "docs/prostar-metrics/reconciliation/T-09.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-09/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-10",
+      "requirement": "No active dispatch timeline",
+      "baselineStatus": "VERIFIED DONE",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-10-contract"
+        ],
+        "integration": [
+          "INT-T-10-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-10-all-months"
+        ],
+        "e2e": [
+          "E2E-T-10-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-10-desktop",
+          "A11Y-t-10-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-10/",
+        "docs/prostar-metrics/reconciliation/T-10.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-10/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-11",
+      "requirement": "UI displays employee names, with ID only as secondary drilldown data",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-11-contract"
+        ],
+        "integration": [
+          "INT-T-11-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-11-all-months"
+        ],
+        "e2e": [
+          "E2E-T-11-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-11-desktop",
+          "A11Y-t-11-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-11/",
+        "docs/prostar-metrics/reconciliation/T-11.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-11/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-12",
+      "requirement": "Technician revenue/hour and gross-profit/hour where financial coverage exists",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-12-contract"
+        ],
+        "integration": [
+          "INT-T-12-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-12-all-months"
+        ],
+        "e2e": [
+          "E2E-T-12-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-12-desktop",
+          "A11Y-t-12-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-12/",
+        "docs/prostar-metrics/reconciliation/T-12.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-12/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-13",
+      "requirement": "Filters for period and technician plus record-level allocation drilldown",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-13-contract"
+        ],
+        "integration": [
+          "INT-T-13-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-13-all-months"
+        ],
+        "e2e": [
+          "E2E-T-13-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-13-desktop",
+          "A11Y-t-13-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-13/",
+        "docs/prostar-metrics/reconciliation/T-13.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-13/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "T-14",
+      "requirement": "Historical trends and coverage reconcile by technician and month",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-07",
+      "acceptingGate": "G-7",
+      "owner": "Technician Performance Agent",
+      "worktree": "codex/wp-07-technicians",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-04",
+        "TI-05"
+      ],
+      "codePaths": [
+        "src/lib/metrics/technicians.ts",
+        "src/components/technicians-dashboard.tsx",
+        "src/app/api/technicians/**"
+      ],
+      "apiContracts": [
+        "GET /api/technicians"
+      ],
+      "databaseTables": [
+        "metrics.dim_people",
+        "metrics.timesheet_snapshots",
+        "metrics.schedule_snapshots",
+        "metrics.mobile_status_snapshots",
+        "metrics.metric_rollups"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-T-14-contract"
+        ],
+        "integration": [
+          "INT-T-14-data-path"
+        ],
+        "reconciliation": [
+          "REC-T-14-all-months"
+        ],
+        "e2e": [
+          "E2E-T-14-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-t-14-desktop",
+          "A11Y-t-14-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-7/T-14/",
+        "docs/prostar-metrics/reconciliation/T-14.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-7/T-14/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-01",
+      "requirement": "Separate year/month selector and explicit load/apply action",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09A",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09a-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-01-contract"
+        ],
+        "integration": [
+          "INT-C-01-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-01-all-months"
+        ],
+        "e2e": [
+          "E2E-C-01-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-01-desktop",
+          "A11Y-c-01-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-01/",
+        "docs/prostar-metrics/reconciliation/C-01.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-01/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-02",
+      "requirement": "Config banner shows pool, tier boosts, minimum, efficiency config, period, and work value",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09A",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09a-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-02-contract"
+        ],
+        "integration": [
+          "INT-C-02-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-02-all-months"
+        ],
+        "e2e": [
+          "E2E-C-02-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-02-desktop",
+          "A11Y-c-02-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-02/",
+        "docs/prostar-metrics/reconciliation/C-02.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-02/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-03",
+      "requirement": "KPI cards show full completed cohort, commission-supported/excluded jobs, work value, pool, and active technicians; June is verified",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09A",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09a-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-03-contract"
+        ],
+        "integration": [
+          "INT-C-03-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-03-all-months"
+        ],
+        "e2e": [
+          "E2E-C-03-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-03-desktop",
+          "A11Y-c-03-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-03/",
+        "docs/prostar-metrics/reconciliation/C-03.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-03/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-04",
+      "requirement": "Bonus-by-technician chart, not a generic pool waterfall",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09A",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09a-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-04-contract"
+        ],
+        "integration": [
+          "INT-C-04-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-04-all-months"
+        ],
+        "e2e": [
+          "E2E-C-04-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-04-desktop",
+          "A11Y-c-04-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-04/",
+        "docs/prostar-metrics/reconciliation/C-04.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-04/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-05",
+      "requirement": "Ranked leaderboard preserves medal/rank presentation",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09A",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09a-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-05-contract"
+        ],
+        "integration": [
+          "INT-C-05-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-05-all-months"
+        ],
+        "e2e": [
+          "E2E-C-05-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-05-desktop",
+          "A11Y-c-05-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-05/",
+        "docs/prostar-metrics/reconciliation/C-05.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-05/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-06",
+      "requirement": "Gold/Silver/Bronze/Standard and below-min tags",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09A",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09a-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-06-contract"
+        ],
+        "integration": [
+          "INT-C-06-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-06-all-months"
+        ],
+        "e2e": [
+          "E2E-C-06-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-06-desktop",
+          "A11Y-c-06-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-06/",
+        "docs/prostar-metrics/reconciliation/C-06.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-06/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-07",
+      "requirement": "Raw bonus, forfeiture, reallocation, efficiency effect, and adjustments visible",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09A",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09a-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-07-contract"
+        ],
+        "integration": [
+          "INT-C-07-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-07-all-months"
+        ],
+        "e2e": [
+          "E2E-C-07-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-07-desktop",
+          "A11Y-c-07-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-07/",
+        "docs/prostar-metrics/reconciliation/C-07.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-07/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-08",
+      "requirement": "Proportional bonus bars",
+      "baselineStatus": "VERIFIED DONE",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09A",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09a-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-08-contract"
+        ],
+        "integration": [
+          "INT-C-08-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-08-all-months"
+        ],
+        "e2e": [
+          "E2E-C-08-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-08-desktop",
+          "A11Y-c-08-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-08/",
+        "docs/prostar-metrics/reconciliation/C-08.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-08/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-09",
+      "requirement": "Per-tech allocation details include job, customer, job value, hours, share, and allocated value",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09A",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09a-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-09-contract"
+        ],
+        "integration": [
+          "INT-C-09-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-09-all-months"
+        ],
+        "e2e": [
+          "E2E-C-09-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-09-desktop",
+          "A11Y-c-09-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-09/",
+        "docs/prostar-metrics/reconciliation/C-09.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-09/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-10",
+      "requirement": "Functional efficiency panel includes persisted toggle/slider, loading/error/coverage states, and per-tech quote jobs, quoted hours, actual hours, ratio, multiplier, percent effect, dollar effect, and neutral reason",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-08",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-08-commission-engine",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-10-contract"
+        ],
+        "integration": [
+          "INT-C-10-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-10-all-months"
+        ],
+        "e2e": [
+          "E2E-C-10-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-10-desktop",
+          "A11Y-c-10-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-10/",
+        "docs/prostar-metrics/reconciliation/C-10.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-10/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-11",
+      "requirement": "Editable pool, tiers, minimum, roster inclusion, allocated value, tier, adjustments, final bonus, and notes",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-08",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-08-commission-engine",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-11-contract"
+        ],
+        "integration": [
+          "INT-C-11-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-11-all-months"
+        ],
+        "e2e": [
+          "E2E-C-11-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-11-desktop",
+          "A11Y-c-11-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-11/",
+        "docs/prostar-metrics/reconciliation/C-11.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-11/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-12",
+      "requirement": "Typed overrides persist and apply with correct field semantics",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P0",
+      "accountableWorkPackage": "WP-08",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-08-commission-engine",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-12-contract"
+        ],
+        "integration": [
+          "INT-C-12-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-12-all-months"
+        ],
+        "e2e": [
+          "E2E-C-12-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-12-desktop",
+          "A11Y-c-12-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-12/",
+        "docs/prostar-metrics/reconciliation/C-12.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-12/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-13",
+      "requirement": "Immutable runs store config, watermarks, hashes, employee results, and job allocations",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-08",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-08-commission-engine",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-13-contract"
+        ],
+        "integration": [
+          "INT-C-13-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-13-all-months"
+        ],
+        "e2e": [
+          "E2E-C-13-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-13-desktop",
+          "A11Y-c-13-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-13/",
+        "docs/prostar-metrics/reconciliation/C-13.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-13/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-14",
+      "requirement": "Draft/reviewed/exported/locked lifecycle and revision transitions",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-08",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-08-commission-engine",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-14-contract"
+        ],
+        "integration": [
+          "INT-C-14-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-14-all-months"
+        ],
+        "e2e": [
+          "E2E-C-14-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-14-desktop",
+          "A11Y-c-14-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-14/",
+        "docs/prostar-metrics/reconciliation/C-14.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-14/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-15",
+      "requirement": "Payroll CSV matches the displayed immutable run and outside adjustments",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09C",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09c-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-15-contract"
+        ],
+        "integration": [
+          "INT-C-15-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-15-all-months"
+        ],
+        "e2e": [
+          "E2E-C-15-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-15-desktop",
+          "A11Y-c-15-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-15/",
+        "docs/prostar-metrics/reconciliation/C-15.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-15/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-16",
+      "requirement": "PDF is a formatted review worksheet with signatures/status/detail, not a technical stub",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09C",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09c-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-16-contract"
+        ],
+        "integration": [
+          "INT-C-16-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-16-all-months"
+        ],
+        "e2e": [
+          "E2E-C-16-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-16-desktop",
+          "A11Y-c-16-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-16/",
+        "docs/prostar-metrics/reconciliation/C-16.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-16/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-17",
+      "requirement": "Calculation-detail CSV fully reconciles jobs, technicians, inputs, and outputs",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09C",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09c-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-17-contract"
+        ],
+        "integration": [
+          "INT-C-17-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-17-all-months"
+        ],
+        "e2e": [
+          "E2E-C-17-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-17-desktop",
+          "A11Y-c-17-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-17/",
+        "docs/prostar-metrics/reconciliation/C-17.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-17/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-18",
+      "requirement": "Private, audited, retained exports are linked to immutable runs",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09C",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09c-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-18-contract"
+        ],
+        "integration": [
+          "INT-C-18-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-18-all-months"
+        ],
+        "e2e": [
+          "E2E-C-18-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-18-desktop",
+          "A11Y-c-18-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-18/",
+        "docs/prostar-metrics/reconciliation/C-18.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-18/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-19",
+      "requirement": "Summary has year selector and Monthly/Quarterly/Annual segmented view",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09B",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09b-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-19-contract"
+        ],
+        "integration": [
+          "INT-C-19-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-19-all-months"
+        ],
+        "e2e": [
+          "E2E-C-19-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-19-desktop",
+          "A11Y-c-19-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-19/",
+        "docs/prostar-metrics/reconciliation/C-19.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-19/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-20",
+      "requirement": "Summary stats show annual pool, average across loaded finalized runs, peak month and value, and distinct technicians with final bonus greater than zero",
+      "baselineStatus": "PARTIAL",
+      "executionStatus": "PARTIAL",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09B",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09b-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-20-contract"
+        ],
+        "integration": [
+          "INT-C-20-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-20-all-months"
+        ],
+        "e2e": [
+          "E2E-C-20-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-20-desktop",
+          "A11Y-c-20-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-20/",
+        "docs/prostar-metrics/reconciliation/C-20.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-20/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-21",
+      "requirement": "Period and annual per-tech tables include totals, rank, jobs, work value, average, sparklines, and no-data cells",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09B",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09b-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-21-contract"
+        ],
+        "integration": [
+          "INT-C-21-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-21-all-months"
+        ],
+        "e2e": [
+          "E2E-C-21-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-21-desktop",
+          "A11Y-c-21-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-21/",
+        "docs/prostar-metrics/reconciliation/C-21.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-21/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-22",
+      "requirement": "Summary loading progress and diagnostics from prior dashboard",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09B",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09b-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-22-contract"
+        ],
+        "integration": [
+          "INT-C-22-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-22-all-months"
+        ],
+        "e2e": [
+          "E2E-C-22-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-22-desktop",
+          "A11Y-c-22-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-22/",
+        "docs/prostar-metrics/reconciliation/C-22.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-22/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-23",
+      "requirement": "Team-total rows reconcile every summary view",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09B",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09b-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-23-contract"
+        ],
+        "integration": [
+          "INT-C-23-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-23-all-months"
+        ],
+        "e2e": [
+          "E2E-C-23-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-23-desktop",
+          "A11Y-c-23-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-23/",
+        "docs/prostar-metrics/reconciliation/C-23.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-23/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-24",
+      "requirement": "Export history exposes type, run, actor, timestamp, status, and re-download",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09C",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09c-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-24-contract"
+        ],
+        "integration": [
+          "INT-C-24-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-24-all-months"
+        ],
+        "e2e": [
+          "E2E-C-24-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-24-desktop",
+          "A11Y-c-24-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-24/",
+        "docs/prostar-metrics/reconciliation/C-24.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-24/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-25",
+      "requirement": "Override and lifecycle audit history is visible to Asad and Laila",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-09C",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-09c-commission-ui",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-25-contract"
+        ],
+        "integration": [
+          "INT-C-25-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-25-all-months"
+        ],
+        "e2e": [
+          "E2E-C-25-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-25-desktop",
+          "A11Y-c-25-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-25/",
+        "docs/prostar-metrics/reconciliation/C-25.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-25/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    },
+    {
+      "id": "C-26",
+      "requirement": "Locked-period change creates a revision without modifying prior exports",
+      "baselineStatus": "NOT STARTED",
+      "executionStatus": "NOT STARTED",
+      "priority": "P1",
+      "accountableWorkPackage": "WP-08",
+      "acceptingGate": "G-8",
+      "owner": "Commission Agent",
+      "worktree": "codex/wp-08-commission-engine",
+      "dependencies": [
+        "F-02",
+        "F-04",
+        "F-07",
+        "F-10",
+        "F-12",
+        "J-09",
+        "T-03"
+      ],
+      "technicalInvestigations": [
+        "TI-02",
+        "TI-03",
+        "TI-05",
+        "TI-06"
+      ],
+      "codePaths": [
+        "src/lib/metrics/commissions.ts",
+        "src/lib/store/commission-*.ts",
+        "src/components/commissions-dashboard.tsx",
+        "src/app/api/commissions/**"
+      ],
+      "apiContracts": [
+        "GET /api/commissions",
+        "POST /api/commissions/rebuild",
+        "POST /api/commissions/overrides",
+        "POST /api/commissions/exports"
+      ],
+      "databaseTables": [
+        "metrics.commission_periods",
+        "metrics.commission_calculation_runs",
+        "metrics.commission_run_inputs",
+        "metrics.commission_employee_results",
+        "metrics.commission_job_allocations",
+        "metrics.commission_overrides",
+        "metrics.report_exports"
+      ],
+      "testIds": {
+        "unit": [
+          "UNIT-C-26-contract"
+        ],
+        "integration": [
+          "INT-C-26-data-path"
+        ],
+        "reconciliation": [
+          "REC-C-26-all-months"
+        ],
+        "e2e": [
+          "E2E-C-26-primary-flow"
+        ],
+        "accessibility": [
+          "A11Y-c-26-desktop",
+          "A11Y-c-26-mobile"
+        ]
+      },
+      "evidencePaths": [
+        "docs/prostar-metrics/verification/G-8/C-26/",
+        "docs/prostar-metrics/reconciliation/C-26.json"
+      ],
+      "evidenceArtifactPath": "docs/prostar-metrics/verification/G-8/C-26/evidence.json",
+      "evidenceArtifactSha256": null,
+      "buildSourceSha256": null,
+      "deployedRevision": null,
+      "imageDigest": null,
+      "independentReviewer": null,
+      "reviewResult": null
+    }
+  ]
+}

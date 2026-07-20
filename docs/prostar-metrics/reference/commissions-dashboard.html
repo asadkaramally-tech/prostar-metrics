@@ -1,0 +1,2184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prostar Mechanical — Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f6fa;--surface:#ffffff;--card:#ffffff;--border:#e2e5ed;
+  --text:#1a1d27;--muted:#6b7085;--accent:#2563eb;--accent-dim:#dbeafe;
+  --green:#059669;--yellow:#d97706;--orange:#ea580c;--red:#dc2626;
+  --purple:#7c3aed;--cyan:#0891b2;
+  --radius:10px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,sans-serif;
+}
+html{background:var(--bg);color:var(--text);font-size:14px}
+body{min-height:100vh;display:flex;flex-direction:column}
+
+/* ── Topbar ──────────────────────────────────────────────────────────── */
+.topbar{
+  display:flex;align-items:center;gap:16px;
+  padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+.topbar .logo-img{height:44px;width:auto;flex-shrink:0;overflow:visible}
+.topbar .spacer{flex:1}
+.topbar .pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:600;
+  background:var(--card);border:1px solid var(--border);color:var(--yellow);
+}
+.topbar .pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.nav-btn{
+  background:none;color:var(--muted);border:1px solid var(--border);
+  padding:7px 16px;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;transition:.2s;
+}
+.nav-btn:hover{color:var(--text);border-color:var(--text)}
+.nav-btn.active{color:#fff;border-color:var(--accent);background:var(--accent)}
+
+/* ── Layout ──────────────────────────────────────────────────────────── */
+.main-view{flex:1;padding:22px 28px 40px;display:flex;flex-direction:column;gap:22px;display:none}
+.main-view.active{display:flex}
+
+/* ── Stat Cards ──────────────────────────────────────────────────────── */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 20px;display:flex;flex-direction:column;gap:4px;transition:border-color .2s;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.stat-card:hover{border-color:var(--accent)}
+.stat-card .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600}
+.stat-card .value{font-size:1.9rem;font-weight:800;line-height:1.1}
+.stat-card .sub{font-size:.72rem;color:var(--muted)}
+
+/* ── Tabs ────────────────────────────────────────────────────────────── */
+.tab-bar{display:flex;gap:4px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab-btn{
+  padding:10px 20px;font-size:.82rem;font-weight:600;cursor:pointer;
+  background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--muted);transition:.2s;border-radius:6px 6px 0 0;
+}
+.tab-btn:hover{color:var(--text);background:var(--card)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ── Filters ─────────────────────────────────────────────────────────── */
+.filters{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+}
+.filters input,.filters select{
+  background:var(--surface);color:var(--text);border:1px solid var(--border);
+  padding:7px 12px;border-radius:6px;font-size:.82rem;outline:none;transition:border-color .2s;
+}
+.filters input:focus,.filters select:focus{border-color:var(--accent)}
+.filters input[type="text"]{min-width:220px}
+.filters select{min-width:140px}
+.filters label{font-size:.72rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600}
+.filter-group{display:flex;flex-direction:column;gap:3px}
+.clear-btn{
+  background:transparent;color:var(--muted);border:1px solid var(--border);
+  padding:7px 14px;border-radius:6px;font-size:.78rem;cursor:pointer;margin-left:auto;
+}
+.clear-btn:hover{color:var(--text);border-color:var(--text)}
+
+/* ── Table ───────────────────────────────────────────────────────────── */
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+thead th{
+  text-align:left;padding:12px 14px;font-weight:700;font-size:.72rem;
+  text-transform:uppercase;letter-spacing:.7px;color:var(--muted);
+  background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;cursor:pointer;user-select:none;white-space:nowrap;
+}
+thead th:hover{color:var(--text)}
+thead th .sort-arrow{margin-left:4px;font-size:.65rem;opacity:.5}
+thead th.sorted .sort-arrow{opacity:1;color:var(--accent)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:hover{background:rgba(37,99,235,.05)}
+tbody td{padding:11px 14px;vertical-align:middle}
+tbody tr.overdue-row{border-left:3px solid var(--red)}
+tbody tr.due-today-row{border-left:3px solid var(--orange)}
+
+/* ── Badges ──────────────────────────────────────────────────────────── */
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.badge.urgent{background:rgba(220,38,38,.1);color:var(--red)}
+.badge.high{background:rgba(234,88,12,.1);color:var(--orange)}
+.badge.normal{background:rgba(37,99,235,.1);color:var(--accent)}
+.badge.low{background:rgba(107,112,133,.1);color:var(--muted)}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.due-flag{font-size:.7rem;font-weight:700;margin-left:6px}
+.due-flag.overdue{color:var(--red)}
+.due-flag.today{color:var(--orange)}
+.due-flag.soon{color:var(--yellow)}
+
+/* ── Bar charts ──────────────────────────────────────────────────────── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.charts-row{grid-template-columns:1fr}}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.chart-card h3{font-size:.82rem;font-weight:700;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-label{min-width:120px;font-size:.78rem;text-align:right;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:26px;background:var(--surface);border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s ease;display:flex;align-items:center;padding-left:8px;font-size:.72rem;font-weight:700;color:#fff;min-width:28px}
+
+/* ── Timeline ────────────────────────────────────────────────────────── */
+.timeline-container{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.timeline-nav{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.timeline-nav button{background:var(--surface);color:var(--text);border:1px solid var(--border);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:600}
+.timeline-nav button:hover{border-color:var(--accent)}
+.timeline-nav .week-label{font-weight:700;font-size:.9rem}
+.timeline-grid{display:grid;grid-template-columns:140px repeat(7,1fr);gap:1px;background:var(--border);border-radius:6px;overflow:hidden}
+.tg-header{background:var(--surface);padding:10px 8px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);text-align:center}
+.tg-header.today-col{color:var(--accent)}
+.tg-tech{background:var(--surface);padding:10px 12px;font-size:.78rem;font-weight:600;display:flex;align-items:center}
+.tg-cell{background:var(--card);padding:6px;min-height:60px;display:flex;flex-direction:column;gap:3px}
+.tg-cell.today-col{background:rgba(37,99,235,.05)}
+.tg-job{padding:4px 8px;border-radius:4px;font-size:.68rem;font-weight:600;cursor:pointer;transition:.15s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tg-job:hover{filter:brightness(1.2);transform:scale(1.02)}
+.tg-job.urgent{background:rgba(220,38,38,.1);color:var(--red)}
+.tg-job.high{background:rgba(234,88,12,.1);color:var(--orange)}
+.tg-job.normal{background:rgba(37,99,235,.1);color:var(--accent)}
+.tg-job.low{background:rgba(107,112,133,.1);color:var(--muted)}
+
+/* ── Modal ───────────────────────────────────────────────────────────── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:12px;width:560px;max-width:92vw;max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.modal h2{font-size:1.1rem;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.modal .close-btn{margin-left:auto;background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:4px 8px}
+.modal .close-btn:hover{color:var(--text)}
+.modal .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal .detail-item{display:flex;flex-direction:column;gap:2px}
+.modal .detail-item .dl{font-size:.7rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600}
+.modal .detail-item .dv{font-size:.88rem;font-weight:600}
+.modal .desc{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.modal .desc p{font-size:.85rem;line-height:1.6;color:var(--muted)}
+
+/* ── Quarter selector ────────────────────────────────────────────────── */
+.page-header{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.page-header h1{font-size:1.3rem;font-weight:800}
+.quarter-selector{display:flex;align-items:center;gap:8px;margin-left:auto}
+.quarter-selector select,.quarter-selector button{
+  background:var(--surface);color:var(--text);border:1px solid var(--border);
+  padding:7px 14px;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;
+}
+.quarter-selector select:focus{border-color:var(--accent);outline:none}
+.quarter-selector button{background:var(--accent);color:#fff;border:none}
+.quarter-selector button:hover{background:#3d76e0}
+
+/* ── Config banner ───────────────────────────────────────────────────── */
+.config-banner{
+  display:flex;flex-wrap:wrap;gap:18px;
+  padding:14px 18px;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);font-size:.78rem;color:var(--muted);
+}
+.config-banner .cfg-item{display:flex;flex-direction:column;gap:2px}
+.config-banner .cfg-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.7px;font-weight:700;color:var(--muted)}
+.config-banner .cfg-val{font-weight:700;color:var(--text)}
+
+/* ── Leaderboard ─────────────────────────────────────────────────────── */
+.leaderboard{display:flex;flex-direction:column;gap:12px}
+.tech-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s}
+.tech-card:hover{border-color:var(--accent)}
+.tech-card.rank-1{border-left:4px solid #b8860b}
+.tech-card.rank-2{border-left:4px solid #94a3b8}
+.tech-card.rank-3{border-left:4px solid #b45309}
+.tech-header{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;transition:background .15s}
+.tech-header:hover{background:rgba(37,99,235,.04)}
+.rank-badge{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0}
+.rank-badge.r1{background:rgba(184,134,11,.15);color:#b8860b}
+.rank-badge.r2{background:rgba(148,163,184,.18);color:#64748b}
+.rank-badge.r3{background:rgba(180,83,9,.15);color:#b45309}
+.rank-badge.rn{background:var(--surface);color:var(--muted)}
+.tech-info{flex:1;min-width:0}
+.tech-name{font-weight:700;font-size:.95rem}
+.tech-meta{font-size:.72rem;color:var(--muted);display:flex;gap:14px;margin-top:2px;flex-wrap:wrap}
+.tech-bonus{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.tech-bonus .bonus-val{font-size:1.4rem;font-weight:800}
+.tech-bonus .bonus-val.gold{color:#b8860b}
+.tech-bonus .bonus-val.silver{color:#64748b}
+.tech-bonus .bonus-val.bronze{color:#b45309}
+.tech-bonus .bonus-val.standard{color:var(--accent)}
+.tech-bonus .bonus-tag{font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;font-weight:700;padding:2px 8px;border-radius:10px}
+.bonus-tag.gold{background:rgba(184,134,11,.12);color:#b8860b}
+.bonus-tag.silver{background:rgba(148,163,184,.15);color:#64748b}
+.bonus-tag.bronze{background:rgba(180,83,9,.12);color:#b45309}
+.bonus-tag.standard{background:rgba(37,99,235,.08);color:var(--accent)}
+.bonus-tag.no-qual{background:rgba(220,38,38,.08);color:var(--red)}
+.tech-bonus .bonus-val.no-bonus{color:var(--muted);opacity:.5}
+.bonus-bar-wrap{display:flex;align-items:center;gap:10px;padding:0 20px 0 70px;margin-top:-4px}
+.bonus-bar-track{flex:1;height:6px;background:var(--surface);border-radius:3px;overflow:hidden;position:relative}
+.bonus-bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+.bonus-bar-markers{position:absolute;top:0;left:0;right:0;bottom:0}
+.bonus-bar-marker{position:absolute;top:-3px;width:1px;height:12px;background:var(--muted);opacity:.4}
+.bonus-bar-label{font-size:.65rem;color:var(--muted);white-space:nowrap;min-width:60px;text-align:right}
+.tech-detail{display:none;padding:0 20px 16px 70px}
+.tech-detail.open{display:block}
+.detail-table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}
+.detail-table th{text-align:left;padding:8px 10px;font-size:.68rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;border-bottom:1px solid var(--border)}
+.detail-table td{padding:8px 10px;border-bottom:1px solid var(--border)}
+.detail-table tr:last-child td{border-bottom:none}
+.detail-table .tag{display:inline-block;padding:2px 7px;border-radius:8px;font-size:.65rem;font-weight:700}
+.tag.quote{background:rgba(124,58,237,.1);color:var(--purple)}
+.tag.sell{background:rgba(8,145,178,.1);color:var(--cyan)}
+.expand-arrow{font-size:.7rem;color:var(--muted);transition:transform .2s;margin-left:auto;padding:0 8px}
+.expand-arrow.open{transform:rotate(90deg)}
+
+/* ── Bonus chart ────────────────────────────────────────────────────── */
+.chart-card-comm{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.chart-card-comm h3{font-size:.82rem;font-weight:700;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;align-self:flex-start}
+
+/* ── Waterfall chart ─────────────────────────────────────────────────── */
+.waterfall{display:flex;align-items:flex-end;gap:10px;height:360px;padding:30px 0 0;width:100%}
+.wf-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1;min-width:0;gap:4px}
+.wf-bar{width:100%;max-width:72px;border-radius:5px 5px 0 0;transition:height .5s ease;position:relative;min-height:2px;overflow:hidden}
+.wf-bar.shiny::after{content:"";position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);animation:shimmer 3s ease-in-out infinite}
+@keyframes shimmer{0%{left:-100%}50%{left:150%}100%{left:150%}}
+.wf-bar .wf-val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:.72rem;font-weight:700;white-space:nowrap}
+.wf-label{font-size:.7rem;color:var(--muted);text-align:center;line-height:1.15;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-top:2px}
+
+/* ── Efficiency Panel ────────────────────────────────────────────────── */
+.efficiency-panel{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.efficiency-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.efficiency-header h3{font-size:.82rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:0}
+.toggle-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:24px;transition:.25s}
+.toggle-slider::before{content:"";position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle-switch input:checked+.toggle-slider{background:var(--accent)}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px)}
+.efficiency-controls{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:14px}
+.efficiency-slider-group{flex:1;min-width:200px}
+.efficiency-slider-group label{font-size:.72rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+.efficiency-slider-group input[type="range"]{width:100%;accent-color:var(--accent);height:6px}
+.efficiency-table-wrap{margin-top:14px;border-top:1px solid var(--border);padding-top:14px}
+.efficiency-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.efficiency-table th{text-align:left;padding:6px 10px;font-size:.68rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;border-bottom:1px solid var(--border)}
+.efficiency-table td{padding:6px 10px;border-bottom:1px solid var(--border)}
+.efficiency-table tr:last-child td{border-bottom:none}
+.eff-bar{display:inline-block;height:6px;border-radius:3px;vertical-align:middle;margin-right:6px}
+.eff-tag{display:inline-block;padding:2px 7px;border-radius:8px;font-size:.65rem;font-weight:700}
+.eff-tag.boost{background:rgba(5,150,105,.1);color:var(--green)}
+.eff-tag.neutral{background:rgba(37,99,235,.08);color:var(--accent)}
+.eff-tag.reduce{background:rgba(220,38,38,.08);color:var(--red)}
+
+/* ── Loading ─────────────────────────────────────────────────────────── */
+.loading{text-align:center;padding:60px;color:var(--muted)}
+.loading .spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:60px;color:var(--muted);font-size:.9rem}
+.no-results{padding:40px;text-align:center;color:var(--muted);font-size:.85rem}
+
+/* ── Summary Page ────────────────────────────────────────────────────── */
+.summary-toggle{display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:3px}
+.summary-toggle button{border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;background:transparent;color:var(--muted);transition:.2s}
+.summary-toggle button:hover{color:var(--text)}
+.summary-toggle button.active{background:var(--accent);color:#fff}
+.summary-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.summary-table th,.summary-table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:right}
+.summary-table th:first-child,.summary-table td:first-child{text-align:left}
+.summary-table th{font-size:.68rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;background:var(--surface);position:sticky;top:0}
+.summary-table .total-col{font-weight:700;background:rgba(37,99,235,.04)}
+.summary-table .total-row{background:var(--surface);border-top:2px solid var(--border);font-weight:600}
+.summary-table .total-row td{font-weight:700}
+.summary-table .zero{color:var(--muted);opacity:.5}
+.sparkline{display:inline-flex;gap:1px;align-items:flex-end;height:20px}
+.sparkline span{width:6px;background:var(--accent);border-radius:1px;min-height:1px}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);transition:width .3s}
+.summary-table .rank-cell{font-weight:700}
+.rank-cell.gold{color:#b8860b}
+.rank-cell.silver{color:#64748b}
+.rank-cell.bronze{color:#b45309}
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media(max-width:700px){
+  .main-view{padding:14px}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .filters{flex-direction:column}
+  .filters input,.filters select{width:100%}
+  .tech-detail{padding-left:20px}
+  .bonus-bar-wrap{padding-left:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- TOPBAR                                                               -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<header class="topbar">
+  <svg class="logo-img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 50" width="260" height="50">
+    <defs>
+      <linearGradient id="sg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#7dc242"/><stop offset="50%" stop-color="#4bae4f"/><stop offset="100%" stop-color="#1b8a3e"/></linearGradient>
+      <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#4ca8e8"/><stop offset="100%" stop-color="#2171b5"/></linearGradient>
+    </defs>
+    <!-- PRO -->
+    <text x="2" y="34" font-family="Arial Black,Impact,Arial,sans-serif" font-weight="900" font-size="38" fill="url(#bg)">PRO</text>
+    <!-- Star -->
+    <g transform="translate(96,1) scale(0.5)">
+      <polygon points="45,0 56,30 88,34 64,55 71,87 45,72 19,87 26,55 2,34 34,30" fill="url(#sg)"/>
+      <path d="M20,58Q35,50 55,42" stroke="#1a6e30" stroke-width="3" fill="none" opacity=".5"/>
+      <path d="M18,65Q38,55 60,48" stroke="#1a6e30" stroke-width="3" fill="none" opacity=".4"/>
+      <path d="M22,72Q40,62 58,55" stroke="#1a6e30" stroke-width="3" fill="none" opacity=".3"/>
+    </g>
+    <!-- STAR -->
+    <text x="142" y="34" font-family="Arial Black,Impact,Arial,sans-serif" font-weight="900" font-size="38" fill="url(#bg)">STAR</text>
+    <!-- MECHANICAL SERVICES -->
+    <text x="20" y="48" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="10.5" fill="#8c9bab" letter-spacing="3.5">MECHANICAL SERVICES</text>
+  </svg>
+  <button class="nav-btn active" id="navJobs" onclick="showView('jobs')">Pending Jobs</button>
+  <button class="nav-btn" id="navComm" onclick="showView('comm')">Commissions</button>
+  <button class="nav-btn" id="navSummary" onclick="showView('summary')">Summary</button>
+  <div class="spacer"></div>
+  <div class="pill" id="modePill"><span class="dot"></span>Detecting…</div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- VIEW: PENDING JOBS                                                   -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<main class="main-view active" id="viewJobs">
+
+  <section class="stats-row">
+    <div class="stat-card"><div class="label">Total Pending</div><div class="value" id="jStatTotal" style="color:var(--accent)">–</div><div class="sub">pending / in progress</div></div>
+    <div class="stat-card"><div class="label">Total Value</div><div class="value" id="jStatValue" style="color:var(--green)">–</div><div class="sub">ExTax</div></div>
+    <div class="stat-card"><div class="label">Scheduled Today</div><div class="value" id="jStatToday" style="color:var(--orange)">–</div><div class="sub">on today's schedule</div></div>
+    <div class="stat-card"><div class="label">This Week</div><div class="value" id="jStatWeek" style="color:var(--yellow)">–</div><div class="sub">scheduled this week</div></div>
+  </section>
+
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="table">Jobs Table</button>
+    <button class="tab-btn" data-tab="charts">Breakdown</button>
+    <button class="tab-btn" data-tab="timeline">Timeline</button>
+  </nav>
+
+  <!-- TAB: Jobs Table -->
+  <div class="tab-panel active" id="tab-table">
+    <div class="filters">
+      <div class="filter-group"><label>Search</label><input type="text" id="searchInput" placeholder="Job ID, customer, description…"></div>
+      <div class="filter-group"><label>Technician</label><select id="filterTech"><option value="">All Technicians</option></select></div>
+      <div class="filter-group"><label>Status</label><select id="filterStatus"><option value="">All Statuses</option></select></div>
+      <div class="filter-group"><label>Priority</label><select id="filterPriority"><option value="">All Priorities</option></select></div>
+      <div class="filter-group"><label>Type</label><select id="filterType"><option value="">All Types</option></select></div>
+      <div class="filter-group"><label>Schedule</label>
+        <select id="filterDue"><option value="">All Dates</option><option value="today">Scheduled Today</option><option value="week">This Week</option><option value="past">Past (completed)</option></select>
+      </div>
+      <button class="clear-btn" id="clearFilters">Clear Filters</button>
+    </div>
+    <div class="table-wrap">
+      <table id="jobsTable">
+        <thead><tr>
+          <th data-col="ID">Job # <span class="sort-arrow">▲</span></th>
+          <th data-col="Customer">Customer <span class="sort-arrow">▲</span></th>
+          <th data-col="Site">Site <span class="sort-arrow">▲</span></th>
+          <th data-col="Status">Stage <span class="sort-arrow">▲</span></th>
+          <th data-col="Technician">Technician <span class="sort-arrow">▲</span></th>
+          <th data-col="ScheduledDate">Scheduled <span class="sort-arrow">▲</span></th>
+          <th data-col="Total">Value <span class="sort-arrow">▲</span></th>
+        </tr></thead>
+        <tbody id="jobsBody"></tbody>
+      </table>
+      <div class="no-results" id="noResults" style="display:none">No jobs match your filters.</div>
+    </div>
+    <div style="padding:8px 0;font-size:.72rem;color:var(--muted)" id="resultCount"></div>
+  </div>
+
+  <!-- TAB: Charts -->
+  <div class="tab-panel" id="tab-charts">
+    <div class="charts-row">
+      <div class="chart-card"><h3>Jobs by Technician</h3><div class="bar-chart" id="chartTech"></div></div>
+      <div class="chart-card"><h3>Jobs by Priority</h3><div class="bar-chart" id="chartPriority"></div></div>
+      <div class="chart-card"><h3>Jobs by Status</h3><div class="bar-chart" id="chartStatus"></div></div>
+      <div class="chart-card"><h3>Jobs by Type</h3><div class="bar-chart" id="chartType"></div></div>
+    </div>
+  </div>
+
+  <!-- TAB: Timeline -->
+  <div class="tab-panel" id="tab-timeline">
+    <div class="timeline-container">
+      <div class="timeline-nav">
+        <button id="prevWeek">← Prev</button>
+        <span class="week-label" id="weekLabel"></span>
+        <button id="nextWeek">Next →</button>
+        <button id="todayWeek" style="margin-left:auto">Today</button>
+      </div>
+      <div class="timeline-grid" id="timelineGrid"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- VIEW: COMMISSIONS                                                    -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<main class="main-view" id="viewComm">
+
+  <div class="page-header">
+    <h1>Technician Commissions</h1>
+    <div class="quarter-selector">
+      <select id="selYear"></select>
+      <select id="selMonth">
+        <option value="1">January</option><option value="2">February</option>
+        <option value="3">March</option><option value="4">April</option>
+        <option value="5">May</option><option value="6">June</option>
+        <option value="7">July</option><option value="8">August</option>
+        <option value="9">September</option><option value="10">October</option>
+        <option value="11">November</option><option value="12">December</option>
+      </select>
+      <button id="loadBtn">Load Month</button>
+    </div>
+  </div>
+
+  <div class="config-banner" id="configBanner"></div>
+
+  <div style="display:flex;align-items:center;gap:10px;padding:8px 18px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);font-size:.82rem">
+    <label style="font-size:.72rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700">Bonus Pool %</label>
+    <select id="poolPercentSel" style="background:var(--surface);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:.82rem;font-weight:700;cursor:pointer"></select>
+    <span style="font-size:.72rem;color:var(--muted)">of completed work value</span>
+  </div>
+
+  <div class="efficiency-panel" id="efficiencyPanel">
+    <div class="efficiency-header">
+      <h3>Efficiency Bonus</h3>
+      <label class="toggle-switch">
+        <input type="checkbox" id="efficiencyToggle">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="efficiency-controls" id="efficiencyControls" style="display:none">
+      <div class="efficiency-slider-group">
+        <label>Max Adjustment</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="range" id="efficiencySlider" min="5" max="50" value="20" step="1">
+          <span id="sliderValue" style="min-width:40px;text-align:right;font-weight:700;font-size:.88rem;color:var(--accent)">±20%</span>
+        </div>
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);max-width:400px">
+        Compares quoted hours vs actual hours on jobs converted from quotes. Finishing faster than quoted = efficiency boost. No quote data = neutral (1.0×).
+      </div>
+    </div>
+    <div id="efficiencyLoading" style="display:none;text-align:center;padding:16px;color:var(--muted)"><div class="spinner" style="margin:0 auto 8px"></div>Loading efficiency data…</div>
+    <div id="efficiencyError" style="display:none;text-align:center;padding:16px;color:var(--red)"></div>
+    <div class="efficiency-table-wrap" id="efficiencyTableWrap" style="display:none">
+      <table class="efficiency-table">
+        <thead><tr>
+          <th>Technician</th>
+          <th>Quote Jobs</th>
+          <th>Quoted Hrs</th>
+          <th>Actual Hrs</th>
+          <th>Efficiency</th>
+          <th>Multiplier</th>
+          <th>Effect</th>
+        </tr></thead>
+        <tbody id="efficiencyTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <section class="stats-row">
+    <div class="stat-card"><div class="label">Completed Jobs</div><div class="value" id="cStatJobs" style="color:var(--accent)">–</div><div class="sub">this month</div></div>
+    <div class="stat-card"><div class="label">Total Work Value</div><div class="value" id="cStatValue" style="color:var(--cyan)">–</div><div class="sub">allocated to technicians</div></div>
+    <div class="stat-card"><div class="label">Commission Pool</div><div class="value" id="cStatPool" style="color:var(--green)">–</div><div class="sub" id="cStatPoolSub">0.5% of work value</div></div>
+    <div class="stat-card"><div class="label">Technicians</div><div class="value" id="cStatTechs" style="color:var(--purple)">–</div><div class="sub">earning commission</div></div>
+  </section>
+
+  <div class="chart-card-comm" style="width:100%">
+    <h3>Bonus by Technician</h3>
+    <div style="width:100%;position:relative"><div class="waterfall" id="waterfallChart"></div></div>
+  </div>
+
+  <div class="leaderboard" id="leaderboard"></div>
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- VIEW: COMMISSION SUMMARY                                            -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<main class="main-view" id="viewSummary">
+
+  <div class="page-header">
+    <h1>Commission Summary</h1>
+    <div class="quarter-selector">
+      <select id="summaryYearSel"></select>
+      <button id="summaryLoadBtn">Load Year</button>
+    </div>
+  </div>
+
+  <div class="summary-toggle-wrap" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div class="summary-toggle" id="summaryToggle">
+      <button class="active" data-view="monthly">Monthly</button>
+      <button data-view="quarterly">Quarterly</button>
+      <button data-view="annual">Annual</button>
+    </div>
+    <div class="progress-bar" id="summaryProgress" style="flex:1;min-width:120px;display:none">
+      <div class="progress-fill" id="summaryProgressFill" style="width:0%"></div>
+    </div>
+    <span id="summaryProgressLabel" style="font-size:.72rem;color:var(--muted);display:none">Loading…</span>
+  </div>
+
+  <section class="stats-row" id="summaryStats">
+    <div class="stat-card"><div class="label">Total Annual Pool</div><div class="value" id="ssPool" style="color:var(--green)">–</div><div class="sub">year-to-date</div></div>
+    <div class="stat-card"><div class="label">Avg Monthly Pool</div><div class="value" id="ssAvg" style="color:var(--accent)">–</div><div class="sub">per month</div></div>
+    <div class="stat-card"><div class="label">Peak Month</div><div class="value" id="ssPeak" style="color:var(--orange)">–</div><div class="sub" id="ssPeakSub">highest pool</div></div>
+    <div class="stat-card"><div class="label">Active Technicians</div><div class="value" id="ssTechs" style="color:var(--purple)">–</div><div class="sub">earned commission</div></div>
+  </section>
+
+  <div id="summaryTableWrap" class="table-wrap" style="display:none">
+    <table class="summary-table" id="summaryTable">
+      <thead id="summaryThead"><tr></tr></thead>
+      <tbody id="summaryTbody"></tbody>
+    </table>
+  </div>
+
+  <div class="loading" id="summaryLoading" style="display:none"><div class="spinner"></div>Loading commission data across months…</div>
+  <div class="empty-state" id="summaryEmpty">Select a year and click "Load Year" to view commission summary.</div>
+</main>
+
+<!-- ── Job Detail Modal ──────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2><span id="modalTitle"></span><button class="close-btn" id="modalClose">✕</button></h2>
+    <div class="detail-grid" id="modalGrid"></div>
+    <div class="desc" id="modalDesc"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   Prostar Mechanical – Standalone Dashboard (No Server Required)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const COLORS = ["#2563eb","#059669","#7c3aed","#d97706","#ea580c","#dc2626","#0891b2","#db2777","#65a30d","#e11d48"];
+const BAR_COLORS = ["var(--accent)","var(--green)","var(--purple)","var(--orange)","var(--yellow)","var(--red)","#06b6d4","#ec4899"];
+const PRIO_COLORS = {urgent:"var(--red)",high:"var(--orange)",normal:"var(--accent)",low:"var(--muted)"};
+
+// ── Helpers ─────────────────────────────────────────────────────────────
+function fmtMoney(v){ return "$"+Number(v||0).toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtCompact(v){ return v>=1000 ? "$"+Math.round(v/1000)+"k" : "$"+Math.round(v); }
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+function fmtDisplay(d){ if(!d)return "—"; return new Date(d).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}); }
+function field(job,key){ const v=job[key]; if(v==null)return ""; if(typeof v==="object")return v.Name||v.name||""; return String(v); }
+function prioClass(p){ const s=(typeof p==="object"?(p.Name||""):String(p||"")).toLowerCase(); if(s==="urgent")return "urgent"; if(s==="high")return "high"; if(s==="low")return "low"; return "normal"; }
+
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+const TODAY_STR = fmtDate(TODAY);
+
+function dueClass(d){
+  if(!d)return ""; const dd=new Date(d);dd.setHours(0,0,0,0);
+  if(dd<TODAY)return "overdue"; if(dd.getTime()===TODAY.getTime())return "today";
+  const we=new Date(TODAY);we.setDate(we.getDate()+7); if(dd<=we)return "soon"; return "";
+}
+
+// ── Seeded PRNG (mulberry32) ────────────────────────────────────────────
+function createRNG(seed){
+  return function(){
+    seed|=0; seed=seed+0x6D2B79F5|0;
+    let t=Math.imul(seed^seed>>>15,1|seed);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return((t^t>>>14)>>>0)/4294967296;
+  };
+}
+function rngChoice(arr,rng){ return arr[Math.floor(rng()*arr.length)]; }
+function rngUniform(min,max,rng){ return min+rng()*(max-min); }
+function rngWeightedIdx(weights,rng){
+  const total=weights.reduce((s,w)=>s+w,0);
+  let r=rng()*total;
+  for(let i=0;i<weights.length;i++){r-=weights[i];if(r<=0)return i;}
+  return weights.length-1;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CONFIGURATION
+// ══════════════════════════════════════════════════════════════════════════
+const CONFIG = {
+  pool_percent:0.5,
+  rank_tiers:[
+    {label:"Gold",   multiplier:1.30},
+    {label:"Silver", multiplier:1.20},
+    {label:"Bronze", multiplier:1.10}
+  ],
+  min_bonus_percent:5
+};
+
+const EMPLOYEES = [
+  {id:17, name:"Rob Sires",       hired:"2007-08-23"},
+  {id:134,name:"Roberto Villalta", hired:"2022-11-21"},
+  {id:168,name:"Ernie Hernandez",  hired:"2023-03-08"},
+  {id:205,name:"Juan Serrato",     hired:"2023-12-06"},
+  {id:209,name:"Justin Molina",    hired:"2024-05-08"},
+  {id:216,name:"Jeffrey Perry",    hired:"2025-04-21"},
+  {id:251,name:"Erick Eudave",     hired:"2025-09-18"},
+  {id:252,name:"Cole Bender",      hired:"2025-10-13"},
+  {id:253,name:"Victor Contreras", hired:"2025-11-17"}
+];
+// Weights indexed to match EMPLOYEES order above (Rob, Roberto, Ernie, Juan, Justin, Jeffrey, Erick, Cole, Victor)
+const TECH_WEIGHTS = [7,6,5,4,3,3,2,2,1];
+
+const CUSTOMERS = [
+  "Greenfield Commercial","Riverside Medical","Sunset Apartments",
+  "CBD Office Tower","Harbour View Hotel","Northside School",
+  "Metro Shopping Centre","Council Depot","Airport Terminal B",
+  "University Lab Block","Bayview Residences","Pacific Industrial",
+  "Westfield Plaza","Crown Casino HVAC","Royal Children's Hospital",
+  "Federation Square","Melbourne Convention","Docklands Tower 3"
+];
+const SITES = [
+  "Level 3, 45 King St","Unit 7, Medical Pct","Building A, 12 River Rd",
+  "Suite 800, Tower 1","Kitchen Block, 99 Harbour Dr","Main Campus Hall B",
+  "Shop 42, Metro Mall","Workshop 3, Depot Rd","Gate 5, Terminal B",
+  "Room 204, Science Wing","Penthouse, 1 Bay Ave","Warehouse 6, Pacific Blvd"
+];
+const STATUSES = ["Awaiting Parts","Quoted","Scheduled","On Hold","Ready","Pending Approval"];
+const DESCRIPTIONS = [
+  "Replace faulty condenser unit on rooftop AHU-3",
+  "Annual fire safety inspection and compliance report",
+  "Hot water system upgrade – tankless conversion",
+  "Emergency leak repair in ceiling cavity",
+  "Install VRF system across floors 8-10",
+  "Preventive maintenance on chiller plant",
+  "Gas line extension for new kitchen fit-out",
+  "Backflow prevention device testing and certification",
+  "Ductwork modification for new server room",
+  "Boiler replacement and pipework reconfiguration",
+  "Split system install x4 units – residential",
+  "Hydraulic pump station overhaul"
+];
+const PRIORITIES = ["High","Normal","Low","Urgent","Normal"];
+const TYPES = ["Service","Project","Service","Service","Project"];
+
+// ══════════════════════════════════════════════════════════════════════════
+// COMMISSION CALCULATION ENGINE
+// ══════════════════════════════════════════════════════════════════════════
+function monthDates(year,month){
+  const start=new Date(year,month-1,1);
+  const end=new Date(year,month,0); // last day of month
+  return [fmtDate(start),fmtDate(end)];
+}
+const MONTH_NAMES=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTH_SHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function calculateCommissions(jobs,schedules){
+  // Log first entries for debugging (visible in browser console)
+  if(schedules.length>0){
+    console.log('[CommCalc] Sample timesheet keys:', Object.keys(schedules[0]));
+    console.log('[CommCalc] Sample timesheet:', JSON.stringify(schedules[0]).slice(0,500));
+  }
+  if(jobs.length>0){
+    console.log('[CommCalc] Sample job keys:', Object.keys(jobs[0]));
+    console.log('[CommCalc] Sample job.Total:', JSON.stringify(jobs[0].Total));
+  }
+
+  // Build job_staff_map from schedule/timesheet entries
+  // Handles multiple Simpro field name formats
+  const jobStaff={};
+  let matchedEntries=0, skippedNoJob=0, skippedNoStaff=0;
+  for(const sched of schedules){
+    let jobId=null;
+    const ref=String(sched.Reference||"");
+    const refId=parseInt(ref.split("-")[0]);
+    if(!isNaN(refId)&&refId>0) jobId=refId;
+    if(!jobId&&sched.Job&&sched.Job.ID) jobId=parseInt(sched.Job.ID);
+    if(!jobId&&sched.JobID) jobId=parseInt(sched.JobID);
+    if(!jobId){skippedNoJob++;continue;}
+
+    let staffName="";
+    if(typeof sched.Staff==="object"&&sched.Staff){
+      staffName=sched.Staff.Name||sched.Staff.DisplayName||sched.Staff.CompanyName||"";
+      if(!staffName&&(sched.Staff.FirstName||sched.Staff.LastName)){
+        staffName=[sched.Staff.FirstName,sched.Staff.LastName].filter(Boolean).join(" ");
+      }
+    }else if(typeof sched.Staff==="string"){
+      staffName=sched.Staff;
+    }
+    if(!staffName&&typeof sched.Employee==="object"&&sched.Employee){
+      staffName=sched.Employee.Name||sched.Employee.DisplayName||"";
+    }
+    if(!staffName){skippedNoStaff++;continue;}
+
+    let hours=parseFloat(sched.TotalHrs||sched.TotalHours||sched.Hours||sched.Duration||sched.ActualHours||0);
+    if(hours<=0)hours=1;
+
+    if(!jobStaff[jobId])jobStaff[jobId]={};
+    jobStaff[jobId][staffName]=(jobStaff[jobId][staffName]||0)+hours;
+    matchedEntries++;
+  }
+  console.log(`[CommCalc] Timesheet parsing: ${matchedEntries} matched, ${skippedNoJob} skipped (no job ID), ${skippedNoStaff} skipped (no staff name)`);
+
+  // Calculate per-tech allocations (proportional hours on each job)
+  const techData={};
+  let jobsMatched=0, jobsSkippedZero=0, jobsSkippedNoStaff=0;
+  let totalWorkValue=0;
+  for(const j of jobs){
+    const jobId=j.ID;
+    let sellTotal=0;
+    if(typeof j.Total==="object"&&j.Total!==null){
+      sellTotal=parseFloat(j.Total.Amount||j.Total.ExTax||j.Total.IncTax||j.Total.Total||j.Total.SellPrice||0);
+      if(sellTotal===0){
+        for(const v of Object.values(j.Total)){
+          const n=parseFloat(v);
+          if(!isNaN(n)&&n>0){sellTotal=n;break;}
+        }
+      }
+    }else{
+      sellTotal=parseFloat(j.Total||0);
+    }
+    if(sellTotal===0){jobsSkippedZero++;continue;}
+    totalWorkValue+=sellTotal;
+
+    const staffHours=jobStaff[jobId];
+    if(!staffHours){jobsSkippedNoStaff++;continue;}
+    const totalHours=Object.values(staffHours).reduce((s,h)=>s+h,0)||1;
+    const custName=typeof j.Customer==="object"?(j.Customer.CompanyName||j.Customer.Name||""):String(j.Customer||"");
+
+    for(const[staffName,hrs]of Object.entries(staffHours)){
+      const share=hrs/totalHours;
+      const alloc=sellTotal*share;
+      if(!techData[staffName])techData[staffName]={allocated_value:0,jobs:[],job_count:0};
+      techData[staffName].allocated_value+=alloc;
+      techData[staffName].job_count++;
+      techData[staffName].jobs.push({
+        job_id:jobId,job_name:j.Name||j.Description||"",customer:custName,
+        base_value:Math.round(sellTotal*100)/100,share:Math.round(share*1000)/10,
+        allocated_value:Math.round(alloc*100)/100,hours:Math.round(hrs*10)/10,
+        from_quote:false,
+        projected_hours:0
+      });
+    }
+    jobsMatched++;
+  }
+  console.log(`[CommCalc] Job parsing: ${jobsMatched} matched, ${jobsSkippedZero} skipped ($0 total), ${jobsSkippedNoStaff} skipped (no staff hours)`);
+  console.log(`[CommCalc] Technicians found: ${Object.keys(techData).length}, Total work value: $${totalWorkValue.toFixed(2)}`);
+
+  // ── POOL MODEL ──────────────────────────────────────────────────────
+  // Pool = pool_percent% of total completed work value
+  const poolRate=(CONFIG.pool_percent||0.5)/100;
+  const pool=totalWorkValue*poolRate;
+  console.log(`[CommCalc] Pool: ${CONFIG.pool_percent}% × $${totalWorkValue.toFixed(0)} = $${pool.toFixed(2)}`);
+
+  // Build results — each tech gets a base share proportional to allocated value
+  const totalAllocated=Object.values(techData).reduce((s,d)=>s+d.allocated_value,0)||1;
+  let results=[];
+  for(const[tname,data]of Object.entries(techData)){
+    const baseShare=(data.allocated_value/totalAllocated)*pool;
+    results.push({
+      technician:tname,allocated_value:Math.round(data.allocated_value*100)/100,
+      job_count:data.job_count,base_share:Math.round(baseShare*100)/100,
+      jobs:data.jobs.sort((a,b)=>b.allocated_value-a.allocated_value)
+    });
+  }
+
+  // Rank by allocated value
+  results.sort((a,b)=>b.allocated_value-a.allocated_value);
+
+  // Apply rank multipliers (Gold/Silver/Bronze boost, Standard ×1.0)
+  for(let i=0;i<results.length;i++){
+    const r=results[i];
+    if(i<CONFIG.rank_tiers.length){
+      const rt=CONFIG.rank_tiers[i];
+      r.weighted_share=r.base_share*rt.multiplier;
+      r.cap_type=rt.label.toLowerCase();
+      r.tier_label=rt.label;
+      r.multiplier=rt.multiplier;
+    }else{
+      r.weighted_share=r.base_share;
+      r.cap_type="standard";
+      r.tier_label="Standard";
+      r.multiplier=1.0;
+    }
+    r.rank=i+1;
+  }
+
+  // Normalize so total weighted shares = pool exactly
+  const totalWeighted=results.reduce((s,r)=>s+r.weighted_share,0)||1;
+  for(const r of results){
+    r.final_bonus=Math.round((r.weighted_share/totalWeighted)*pool*100)/100;
+    r.raw_bonus=r.base_share; // for display: what they'd get without rank boost
+    r.capped=false;
+  }
+
+  // Apply minimum threshold – techs below min get $0,
+  // their forfeited bonus redistributed to qualifying techs
+  // min_bonus_percent: percentage of average bonus (e.g., 5% means if avg=$60, min=$3)
+  const avgBonus=pool/(results.length||1);
+  const minB=CONFIG.min_bonus_percent?avgBonus*(CONFIG.min_bonus_percent/100):(CONFIG.min_bonus||0);
+  if(minB>0){
+    const below=results.filter(r=>r.final_bonus<minB);
+    const above=results.filter(r=>r.final_bonus>=minB);
+    if(below.length>0 && above.length>0){
+      const forfeited=below.reduce((s,r)=>s+r.final_bonus,0);
+      for(const r of below){
+        r.forfeited_bonus=Math.round(r.final_bonus*100)/100;
+        r.final_bonus=0;
+        r.below_threshold=true;
+      }
+      const abovePool=above.reduce((s,r)=>s+r.final_bonus,0);
+      for(const r of above){
+        const share=r.final_bonus/abovePool;
+        const extra=Math.round(forfeited*share*100)/100;
+        r.realloc_received=extra;
+        r.final_bonus=Math.round((r.final_bonus+extra)*100)/100;
+      }
+    } else if(below.length>0){
+      for(const r of below){
+        r.forfeited_bonus=Math.round(r.final_bonus*100)/100;
+        r.final_bonus=0;
+        r.below_threshold=true;
+      }
+    }
+  }
+
+  const totalPool=results.reduce((s,r)=>s+r.final_bonus,0);
+  return{technicians:results,total_pool:Math.round(totalPool*100)/100,total_work_value:Math.round(totalWorkValue*100)/100};
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// EFFICIENCY BONUS (post-processing overlay)
+// ══════════════════════════════════════════════════════════════════════════
+function applyEfficiencyBonus(results,maxAdjustPct){
+  // Efficiency = Quoted Hours / Actual Hours (only for quote-converted jobs)
+  // > 1.0 = finished faster than quoted (efficient)
+  // < 1.0 = took longer than quoted (inefficient)
+  const adjFrac=maxAdjustPct/100;
+
+  // 1) Calculate per-tech efficiency from their quote-converted jobs
+  let teamQuotedTotal=0,teamActualTotal=0;
+  for(const t of results){
+    let quotedHrs=0,actualHrs=0,quoteJobCount=0,totalHrs=0;
+    for(const j of(t.jobs||[])){
+      totalHrs+=j.hours||0;
+      if(j.from_quote&&j.projected_hours>0){
+        // Actual hours for this tech on this job = their hours (proportional)
+        quotedHrs+=j.projected_hours*(j.share/100); // their share of quoted hours
+        actualHrs+=j.hours||0;
+        quoteJobCount++;
+      }
+    }
+    t._totalHrs=totalHrs||0;
+    t._quoteJobCount=quoteJobCount;
+    t._quotedHrs=Math.round(quotedHrs*10)/10;
+    t._actualHrs=Math.round(actualHrs*10)/10;
+    // Efficiency ratio: quoted / actual (>1 = faster than quoted)
+    if(quoteJobCount>0&&actualHrs>0){
+      t.efficiency_ratio=Math.round((quotedHrs/actualHrs)*100)/100;
+    }else{
+      t.efficiency_ratio=1.0; // no quote data → neutral
+    }
+    teamQuotedTotal+=quotedHrs;
+    teamActualTotal+=actualHrs;
+  }
+  const teamAvgRatio=teamActualTotal>0?Math.round((teamQuotedTotal/teamActualTotal)*100)/100:1.0;
+
+  // 2) Map efficiency ratio to multiplier
+  // ratio 0.5 (took 2× quoted) → 1-adjFrac, ratio 1.0 (on time) → 1.0, ratio 1.5+ (50% faster) → 1+adjFrac
+  const MIN_RATIO=0.5,MAX_RATIO=1.5;
+  const minMult=1-adjFrac,maxMult=1+adjFrac;
+  for(const t of results){
+    const r=t.efficiency_ratio;
+    let mult;
+    if(r<=MIN_RATIO)mult=minMult;
+    else if(r>=MAX_RATIO)mult=maxMult;
+    else mult=minMult+((r-MIN_RATIO)/(MAX_RATIO-MIN_RATIO))*(maxMult-minMult);
+    t.efficiency_multiplier=Math.round(mult*10000)/10000;
+  }
+
+  // 3) Apply multipliers and normalize to preserve pool total
+  const origPool=results.reduce((s,r)=>s+r.final_bonus,0);
+  let totalAdjusted=0;
+  for(const t of results){
+    t.efficiency_adjusted_bonus=t.final_bonus*t.efficiency_multiplier;
+    totalAdjusted+=t.efficiency_adjusted_bonus;
+  }
+  const norm=totalAdjusted>0?origPool/totalAdjusted:1;
+  for(const t of results){
+    t.efficiency_adjusted_bonus=Math.round(t.efficiency_adjusted_bonus*norm*100)/100;
+  }
+  return{teamAvgRatio};
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// DEMO DATA GENERATORS
+// ══════════════════════════════════════════════════════════════════════════
+function generatePendingJobs(){
+  const rng=createRNG(42);
+  const jobs=[];
+  for(let i=0;i<12;i++){
+    const offset=Math.floor(rngUniform(-5,10,rng));
+    const due=new Date(TODAY);due.setDate(due.getDate()+offset);
+    const issued=new Date(due);issued.setDate(issued.getDate()-Math.floor(rngUniform(3,15,rng)));
+    const emp=EMPLOYEES[Math.floor(rng()*EMPLOYEES.length)];
+    jobs.push({
+      ID:30400+i,Name:`J-${30400+i}`,
+      Type:TYPES[i%TYPES.length],
+      Customer:{Name:CUSTOMERS[i%CUSTOMERS.length]},
+      Site:{Name:SITES[i%SITES.length]},
+      Stage:"Pending",
+      Status:{Name:STATUSES[i%STATUSES.length]},
+      DateIssued:fmtDate(issued),DueDate:fmtDate(due),
+      Technician:{Name:i%5===4?"":emp.name},
+      Priority:{Name:PRIORITIES[i%PRIORITIES.length]},
+      Total:Math.round((1500+i*843.5)*100)/100,
+      Description:DESCRIPTIONS[i%DESCRIPTIONS.length]
+    });
+  }
+  return jobs;
+}
+
+function generateCommissionData(year,month){
+  const rng=createRNG(year*100+month);
+  const[dateFrom,dateTo]=monthDates(year,month);
+
+  // Filter employees to only those hired before the END of this month
+  const periodEnd=new Date(dateTo+"T23:59:59");
+  const activeEmps=[];
+  const activeWeights=[];
+  for(let i=0;i<EMPLOYEES.length;i++){
+    const hireDate=new Date(EMPLOYEES[i].hired);
+    if(hireDate<=periodEnd){
+      activeEmps.push(EMPLOYEES[i]);
+      activeWeights.push(TECH_WEIGHTS[i]);
+    }
+  }
+
+  // If no techs were active yet, return empty result
+  if(activeEmps.length===0){
+    return{
+      ok:true,year,month,date_from:dateFrom,date_to:dateTo,
+      total_completed_jobs:0,total_pool:0,total_work_value:0,technicians:[],
+      config:{pool_percent:CONFIG.pool_percent,rank_tiers:CONFIG.rank_tiers,min_bonus_percent:CONFIG.min_bonus_percent}
+    };
+  }
+
+  // Vary job count based on month (90–140 range matches real Simpro ~100-130/mo)
+  const baseJobCount=Math.floor(rngUniform(90,140,rng));
+  // Scale by active workforce — fewer techs means fewer jobs
+  const jobCount=Math.max(8, Math.round(baseJobCount * (activeEmps.length / EMPLOYEES.length)));
+
+  const demoJobs=[];
+  const demoSchedules=[];
+  let schedId=9000;
+
+  for(let i=0;i<jobCount;i++){
+    const jobId=29000+i;
+    // Consume the quote RNG call to keep seed sequence stable
+    const wasQuote=rng()<0.10;
+    let baseVal;
+    const r=rng();
+    if(wasQuote){
+      baseVal=rngUniform(2000,20000,rng);
+    } else if(r<0.55){
+      // Small service calls ($100-$600) – most common, matches Simpro
+      baseVal=rngUniform(100,600,rng);
+    } else if(r<0.80){
+      // Medium service ($600-$1700) – repairs, replacements
+      baseVal=rngUniform(600,1700,rng);
+    } else if(r<0.92){
+      // Mid-range ($1700-$5000) – installations, larger repairs
+      baseVal=rngUniform(1700,5000,rng);
+    } else if(r<0.98){
+      // Larger jobs ($5000-$15000)
+      baseVal=rngUniform(5000,15000,rng);
+    } else {
+      // Rare projects ($15000-$40000)
+      baseVal=rngUniform(15000,40000,rng);
+    }
+
+    // Only use Total (sell price) — QuoteValue excluded from calculations
+    demoJobs.push({
+      ID:jobId,Name:`J-${jobId}`,
+      Type:baseVal>5000?"Project":"Service",
+      Customer:{Name:rngChoice(CUSTOMERS,rng)},
+      Total:Math.round(baseVal*100)/100,
+      Stage:"Complete"
+    });
+
+    // Only assign active employees
+    const numStaff=rng()<0.7?1:2;
+    const primaryIdx=rngWeightedIdx(activeWeights,rng);
+    const assignedSet=new Set([primaryIdx]);
+    if(numStaff>1 && activeEmps.length>1){
+      const pool=[];
+      for(let j=0;j<activeEmps.length;j++){if(j!==primaryIdx)pool.push(j);}
+      assignedSet.add(rngChoice(pool,rng));
+    }
+
+    for(const idx of assignedSet){
+      const emp=activeEmps[idx];
+      const hours=Math.round(rngUniform(2,24,rng)*10)/10;
+      demoSchedules.push({
+        ID:schedId++,Reference:`${jobId}-1`,
+        Staff:{ID:emp.id,Name:emp.name},
+        TotalHours:hours,Date:dateFrom,Type:"Job"
+      });
+    }
+  }
+
+  const{technicians,total_pool,total_work_value}=calculateCommissions(demoJobs,demoSchedules);
+  return{
+    ok:true,year,month,date_from:dateFrom,date_to:dateTo,
+    total_completed_jobs:demoJobs.length,total_pool,total_work_value,technicians,
+    config:{
+      pool_percent:CONFIG.pool_percent,rank_tiers:CONFIG.rank_tiers,min_bonus_percent:CONFIG.min_bonus_percent}
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// LIVE API MODE
+// ══════════════════════════════════════════════════════════════════════════
+let API_MODE = 'detecting'; // 'live' | 'demo' | 'detecting'
+
+async function detectMode(){
+  try{
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),4000);
+    const resp=await fetch('/health',{signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!resp.ok) throw new Error('health check failed');
+    const data=await resp.json();
+    if(data.simpro_connected){
+      API_MODE='live'; updatePill('live'); return true;
+    }
+    throw new Error(data.error||'Simpro not connected');
+  }catch(e){
+    API_MODE='demo'; updatePill('demo'); return false;
+  }
+}
+
+function updatePill(mode){
+  const pill=$('#modePill'); if(!pill)return;
+  if(mode==='live'){
+    pill.style.color='var(--green)';
+    pill.innerHTML='<span class="dot" style="background:var(--green)"></span>Live';
+  }else if(mode==='loading'){
+    pill.style.color='var(--accent)';
+    pill.innerHTML='<span class="dot" style="background:var(--accent)"></span>Loading…';
+  }else if(mode==='error'){
+    pill.style.color='var(--red)';
+    pill.innerHTML='<span class="dot" style="background:var(--red)"></span>API Error';
+  }else{
+    pill.style.color='var(--yellow)';
+    pill.innerHTML='<span class="dot"></span>Demo Mode';
+  }
+}
+
+// Fetch helper — paginated (returns all pages via proxy)
+async function apiFetchAll(endpoint){
+  const resp=await fetch('/api-all/'+endpoint);
+  if(!resp.ok){
+    const txt=await resp.text();
+    throw new Error(`API ${resp.status}: ${txt.slice(0,200)}`);
+  }
+  return await resp.json();
+}
+
+// Fetch helper — single resource
+async function apiFetchOne(endpoint){
+  const resp=await fetch('/api/'+endpoint);
+  if(!resp.ok){
+    const txt=await resp.text();
+    throw new Error(`API ${resp.status}: ${txt.slice(0,200)}`);
+  }
+  return await resp.json();
+}
+
+// Helper — pause between API calls to avoid 429 rate limits
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ── LIVE: Pending/Progress Jobs (server fetches details + filters by Stage) ──
+async function fetchLivePendingJobs(){
+  updatePill('loading');
+  try{
+    const resp=await fetch('/pending-jobs');
+    if(!resp.ok) throw new Error('API '+resp.status);
+    let jobs=await resp.json();
+    if(!Array.isArray(jobs)) jobs=[];
+    updatePill('live');
+    // Normalize live data into the shape the rendering code expects
+    // Server now returns full job details (Name, Customer, Site, Stage, etc.)
+    return jobs.map(j=>{
+      const total=(j.Total&&typeof j.Total==='object')
+        ? parseFloat(j.Total.ExTax||j.Total.IncTax||0)
+        : parseFloat(j.Total||0);
+      // Extract customer name
+      let custName='';
+      if(typeof j.Customer==='object'&&j.Customer){
+        custName=j.Customer.CompanyName||j.Customer.Name||'';
+      }else if(typeof j.Customer==='string'){
+        custName=j.Customer;
+      }
+      // Extract site
+      let siteName='';
+      if(typeof j.Site==='object'&&j.Site){
+        siteName=j.Site.Name||j.Site.Address||'';
+      }else if(typeof j.Site==='string'){
+        siteName=j.Site;
+      }
+      // Extract stage
+      let stageName=j._stageName||'';
+      if(!stageName&&typeof j.Stage==='object'&&j.Stage) stageName=j.Stage.Name||'';
+      return{
+        ID:j.ID,
+        Name:j.Name||j.Description||`Job #${j.ID}`,
+        Description:j.Description||'',
+        Customer:custName,
+        Site:siteName,
+        Technician:j._staffNames?j._staffNames.join(', '):'Unassigned',
+        Status:stageName||'Active',
+        Priority:(typeof j.Priority==='object'&&j.Priority)?j.Priority.Name||'Normal':(j.Priority||'Normal'),
+        Type:j._totalHrs?`${j._totalHrs} hrs`:'',
+        ScheduledDate:j._latestActivity||j.DateIssued||'',
+        Total:total
+      };
+    });
+  }catch(e){
+    console.error('Live pending-jobs fetch failed:',e);
+    updatePill('error');
+    throw e;
+  }
+}
+
+// ── LIVE: Commission Data (uses server-side /commission-data endpoint) ───
+// The server handles all the heavy lifting: caches all jobs in memory,
+// fetches timesheets per employee, and returns everything in one response.
+// This reduces load time from ~60+ seconds to ~5-10 seconds.
+async function fetchLiveCommissionData(year,month){
+  const[dateFrom,dateTo]=monthDates(year,month);
+  updatePill('loading');
+
+  try{
+    commAbortController=new AbortController();
+    const resp=await fetch(`/commission-data?year=${year}&month=${month}`,{signal:commAbortController.signal});
+    if(!resp.ok){
+      const txt=await resp.text();
+      throw new Error(`Server ${resp.status}: ${txt.slice(0,200)}`);
+    }
+    const data=await resp.json();
+    if(!data.ok) throw new Error(data.error||'Server returned error');
+
+    const jobs=data.jobs||[];
+    const timesheets=data.timesheets||[];
+
+    if(jobs.length===0||timesheets.length===0){
+      updatePill('live');
+      return{
+        ok:true,year,month,date_from:dateFrom,date_to:dateTo,
+        total_completed_jobs:0,total_pool:0,total_work_value:0,technicians:[],
+        config:{pool_percent:CONFIG.pool_percent,rank_tiers:CONFIG.rank_tiers,min_bonus_percent:CONFIG.min_bonus_percent}
+      };
+    }
+
+    // Calculate commissions client-side using the shared engine
+    const{technicians,total_pool,total_work_value}=calculateCommissions(jobs,timesheets);
+
+    updatePill('live');
+    return{
+      ok:true,year,month,date_from:dateFrom,date_to:dateTo,
+      total_completed_jobs:jobs.length,total_pool,total_work_value,technicians,
+      config:{pool_percent:CONFIG.pool_percent,rank_tiers:CONFIG.rank_tiers,min_bonus_percent:CONFIG.min_bonus_percent}
+    };
+  }catch(e){
+    console.error('Live commission fetch failed:',e);
+    updatePill('error');
+    throw e;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// VIEW NAVIGATION
+// ══════════════════════════════════════════════════════════════════════════
+function showView(view){
+  document.querySelectorAll(".main-view").forEach(v=>v.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  if(view==="comm"){
+    $("#viewComm").classList.add("active");
+    $("#navComm").classList.add("active");
+  }else if(view==="summary"){
+    $("#viewSummary").classList.add("active");
+    $("#navSummary").classList.add("active");
+  }else{
+    $("#viewJobs").classList.add("active");
+    $("#navJobs").classList.add("active");
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PENDING JOBS VIEW
+// ══════════════════════════════════════════════════════════════════════════
+let allJobs=[];
+let filteredJobs=[];
+let sortCol="ScheduledDate";
+let sortAsc=true;
+let weekOffset=0;
+
+async function initJobsView(){
+  if(API_MODE==='live'){
+    try{
+      allJobs=await fetchLivePendingJobs();
+    }catch(e){
+      console.warn('Live fetch failed, using demo data:',e.message);
+      allJobs=generatePendingJobs();
+    }
+  }else{
+    allJobs=generatePendingJobs();
+  }
+  populateFilters();
+  applyFilters();
+  updateJobStats();
+  renderJobCharts();
+  renderTimeline();
+}
+
+function updateJobStats(){
+  const total=allJobs.length;
+  // Use ScheduledDate for live mode, DueDate for demo
+  const dateKey=API_MODE==='live'?'ScheduledDate':'DueDate';
+  let scheduledToday=0,scheduledWeek=0,totalValue=0;
+  const weekStart=new Date(TODAY);weekStart.setDate(weekStart.getDate()-weekStart.getDay()+1); // Monday
+  const weekEnd=new Date(weekStart);weekEnd.setDate(weekEnd.getDate()+6); // Sunday
+  allJobs.forEach(j=>{
+    if(j[dateKey]){
+      const dd=new Date(j[dateKey]);dd.setHours(0,0,0,0);
+      if(dd.getTime()===TODAY.getTime())scheduledToday++;
+      if(dd>=weekStart&&dd<=weekEnd)scheduledWeek++;
+    }
+    totalValue+=parseFloat(j.Total||0);
+  });
+  $("#jStatTotal").textContent=total;
+  $("#jStatValue").textContent=fmtCompact(totalValue);
+  $("#jStatToday").textContent=scheduledToday;
+  $("#jStatWeek").textContent=scheduledWeek;
+}
+
+function populateFilters(){
+  const techs=new Set(),statuses=new Set(),priorities=new Set(),types=new Set();
+  allJobs.forEach(j=>{
+    techs.add(field(j,"Technician")||"Unassigned");
+    statuses.add(field(j,"Status")||"Unknown");
+    priorities.add(field(j,"Priority")||"Normal");
+    types.add(field(j,"Type")||"Unknown");
+  });
+  const fill=(sel,vals)=>{
+    const el=$(sel);const cur=el.value;
+    while(el.options.length>1)el.remove(1);
+    [...vals].sort().forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;el.appendChild(o);});
+    el.value=cur;
+  };
+  fill("#filterTech",techs);fill("#filterStatus",statuses);
+  fill("#filterPriority",priorities);fill("#filterType",types);
+}
+
+function applyFilters(){
+  const search=$("#searchInput").value.toLowerCase();
+  const tech=$("#filterTech").value,status=$("#filterStatus").value;
+  const prio=$("#filterPriority").value,type=$("#filterType").value,due=$("#filterDue").value;
+  const dateKey=API_MODE==='live'?'ScheduledDate':'DueDate';
+  const weekStart=new Date(TODAY);weekStart.setDate(weekStart.getDate()-weekStart.getDay()+1);
+  const weekEnd=new Date(weekStart);weekEnd.setDate(weekEnd.getDate()+6);
+
+  filteredJobs=allJobs.filter(j=>{
+    if(search){
+      const hay=[String(j.ID),field(j,"Customer"),field(j,"Site"),field(j,"Technician"),j.Description||"",field(j,"Status"),j.Name||""].join(" ").toLowerCase();
+      if(!hay.includes(search))return false;
+    }
+    if(tech&&(field(j,"Technician")||"Unassigned")!==tech)return false;
+    if(status&&field(j,"Status")!==status)return false;
+    if(prio&&field(j,"Priority")!==prio)return false;
+    if(type&&field(j,"Type")!==type)return false;
+    if(due){
+      const dd=j[dateKey]?new Date(j[dateKey]):null;if(!dd)return false;dd.setHours(0,0,0,0);
+      if(due==="today"&&dd.getTime()!==TODAY.getTime())return false;
+      if(due==="week"&&(dd<weekStart||dd>weekEnd))return false;
+      if(due==="past"&&dd>=TODAY)return false;
+    }
+    return true;
+  });
+  sortJobs();renderTable();
+}
+
+function sortJobs(){
+  filteredJobs.sort((a,b)=>{
+    let va,vb;
+    if(sortCol==="ID"||sortCol==="Total"){va=Number(a[sortCol]||0);vb=Number(b[sortCol]||0);}
+    else if(sortCol==="ScheduledDate"){va=a.ScheduledDate||a.DueDate||"9999";vb=b.ScheduledDate||b.DueDate||"9999";}
+    else{va=field(a,sortCol).toLowerCase();vb=field(b,sortCol).toLowerCase();}
+    if(va<vb)return sortAsc?-1:1;if(va>vb)return sortAsc?1:-1;return 0;
+  });
+}
+
+function renderTable(){
+  const tbody=$("#jobsBody");tbody.innerHTML="";
+  if(!filteredJobs.length){$("#noResults").style.display="";$("#resultCount").textContent="";return;}
+  $("#noResults").style.display="none";
+  $("#resultCount").textContent=`Showing ${filteredJobs.length} of ${allJobs.length} jobs`;
+
+  const dateKey=API_MODE==='live'?'ScheduledDate':'DueDate';
+  filteredJobs.forEach(j=>{
+    const tr=document.createElement("tr");
+    const schedDate=j[dateKey]||'';
+    const sc=dueClass(schedDate);
+    if(sc==="overdue")tr.className="overdue-row";
+    else if(sc==="today")tr.className="due-today-row";
+    tr.style.cursor="pointer";tr.onclick=()=>showJobDetail(j);
+    const statusName=field(j,"Status")||"—";
+    const statusColor=statusName.includes("Hold")?"var(--yellow)":statusName.includes("Pending")?"var(--orange)":statusName.includes("Progress")?"var(--green)":statusName.includes("Sched")?"var(--accent)":"var(--muted)";
+    let schedFlagHtml="";
+    if(sc==="today")schedFlagHtml='<span class="due-flag today">TODAY</span>';
+    else if(sc==="overdue")schedFlagHtml='<span class="due-flag overdue">PAST</span>';
+    const techName=field(j,"Technician");
+    tr.innerHTML=`
+      <td><strong>${j.ID}</strong> — ${j.Name||j.Description||''}</td>
+      <td>${field(j,"Customer")}</td>
+      <td>${field(j,"Site")}</td>
+      <td><span class="status-dot" style="background:${statusColor}"></span>${statusName}</td>
+      <td>${techName||'<span style="color:var(--muted)">Unassigned</span>'}</td>
+      <td>${fmtDisplay(schedDate)}${schedFlagHtml}</td>
+      <td style="text-align:right;font-weight:600">${fmtMoney(j.Total)}</td>`;
+    tbody.appendChild(tr);
+  });
+  $$("thead th").forEach(th=>{
+    th.classList.toggle("sorted",th.dataset.col===sortCol);
+    const a=th.querySelector(".sort-arrow");if(a)a.textContent=th.dataset.col===sortCol?(sortAsc?"▲":"▼"):"▲";
+  });
+}
+
+function renderJobCharts(){
+  const groupBy=key=>{
+    const map={};allJobs.forEach(j=>{const v=field(j,key)||"Unassigned";map[v]=(map[v]||0)+1;});
+    return Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  };
+  const renderBarChart=(sel,data,usePrio=false)=>{
+    const el=$(sel);el.innerHTML="";
+    if(!data.length){el.innerHTML='<div class="empty-state">No data</div>';return;}
+    const max=Math.max(...data.map(d=>d[1]));
+    data.forEach(([label,count],i)=>{
+      const pct=Math.round((count/max)*100);
+      const color=usePrio?(PRIO_COLORS[label.toLowerCase()]||BAR_COLORS[i%BAR_COLORS.length]):BAR_COLORS[i%BAR_COLORS.length];
+      el.innerHTML+=`<div class="bar-row"><div class="bar-label">${label}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}">${count}</div></div></div>`;
+    });
+  };
+  renderBarChart("#chartTech",groupBy("Technician"));
+  renderBarChart("#chartPriority",groupBy("Priority"),true);
+  renderBarChart("#chartStatus",groupBy("Status"));
+  renderBarChart("#chartType",groupBy("Type"));
+}
+
+function getWeekStart(offset=0){
+  const d=new Date(TODAY);d.setDate(d.getDate()-d.getDay()+1+offset*7);return d;
+}
+
+function renderTimeline(){
+  const start=getWeekStart(weekOffset);
+  const days=[];for(let i=0;i<7;i++){const d=new Date(start);d.setDate(d.getDate()+i);days.push(d);}
+  const end=days[6];
+  $("#weekLabel").textContent=`${days[0].toLocaleDateString("en-AU",{day:"numeric",month:"short"})} – ${end.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}`;
+
+  const dateKey=API_MODE==='live'?'ScheduledDate':'DueDate';
+  const techMap={};
+  allJobs.forEach(j=>{
+    const t=field(j,"Technician")||"Unassigned";if(!techMap[t])techMap[t]={};
+    const sched=j[dateKey];if(!sched)return;const dStr=sched.slice(0,10);
+    if(!techMap[t][dStr])techMap[t][dStr]=[];techMap[t][dStr].push(j);
+  });
+  const techNames=Object.keys(techMap).sort();
+  const grid=$("#timelineGrid");grid.innerHTML="";
+  grid.style.gridTemplateColumns="140px repeat(7,1fr)";
+  grid.innerHTML+='<div class="tg-header"></div>';
+  days.forEach(d=>{
+    const isToday=fmtDate(d)===TODAY_STR;
+    grid.innerHTML+=`<div class="tg-header${isToday?" today-col":""}">${d.toLocaleDateString("en-AU",{weekday:"short"})} ${d.getDate()}</div>`;
+  });
+  if(!techNames.length){grid.innerHTML+='<div class="tg-tech" style="grid-column:1/-1;justify-content:center;color:var(--muted)">No jobs to display</div>';return;}
+  techNames.forEach(tech=>{
+    grid.innerHTML+=`<div class="tg-tech">${tech}</div>`;
+    days.forEach(d=>{
+      const dStr=fmtDate(d);const isToday=dStr===TODAY_STR;
+      const jobs=(techMap[tech]&&techMap[tech][dStr])||[];
+      let html=`<div class="tg-cell${isToday?" today-col":""}">`;
+      jobs.forEach(j=>{const pc=prioClass(j.Priority);html+=`<div class="tg-job ${pc}" title="${field(j,"Customer")}">${j.Name||j.ID}</div>`;});
+      html+="</div>";grid.innerHTML+=html;
+    });
+  });
+}
+
+function showJobDetail(job){
+  if(!job)return;
+  const pc=prioClass(job.Priority);
+  $("#modalTitle").innerHTML=`<span class="badge ${pc}">${field(job,"Priority")||"Normal"}</span> ${job.Name||job.ID}`;
+  const schedDate=job.ScheduledDate||job.DueDate||'';
+  const items=[["Job ID",job.ID],["Job Name",job.Name||"—"],["Customer",field(job,"Customer")],["Site",field(job,"Site")],["Stage",field(job,"Status")||job.Stage||"Pending"],["Technician",field(job,"Technician")||"Unassigned"],["Scheduled Date",fmtDisplay(schedDate)],["Date Issued",fmtDisplay(job.DateIssued)],["Value",fmtMoney(job.Total)]];
+  $("#modalGrid").innerHTML=items.map(([l,v])=>`<div class="detail-item"><span class="dl">${l}</span><span class="dv">${v||"—"}</span></div>`).join("");
+  $("#modalDesc").innerHTML=`<p>${job.Description||"No description available."}</p>`;
+  $("#modalOverlay").classList.add("open");
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// COMMISSIONS VIEW
+// ══════════════════════════════════════════════════════════════════════════
+let commData=null;
+let efficiencySettings={enabled:false,maxAdjustPercent:20};
+let efficiencyEnrichment=null; // cached enrichment from /efficiency-data
+let efficiencyLoading=false;
+let commAbortController=null; // abort stale commission requests
+
+function initCommView(){
+  const now=new Date();
+  const curYear=now.getFullYear();
+  const curMonth=now.getMonth()+1;
+  const selYear=$("#selYear");
+  for(let y=curYear;y>=curYear-3;y--){
+    const o=document.createElement("option");o.value=y;o.textContent=y;selYear.appendChild(o);
+  }
+  selYear.value=curYear;
+  $("#selMonth").value=curMonth;
+  loadCommissions();
+}
+
+async function loadCommissions(){
+  const year=parseInt($("#selYear").value);
+  const month=parseInt($("#selMonth").value);
+
+  // Abort any in-flight request
+  if(commAbortController){commAbortController.abort();commAbortController=null;}
+
+  // Clear efficiency cache when month changes
+  efficiencyEnrichment=null;
+
+  // Reset UI
+  $("#cStatJobs").textContent="–";$("#cStatValue").textContent="–";
+  $("#cStatPool").textContent="–";$("#cStatTechs").textContent="–";
+  $("#configBanner").innerHTML="";
+  $("#leaderboard").innerHTML='<div class="loading"><div class="spinner"></div>Loading commission data…</div>';
+  $("#waterfallChart").innerHTML="";
+
+  if(API_MODE==='live'){
+    try{
+      commData=await fetchLiveCommissionData(year,month);
+    }catch(e){
+      if(e.name==='AbortError')return; // request was cancelled
+      console.warn('Live commission fetch failed, falling back to demo:',e.message);
+      commData=generateCommissionData(year,month);
+    }
+  }else{
+    commData=generateCommissionData(year,month);
+  }
+  renderComm();
+}
+
+function renderComm(){
+  if(!commData||!commData.ok)return;
+  const techs=commData.technicians||[];
+  const cfg=commData.config||{};
+
+  // Config banner
+  try{
+    const poolPct=cfg.pool_percent||0.5;
+    const rankHtml=(cfg.rank_tiers||[]).map(rt=>`${rt.label} ×${rt.multiplier}`).join(", ");
+    $("#configBanner").innerHTML=`
+      <div class="cfg-item"><span class="cfg-label">Commission Pool</span><span class="cfg-val">${poolPct}% of completed work value</span></div>
+      <div class="cfg-item"><span class="cfg-label">Rank Boosts</span><span class="cfg-val">${rankHtml}, Standard ×1.0</span></div>
+      <div class="cfg-item"><span class="cfg-label">Period</span><span class="cfg-val">${MONTH_NAMES[(commData.month||1)-1]} ${commData.year}</span></div>
+      <div class="cfg-item"><span class="cfg-label">Work Value</span><span class="cfg-val">${fmtMoney(commData.total_work_value||0)}</span></div>`;
+  }catch(e){console.error(e);}
+
+  // Stats
+  try{
+    const totalValue=commData.total_work_value||techs.reduce((s,t)=>s+t.allocated_value,0);
+    $("#cStatJobs").textContent=commData.total_completed_jobs;
+    $("#cStatValue").textContent=fmtCompact(totalValue);
+    $("#cStatPool").textContent=fmtMoney(commData.total_pool);
+    $("#cStatTechs").textContent=techs.length;
+    // Update pool percentage sub text
+    const poolSubEl = $("#cStatPoolSub");
+    if(poolSubEl) poolSubEl.textContent = CONFIG.pool_percent.toFixed(2) + "% of work value";
+  }catch(e){console.error(e);}
+
+  // Apply efficiency bonus if toggle is ON and enrichment data is loaded
+  let techsToRender=techs;
+  const effLoad=$("#efficiencyLoading");
+  const effErr=$("#efficiencyError");
+  const effTW=$("#efficiencyTableWrap");
+  // Reset all efficiency UI states
+  if(effLoad)effLoad.style.display="none";
+  if(effErr)effErr.style.display="none";
+  if(effTW)effTW.style.display="none";
+
+  if(efficiencySettings.enabled&&techs.length>0&&efficiencyEnrichment){
+    // Data is ready — apply and show table
+    techsToRender=JSON.parse(JSON.stringify(techs));
+    const effResult=applyEfficiencyBonus(techsToRender,efficiencySettings.maxAdjustPercent);
+    for(const t of techsToRender){
+      t.base_final_bonus=t.final_bonus;
+      t.final_bonus=t.efficiency_adjusted_bonus;
+    }
+    updateEfficiencyTable(techsToRender,effResult.teamAvgRatio);
+  }else if(efficiencySettings.enabled&&techs.length>0&&!efficiencyEnrichment&&!efficiencyLoading){
+    // Need to fetch — show loading spinner (separate from table)
+    if(effLoad)effLoad.style.display="";
+    loadEfficiencyData();
+  }
+
+  try{renderCommLeaderboard(techsToRender,cfg);}catch(e){console.error(e);}
+  try{renderWaterfall(techsToRender,cfg);}catch(e){console.error(e);}
+}
+
+// ── Lazy-load efficiency data from /efficiency-data endpoint ──────────
+async function loadEfficiencyData(){
+  if(!commData||!commData.technicians||efficiencyLoading)return;
+  efficiencyLoading=true;
+
+  // Collect all unique job IDs from all technicians
+  const jobIdSet=new Set();
+  for(const t of commData.technicians){
+    for(const j of(t.jobs||[])){
+      if(j.job_id)jobIdSet.add(j.job_id);
+    }
+  }
+  const jobIds=[...jobIdSet];
+  if(jobIds.length===0){efficiencyLoading=false;return;}
+
+  console.log(`[Efficiency] Fetching enrichment for ${jobIds.length} jobs…`);
+  try{
+    const resp=await fetch(`/efficiency-data?jobIds=${jobIds.join(',')}`);
+    if(!resp.ok)throw new Error(`Server ${resp.status}`);
+    const data=await resp.json();
+    if(!data.ok)throw new Error(data.error||'Error');
+
+    // Apply enrichment to commData job entries
+    const enrich=data.enrichment||{};
+    efficiencyEnrichment=enrich;
+    for(const t of commData.technicians){
+      for(const j of(t.jobs||[])){
+        const e=enrich[j.job_id];
+        if(e){
+          j.from_quote=e.from_quote;
+          j.projected_hours=e.projected_hours;
+        }
+      }
+    }
+    console.log(`[Efficiency] Enrichment loaded (${data.elapsed_ms}ms server-side)`);
+    renderComm(); // re-render with efficiency data
+  }catch(e){
+    console.error('[Efficiency] Failed to load:',e.message);
+    const errDiv=$("#efficiencyError");
+    if(errDiv){errDiv.style.display="";errDiv.textContent="Failed to load efficiency data: "+e.message;}
+    const loadDiv=$("#efficiencyLoading");
+    if(loadDiv)loadDiv.style.display="none";
+  }finally{
+    efficiencyLoading=false;
+  }
+}
+
+function updateEfficiencyTable(techs,teamAvgRatio){
+  const tw=$("#efficiencyTableWrap");
+  const tbody=$("#efficiencyTableBody");
+  if(!tw||!tbody)return;
+  tw.style.display="";
+  tbody.innerHTML=techs.map(t=>{
+    const diff=t.efficiency_adjusted_bonus-(t.base_final_bonus||t.final_bonus);
+    const diffStr=diff>=0?"+"+fmtMoney(diff):"-"+fmtMoney(Math.abs(diff));
+    const tagCls=t.efficiency_multiplier>1.005?"boost":t.efficiency_multiplier<0.995?"reduce":"neutral";
+    const tagText=t.efficiency_multiplier>1.005?"+"+((t.efficiency_multiplier-1)*100).toFixed(1)+"%":t.efficiency_multiplier<0.995?((t.efficiency_multiplier-1)*100).toFixed(1)+"%":"—";
+    const hasQuoteData=t._quoteJobCount>0;
+    const ratioColor=t.efficiency_ratio>1.05?"var(--green)":t.efficiency_ratio<0.95?"var(--red)":"var(--muted)";
+    return`<tr>
+      <td><strong>${t.technician}</strong></td>
+      <td>${hasQuoteData?t._quoteJobCount:'<span style="color:var(--muted)">0</span>'}</td>
+      <td>${hasQuoteData?t._quotedHrs+"h":'<span style="color:var(--muted)">—</span>'}</td>
+      <td>${hasQuoteData?t._actualHrs+"h":'<span style="color:var(--muted)">—</span>'}</td>
+      <td style="font-weight:600;color:${ratioColor}">${hasQuoteData?t.efficiency_ratio+"×":"1.0× <span style='font-size:.65rem;color:var(--muted)'>(no data)</span>"}</td>
+      <td>×${t.efficiency_multiplier.toFixed(3)}</td>
+      <td><span class="eff-tag ${tagCls}">${tagText}</span> <span style="font-size:.7rem;color:var(--muted)">${diffStr}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+function renderCommLeaderboard(techs,cfg){
+  const lb=$("#leaderboard");lb.innerHTML="";
+  const maxBar=Math.max(...techs.map(t=>t.final_bonus),1); // scale bars to actual max
+  techs.forEach((t,i)=>{
+    const card=document.createElement("div");
+    card.className=`tech-card${i<3?" rank-"+(i+1):""}`;
+    const rankCls=i<3?`r${i+1}`:"rn";
+    let bonusCls,tagLabel;
+    const MEDALS = {gold:"🥇",silver:"🥈",bronze:"🥉"};
+    if(t.below_threshold){
+      bonusCls="no-bonus";
+      tagLabel="Below min";
+    } else if(t.cap_type==="gold"){
+      bonusCls="gold";
+      tagLabel="Gold ×"+t.multiplier;
+    } else if(t.cap_type==="silver"){
+      bonusCls="silver";
+      tagLabel="Silver ×"+t.multiplier;
+    } else if(t.cap_type==="bronze"){
+      bonusCls="bronze";
+      tagLabel="Bronze ×"+t.multiplier;
+    } else {
+      bonusCls="standard";
+      tagLabel="Standard";
+    }
+    const medalIcon = MEDALS[t.cap_type]||"";
+    const barPct=Math.round((t.final_bonus/maxBar)*100);
+    const barColor=t.below_threshold?"var(--muted)":COLORS[i%COLORS.length];
+    card.innerHTML=`
+      <div class="tech-header" data-idx="${i}">
+        <div class="rank-badge ${rankCls}">${t.rank}</div>
+        <div class="tech-info">
+          <div class="tech-name">${medalIcon?medalIcon+" ":""}${t.technician}</div>
+          <div class="tech-meta">
+            <span>${t.job_count} job${t.job_count!==1?"s":""}</span>
+            <span>Allocated: ${fmtMoney(t.allocated_value)}</span>
+            ${t.efficiency_multiplier!=null?`<span style="color:${t.efficiency_multiplier>1.005?"var(--green)":t.efficiency_multiplier<0.995?"var(--red)":"var(--muted)"}">Eff: ${t.efficiency_ratio}× · ×${t.efficiency_multiplier.toFixed(3)}</span>`:""}
+          </div>
+        </div>
+        <div class="tech-bonus">
+          <div class="bonus-val ${bonusCls}">${fmtMoney(t.final_bonus)}</div>
+          <span class="bonus-tag ${t.below_threshold?"no-qual":t.cap_type==="standard"?"standard":t.cap_type}">${tagLabel}</span>
+          ${t.capped?`<span style="font-size:.65rem;color:var(--muted)">Raw: ${fmtMoney(t.raw_bonus)}</span>`:""}
+          ${t.below_threshold?`<span style="font-size:.65rem;color:var(--red)">Forfeited: ${fmtMoney(t.forfeited_bonus)}</span>`:""}
+          ${t.realloc_received?`<span style="font-size:.65rem;color:var(--green)">+${fmtMoney(t.realloc_received)} realloc</span>`:""}
+        </div>
+        <span class="expand-arrow" data-idx="${i}">▶</span>
+      </div>
+      <div class="bonus-bar-wrap">
+        <div class="bonus-bar-track">
+          <div class="bonus-bar-fill" style="width:${barPct}%;background:${barColor}"></div>
+        </div>
+        <div class="bonus-bar-label">${fmtMoney(t.final_bonus)}</div>
+      </div>
+      <div class="tech-detail" data-idx="${i}">
+        <table class="detail-table"><thead><tr>
+          <th>Job</th><th>Customer</th><th>Job Value</th><th>Share</th><th>Hours</th><th>Allocated</th>
+        </tr></thead><tbody>
+          ${t.jobs.map(j=>`<tr>
+            <td><strong>${j.job_name||j.job_id}</strong></td><td>${j.customer}</td>
+            <td>${fmtMoney(j.base_value)}</td><td>${j.share}%</td><td>${j.hours}h</td>
+            <td style="font-weight:700">${fmtMoney(j.allocated_value)}</td>
+          </tr>`).join("")}
+          ${t.efficiency_multiplier!=null?`<tr style="background:rgba(37,99,235,.03)">
+            <td colspan="6" style="font-size:.72rem;padding:8px 10px">
+              <strong>Efficiency:</strong>
+              ${t._quoteJobCount>0?`${t._quoteJobCount} quote job${t._quoteJobCount>1?"s":""} · Quoted: ${t._quotedHrs}h · Actual: ${t._actualHrs}h · Ratio: ${t.efficiency_ratio}×`:"No quote-converted jobs (neutral)"}
+              · Multiplier: ×${t.efficiency_multiplier.toFixed(3)}
+              ${t.base_final_bonus!=null?` · Base: ${fmtMoney(t.base_final_bonus)} → Adjusted: ${fmtMoney(t.final_bonus)}`:""}
+            </td>
+          </tr>`:""}
+        </tbody></table>
+      </div>`;
+    lb.appendChild(card);
+  });
+
+  // Expand toggles
+  $$("#leaderboard .tech-header").forEach(h=>{
+    h.addEventListener("click",()=>{
+      const idx=h.dataset.idx;
+      const det=document.querySelector(`.tech-detail[data-idx="${idx}"]`);
+      const arrow=h.querySelector(".expand-arrow");
+      det.classList.toggle("open");arrow.classList.toggle("open");
+    });
+  });
+}
+
+function renderWaterfall(techs,cfg){
+  const wrap=$("#waterfallChart");wrap.innerHTML="";
+  const maxVal=Math.max(...techs.map(t=>t.final_bonus),1);
+  const maxBarPx=290;
+  const MEDALS={gold:"🥇",silver:"🥈",bronze:"🥉"};
+  // Shiny metallic gradients for top 3
+  const TIER_GRADIENTS={
+    gold:"linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%)",
+    silver:"linear-gradient(135deg, #808080 0%, #d7d7d7 25%, #a8a8a8 50%, #e8e8e8 75%, #8c8c8c 100%)",
+    bronze:"linear-gradient(135deg, #804a00 0%, #cd7f32 25%, #a0522d 50%, #daa06d 75%, #8b4513 100%)"
+  };
+  const TIER_TEXT={gold:"#b8860b",silver:"#7a7a7a",bronze:"#a0522d"};
+  techs.forEach((t,i)=>{
+    const barH=t.final_bonus===0?2:Math.max(Math.round((t.final_bonus/maxVal)*maxBarPx),4);
+    const isTop3=t.cap_type&&TIER_GRADIENTS[t.cap_type];
+    const bgStyle=t.below_threshold?"background:var(--muted)":(isTop3?"background:"+TIER_GRADIENTS[t.cap_type]:"background:"+COLORS[Math.abs(i-3)%COLORS.length]);
+    const valColor=t.below_threshold?"var(--red)":(isTop3?TIER_TEXT[t.cap_type]:COLORS[Math.abs(i-3)%COLORS.length]);
+    const label=t.technician.split(" ");
+    const shortName=label[0]+" "+(label[1]?label[1][0]+".":"");
+    const medal=MEDALS[t.cap_type]||"";
+    const valText=t.final_bonus===0?"$0":fmtMoney(t.final_bonus);
+    wrap.innerHTML+=`<div class="wf-col">
+      <div class="wf-bar${isTop3?" shiny":""}" style="height:${barH}px;${bgStyle}">
+        <span class="wf-val" style="color:${valColor}">${valText}</span>
+      </div>
+      <div class="wf-label" title="${t.technician}">${medal?medal+" ":""}${shortName}</div>
+    </div>`;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// COMMISSION SUMMARY
+// ══════════════════════════════════════════════════════════════════════════
+let summaryCache={};           // { "2025": { 1:{technicians,total_pool,...}, 2:{...}, ... } }
+let summaryViewType="monthly"; // "monthly" | "quarterly" | "annual"
+let summaryYear=new Date().getFullYear();
+let summaryLoading=false;
+
+function initSummaryView(){
+  const sel=$("#summaryYearSel");
+  const curYear=new Date().getFullYear();
+  for(let y=curYear;y>=curYear-3;y--){
+    const o=document.createElement("option");o.value=y;o.textContent=y;sel.appendChild(o);
+  }
+  sel.value=curYear;
+  summaryYear=curYear;
+}
+
+async function loadSummaryData(){
+  const year=parseInt($("#summaryYearSel").value);
+  summaryYear=year;
+
+  // If cached, just re-render
+  if(summaryCache[year]){
+    renderSummary();
+    return;
+  }
+
+  if(summaryLoading)return;
+  summaryLoading=true;
+
+  // Show loading UI
+  $("#summaryLoading").style.display="";
+  $("#summaryEmpty").style.display="none";
+  $("#summaryTableWrap").style.display="none";
+  const progBar=$("#summaryProgress");
+  const progFill=$("#summaryProgressFill");
+  const progLabel=$("#summaryProgressLabel");
+  progBar.style.display="";
+  progLabel.style.display="";
+  progFill.style.width="5%";
+  progLabel.textContent="Fetching year data…";
+
+  try{
+    if(API_MODE==='live'){
+      // Single request — server fetches all months in parallel
+      const resp=await fetch(`/summary-data?year=${year}`);
+      if(!resp.ok)throw new Error(`Server ${resp.status}`);
+      const data=await resp.json();
+      if(!data.ok)throw new Error(data.error||'Server error');
+
+      progFill.style.width="70%";
+      progLabel.textContent="Calculating commissions…";
+
+      // Log server diagnostics
+      if(data.diagnostics){
+        console.log('[Summary] Server diagnostics:');
+        for(const[m,d]of Object.entries(data.diagnostics)){
+          console.log(`  Month ${m}: ${d.status} — ${d.timesheets||0} timesheets, ${d.jobs||0} jobs` + (d.error ? ` ERROR: ${d.error}` : ''));
+        }
+        console.log(`  Total: ${data.months_loaded}/${data.months_total} months loaded in ${data.elapsed_ms}ms`);
+      }
+
+      // Run calculateCommissions client-side for each month's raw data
+      const results={};
+      const monthKeys=Object.keys(data.months||{}).map(Number);
+      let done=0;
+      for(const m of monthKeys){
+        const md=data.months[m];
+        if(!md)continue;
+        const jobs=md.jobs||[];
+        const ts=md.timesheets||[];
+        if(jobs.length>0&&ts.length>0){
+          const calc=calculateCommissions(jobs,ts);
+          results[m]={technicians:calc.technicians,total_pool:calc.total_pool,total_work_value:calc.total_work_value,job_count:md.job_count||jobs.length};
+        }else if(ts.length>0){
+          // Has timesheets but no matched jobs — still include so it doesn't vanish
+          console.warn(`Summary: Month ${m} has ${ts.length} timesheets but ${jobs.length} jobs`);
+          results[m]={technicians:[],total_pool:0,total_work_value:0,job_count:0};
+        }else{
+          // Month returned from server but has no data — still include as a loaded month
+          results[m]={technicians:[],total_pool:0,total_work_value:0,job_count:0};
+        }
+        done++;
+        const pct=70+Math.round((done/monthKeys.length)*30);
+        progFill.style.width=pct+"%";
+      }
+      summaryCache[year]=results;
+    }else{
+      // Demo mode — generate locally, no server needed
+      const now=new Date();
+      const maxMonth=(year===now.getFullYear())?now.getMonth()+1:12;
+      const results={};
+      for(let m=1;m<=maxMonth;m++){
+        const cd=generateCommissionData(year,m);
+        results[m]={technicians:cd.technicians,total_pool:cd.total_pool,total_work_value:cd.total_work_value||0,job_count:cd.total_completed_jobs||0};
+        const pct=Math.round((m/maxMonth)*100);
+        progFill.style.width=pct+"%";
+        progLabel.textContent=`Generating… ${m}/${maxMonth} months`;
+      }
+      summaryCache[year]=results;
+    }
+  }catch(e){
+    console.error('Summary load failed:',e);
+    $("#summaryEmpty").style.display="";
+    $("#summaryEmpty").textContent="Failed to load summary: "+e.message;
+  }
+
+  summaryLoading=false;
+  $("#summaryLoading").style.display="none";
+  progBar.style.display="none";
+  progLabel.style.display="none";
+
+  renderSummary();
+}
+
+function aggregateSummary(monthlyResults,viewType){
+  // Track which months actually have data loaded
+  const loadedMonths=new Set(Object.keys(monthlyResults).map(Number));
+
+  // Collect all technician names across all months
+  const allTechs=new Set();
+  const monthNums=Object.keys(monthlyResults).map(Number).sort((a,b)=>a-b);
+  for(const m of monthNums){
+    for(const t of(monthlyResults[m].technicians||[])){
+      allTechs.add(t.technician);
+    }
+  }
+
+  // Build periods based on viewType
+  let periodDefs=[];
+  if(viewType==="monthly"){
+    for(let m=1;m<=12;m++)periodDefs.push({label:MONTH_SHORT[m-1],months:[m]});
+  }else if(viewType==="quarterly"){
+    periodDefs=[
+      {label:"Q1",months:[1,2,3]},{label:"Q2",months:[4,5,6]},
+      {label:"Q3",months:[7,8,9]},{label:"Q4",months:[10,11,12]}
+    ];
+  }else{
+    periodDefs=[{label:"Annual",months:[1,2,3,4,5,6,7,8,9,10,11,12]}];
+  }
+
+  // For each period, check if ALL its months are loaded
+  const periodLoaded=periodDefs.map(pd=>pd.months.some(m=>loadedMonths.has(m)));
+
+  // Build per-tech aggregation
+  const techRows=[];
+  for(const name of allTechs){
+    const periods=[];
+    let totalBonus=0,totalJobs=0,totalValue=0;
+    const monthlyBonuses=[]; // for sparkline: one per calendar month
+
+    for(let m=1;m<=12;m++){
+      const mData=monthlyResults[m];
+      if(!mData){monthlyBonuses.push(loadedMonths.has(m)?0:null);continue;}
+      const tech=mData.technicians.find(t=>t.technician===name);
+      monthlyBonuses.push(tech?tech.final_bonus:0);
+    }
+
+    for(let pi=0;pi<periodDefs.length;pi++){
+      const pd=periodDefs[pi];
+      let pBonus=0,pJobs=0,pValue=0;
+      const hasData=periodLoaded[pi]; // at least one month in this period was loaded
+      for(const m of pd.months){
+        const mData=monthlyResults[m];
+        if(!mData)continue;
+        const tech=mData.technicians.find(t=>t.technician===name);
+        if(tech){
+          pBonus+=tech.final_bonus;
+          pJobs+=tech.job_count;
+          pValue+=tech.allocated_value;
+        }
+      }
+      periods.push({bonus:Math.round(pBonus*100)/100,jobs:pJobs,value:Math.round(pValue*100)/100,hasData});
+      totalBonus+=pBonus;
+      totalJobs+=pJobs;
+      totalValue+=pValue;
+    }
+
+    techRows.push({
+      name,periods,
+      total_bonus:Math.round(totalBonus*100)/100,
+      total_jobs:totalJobs,
+      total_value:Math.round(totalValue*100)/100,
+      sparkline:monthlyBonuses
+    });
+  }
+
+  // Sort by total bonus descending
+  techRows.sort((a,b)=>b.total_bonus-a.total_bonus);
+
+  // Period totals (team)
+  const periodTotals=periodDefs.map((_,i)=>{
+    let bonus=0,jobs=0,value=0;
+    for(const tr of techRows){bonus+=tr.periods[i].bonus;jobs+=tr.periods[i].jobs;value+=tr.periods[i].value;}
+    return{bonus:Math.round(bonus*100)/100,jobs,value:Math.round(value*100)/100,hasData:periodLoaded[i]};
+  });
+  const grandTotal={bonus:techRows.reduce((s,t)=>s+t.total_bonus,0),jobs:techRows.reduce((s,t)=>s+t.total_jobs,0),value:techRows.reduce((s,t)=>s+t.total_value,0)};
+
+  return{techRows,periodDefs,periodTotals,grandTotal,monthNums,loadedMonths};
+}
+
+function renderSummaryStats(agg,monthlyResults){
+  const monthNums=Object.keys(monthlyResults).map(Number);
+  const totalPool=monthNums.reduce((s,m)=>s+(monthlyResults[m].total_pool||0),0);
+  const avgPool=monthNums.length>0?totalPool/monthNums.length:0;
+
+  // Find peak month
+  let peakMonth=0,peakVal=0;
+  for(const m of monthNums){
+    if(monthlyResults[m].total_pool>peakVal){peakVal=monthlyResults[m].total_pool;peakMonth=m;}
+  }
+
+  // Active techs (earned >0 in any month)
+  const activeTechs=new Set();
+  for(const m of monthNums){
+    for(const t of(monthlyResults[m].technicians||[])){
+      if(t.final_bonus>0)activeTechs.add(t.technician);
+    }
+  }
+
+  $("#ssPool").textContent=fmtMoney(totalPool);
+  $("#ssAvg").textContent=fmtMoney(avgPool);
+  $("#ssPeak").textContent=peakMonth>0?MONTH_SHORT[peakMonth-1]:"–";
+  $("#ssPeakSub").textContent=peakMonth>0?fmtMoney(peakVal):"no data";
+  $("#ssTechs").textContent=activeTechs.size;
+}
+
+function buildSparkline(data){
+  const vals=data.map(v=>v===null?0:v);
+  const max=Math.max(...vals,1);
+  return'<span class="sparkline">'+data.map(v=>{
+    if(v===null)return'<span style="height:1px;background:var(--border)" title="no data"></span>';
+    const h=Math.max(1,Math.round((v/max)*20));
+    return`<span style="height:${h}px" title="${fmtMoney(v)}"></span>`;
+  }).join('')+'</span>';
+}
+
+function renderSummaryTable(agg,viewType){
+  const thead=$("#summaryThead");
+  const tbody=$("#summaryTbody");
+
+  // Header row
+  let hHtml='<th>Technician</th>';
+  if(viewType==="annual"){
+    hHtml+='<th>Rank</th><th>Annual Bonus</th><th>Jobs</th><th>Work Value</th><th>Avg/Month</th>';
+  }else{
+    for(const pd of agg.periodDefs)hHtml+=`<th>${pd.label}</th>`;
+    hHtml+='<th class="total-col">Total</th><th>Trend</th>';
+  }
+  thead.innerHTML='<tr>'+hHtml+'</tr>';
+
+  // Body rows
+  let bHtml='';
+  const monthsLoaded=agg.monthNums.length||1;
+
+  for(let i=0;i<agg.techRows.length;i++){
+    const tr=agg.techRows[i];
+    if(viewType==="annual"){
+      const rankClass=i===0?"gold":i===1?"silver":i===2?"bronze":"";
+      const avgPerMonth=fmtMoney(tr.total_bonus/monthsLoaded);
+      bHtml+=`<tr>
+        <td style="text-align:left;font-weight:600">${tr.name}</td>
+        <td class="rank-cell ${rankClass}">#${i+1}</td>
+        <td class="total-col">${fmtMoney(tr.total_bonus)}</td>
+        <td>${tr.total_jobs}</td>
+        <td>${fmtMoney(tr.total_value)}</td>
+        <td>${avgPerMonth}</td>
+      </tr>`;
+    }else{
+      bHtml+='<tr>';
+      bHtml+=`<td style="text-align:left;font-weight:600">${tr.name}</td>`;
+      for(const p of tr.periods){
+        if(!p.hasData){
+          // Period has no loaded data at all — show distinct "no data" indicator
+          bHtml+='<td class="zero" title="No data loaded for this period" style="font-style:italic">n/a</td>';
+        }else if(p.bonus===0){
+          bHtml+='<td class="zero">$0</td>';
+        }else{
+          bHtml+=`<td>${fmtMoney(p.bonus)}</td>`;
+        }
+      }
+      bHtml+=`<td class="total-col">${fmtMoney(tr.total_bonus)}</td>`;
+      bHtml+=`<td>${buildSparkline(tr.sparkline)}</td>`;
+      bHtml+='</tr>';
+    }
+  }
+
+  // Footer: Team totals row
+  if(viewType==="annual"){
+    bHtml+=`<tr class="total-row">
+      <td style="text-align:left">Team Total</td>
+      <td></td>
+      <td class="total-col">${fmtMoney(agg.grandTotal.bonus)}</td>
+      <td>${agg.grandTotal.jobs}</td>
+      <td>${fmtMoney(agg.grandTotal.value)}</td>
+      <td>${fmtMoney(agg.grandTotal.bonus/monthsLoaded)}</td>
+    </tr>`;
+  }else{
+    bHtml+='<tr class="total-row">';
+    bHtml+='<td style="text-align:left">Team Total</td>';
+    for(const pt of agg.periodTotals){
+      if(!pt.hasData){
+        bHtml+='<td class="zero" style="font-style:italic">n/a</td>';
+      }else{
+        bHtml+=`<td>${pt.bonus>0?fmtMoney(pt.bonus):'$0'}</td>`;
+      }
+    }
+    bHtml+=`<td class="total-col">${fmtMoney(agg.grandTotal.bonus)}</td>`;
+    bHtml+='<td></td>';
+    bHtml+='</tr>';
+  }
+
+  tbody.innerHTML=bHtml;
+}
+
+function renderSummary(){
+  const data=summaryCache[summaryYear];
+  if(!data||Object.keys(data).length===0){
+    $("#summaryTableWrap").style.display="none";
+    $("#summaryEmpty").style.display="";
+    $("#summaryEmpty").textContent="No commission data found for "+summaryYear+".";
+    $("#ssPool").textContent="–";$("#ssAvg").textContent="–";$("#ssPeak").textContent="–";$("#ssTechs").textContent="–";
+    return;
+  }
+
+  const agg=aggregateSummary(data,summaryViewType);
+  renderSummaryStats(agg,data);
+  renderSummaryTable(agg,summaryViewType);
+
+  $("#summaryTableWrap").style.display="";
+  $("#summaryEmpty").style.display="none";
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════════
+document.addEventListener("DOMContentLoaded",async()=>{
+  // Detect live vs demo mode
+  await detectMode();
+
+  // In live mode, update stat card labels
+  if(API_MODE==='live'){
+    try{
+      const pendingSub=$("#jStatTotal").closest('.stat-card').querySelector('.sub');
+      if(pendingSub)pendingSub.textContent="pending / in progress";
+    }catch(e){}
+  }
+
+  // Jobs view
+  await initJobsView();
+
+  // Jobs tabs
+  $$(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      $$(".tab-btn").forEach(b=>b.classList.remove("active"));
+      $$(".tab-panel").forEach(p=>p.classList.remove("active"));
+      btn.classList.add("active");$(`#tab-${btn.dataset.tab}`).classList.add("active");
+    });
+  });
+
+  // Jobs filters
+  ["searchInput","filterTech","filterStatus","filterPriority","filterType","filterDue"].forEach(id=>{
+    $(`#${id}`).addEventListener(id==="searchInput"?"input":"change",applyFilters);
+  });
+  $("#clearFilters").addEventListener("click",()=>{
+    $("#searchInput").value="";$("#filterTech").value="";
+    $("#filterStatus").value="";$("#filterPriority").value="";
+    $("#filterType").value="";$("#filterDue").value="";
+    applyFilters();
+  });
+
+  // Jobs sort
+  $$("thead th").forEach(th=>{
+    th.addEventListener("click",()=>{
+      if(sortCol===th.dataset.col)sortAsc=!sortAsc;
+      else{sortCol=th.dataset.col;sortAsc=true;}
+      sortJobs();renderTable();
+    });
+  });
+
+  // Jobs modal
+  $("#modalClose").addEventListener("click",()=>$("#modalOverlay").classList.remove("open"));
+  $("#modalOverlay").addEventListener("click",e=>{if(e.target===$("#modalOverlay"))$("#modalOverlay").classList.remove("open");});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#modalOverlay").classList.remove("open");});
+
+  // Jobs timeline nav
+  $("#prevWeek").addEventListener("click",()=>{weekOffset--;renderTimeline();});
+  $("#nextWeek").addEventListener("click",()=>{weekOffset++;renderTimeline();});
+  $("#todayWeek").addEventListener("click",()=>{weekOffset=0;renderTimeline();});
+
+  // Commissions view
+  initCommView();
+
+  // Pool percentage selector
+  const poolSel = $("#poolPercentSel");
+  if(poolSel){
+    // Populate options: 0.25% to 1.00% in 0.05% increments
+    for(let pct=0.25; pct<=1.005; pct+=0.05){
+      const val = Math.round(pct*100)/100;
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = val.toFixed(2) + "%";
+      if(val === CONFIG.pool_percent) opt.selected = true;
+      poolSel.appendChild(opt);
+    }
+    poolSel.addEventListener("change", () => {
+      CONFIG.pool_percent = parseFloat(poolSel.value);
+      // Clear summary cache since pool % changed
+      summaryCache = {};
+      // If we already have commission data loaded, recalculate
+      if(commData && commData.ok){
+        // Re-run calculation with new pool percent on existing raw data
+        loadCommissions();
+      }
+    });
+  }
+
+  $("#loadBtn").addEventListener("click",()=>{loadCommissions();});
+  $("#selYear").addEventListener("change",()=>{loadCommissions();});
+  $("#selMonth").addEventListener("change",()=>{loadCommissions();});
+
+  // Summary view
+  initSummaryView();
+  $("#summaryLoadBtn").addEventListener("click",()=>{loadSummaryData();});
+  $("#summaryYearSel").addEventListener("change",()=>{
+    summaryYear=parseInt($("#summaryYearSel").value);
+    if(summaryCache[summaryYear])renderSummary();
+  });
+  $$("#summaryToggle button").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      $$("#summaryToggle button").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      summaryViewType=btn.dataset.view;
+      if(summaryCache[summaryYear])renderSummary();
+    });
+  });
+
+  // Efficiency bonus controls
+  const effToggle=$("#efficiencyToggle");
+  const effSlider=$("#efficiencySlider");
+  const effSliderVal=$("#sliderValue");
+  const effControls=$("#efficiencyControls");
+  if(effToggle&&effSlider){
+    effToggle.checked=efficiencySettings.enabled;
+    effSlider.value=efficiencySettings.maxAdjustPercent;
+    effSliderVal.textContent="±"+effSlider.value+"%";
+    if(efficiencySettings.enabled&&effControls)effControls.style.display="";
+
+    effToggle.addEventListener("change",()=>{
+      efficiencySettings.enabled=effToggle.checked;
+      if(effControls)effControls.style.display=effToggle.checked?"":"none";
+      if(commData)renderComm();
+    });
+    effSlider.addEventListener("input",()=>{
+      efficiencySettings.maxAdjustPercent=parseInt(effSlider.value);
+      effSliderVal.textContent="±"+effSlider.value+"%";
+      if(efficiencySettings.enabled&&commData)renderComm();
+    });
+  }
+});
+</script>
+</body>
+</html>

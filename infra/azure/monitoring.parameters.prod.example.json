@@ -1,0 +1,75 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "westus2"
+    },
+    "logAnalyticsResourceGroupName": {
+      "value": "prostar-payroll"
+    },
+    "logAnalyticsWorkspaceName": {
+      "value": "log-prostar-dispatch-prod"
+    },
+    "applicationInsightsName": {
+      "value": "appi-prostar-metrics-prod"
+    },
+    "ownerActionGroupName": {
+      "value": "ag-prostar-metrics-owners"
+    },
+    "asadOwnerEmail": {
+      "value": "asad@prostarmechanical.com"
+    },
+    "lailaOwnerEmail": {
+      "value": "laila@prostarmechanical.com"
+    },
+    "containerAppsEnvironmentName": {
+      "value": "cae-prostar-dispatch-prod"
+    },
+    "containerAppName": {
+      "value": "aca-prostar-metrics-prod"
+    },
+    "containerAppsJobNames": {
+      "value": [
+        "job-prostar-metrics-ingest",
+        "job-prostar-metrics-jobs",
+        "job-psm-quote-logs",
+        "job-psm-job-logs",
+        "job-psm-schedule-logs",
+        "job-psm-mobile-logs",
+        "job-psm-candidate-drain",
+        "job-psm-timesheets-hourly",
+        "job-psm-ts-jobs-hourly",
+        "job-psm-employees-daily",
+        "job-psm-rollup-drain",
+        "job-psm-backfill-hourly",
+        "job-psm-operational-health",
+        "job-psm-reconcile-trailing-24m",
+        "job-psm-reconcile-stable-history",
+        "job-psm-commissions-nightly",
+        "job-prostar-metrics-reconcile",
+        "job-prostar-metrics-employees",
+        "job-prostar-metrics-timesheets",
+        "job-prostar-timesheet-jobs",
+        "job-prostar-metrics-schedules",
+        "job-prostar-metrics-mobile",
+        "job-prostar-metrics-rollups"
+      ]
+    },
+    "postgresServerName": {
+      "value": "pg-prostar-metrics-prod"
+    },
+    "postgresMaxConnections": {
+      "value": 50
+    },
+    "postgresLongestQuerySecondsThreshold": {
+      "value": 60
+    },
+    "postgresBackupStorageUsedGiBThreshold": {
+      "value": 32
+    },
+    "exportStorageAccountName": {
+      "value": "stprostarmetricsexports"
+    }
+  }
+}

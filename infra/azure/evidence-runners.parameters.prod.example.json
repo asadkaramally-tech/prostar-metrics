@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "westus2"
+    },
+    "environmentName": {
+      "value": "prod"
+    },
+    "containerAppsEnvironmentName": {
+      "value": "cae-prostar-dispatch-prod"
+    },
+    "acrName": {
+      "value": "acrprostardispatchprod"
+    },
+    "storageAccountName": {
+      "value": "stprostarmetricsexports"
+    },
+    "keyVaultName": {
+      "value": "kv-prostar-metrics-prod"
+    },
+    "postgresConnectionStringSecretName": {
+      "value": "azure-postgres-connection-string"
+    },
+    "operatorPrincipalId": {
+      "value": "f7293194-18c0-4957-b259-9cd6ef8d492b"
+    },
+    "gateSignerIdentityName": {
+      "value": "id-prostar-release-gate-prod"
+    },
+    "browserSignerIdentityName": {
+      "value": "id-prostar-release-browser-prod"
+    },
+    "reviewerSignerIdentityName": {
+      "value": "id-prostar-release-reviewer-prod"
+    }
+  }
+}

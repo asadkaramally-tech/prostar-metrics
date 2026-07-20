@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quote Metrics — Pro Star Metrics</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/tokens.css">
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><div><img src="assets/prostar-logo-white.png" alt="Pro Star Mechanical"><div class="bsub">Operations Metrics</div></div></div>
+    <div class="navsec">Dashboards</div>
+    <nav class="nav">
+      <a href="today.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>Today</a>
+      <a class="active" href="quotes.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M9 14h6M9 17h4"/></svg>Quote Metrics</a>
+      <a href="jobs.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>Job Metrics</a>
+      <a href="technicians.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.4 2.9-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.5 14.6c2.4.2 4.3 1.7 4.9 4.4"/></svg>Technician Performance</a>
+      <a href="commissions.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M14.8 9.2c-.6-.9-1.6-1.4-2.8-1.4-1.7 0-3 .9-3 2.2 0 2.9 6 1.5 6 4.3 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.6-3-1.5"/></svg>Technician Commissions</a>
+    </nav>
+    <div class="owner"><div class="av">A</div><div><b>Asad Karamally</b><span>Owner</span></div></div>
+  </aside>
+
+  <main class="main"><div class="content">
+    <div class="top">
+      <div>
+        <div class="eyebrow">Operations</div>
+        <div class="h1">Quote Metrics</div>
+        <div class="sub">Quote activity, acceptance and open follow-ups.</div>
+      </div>
+      <div class="controls">
+        <div class="ctl stepper"><button class="stepbtn" title="May 2026">‹</button><span class="lbl"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>June 2026</span><button class="stepbtn" title="July 2026 (month to date)">›</button></div>
+        <button class="pill"><span class="dot"></span>Updated 8 min ago</button>
+      </div>
+    </div>
+
+    <!-- Flagship: headline + trend fused -->
+    <div class="hero split">
+      <div class="focal" style="padding-bottom:24px">
+        <div class="lab"><span class="pip"></span><span class="def" data-def="Accepted ÷ (accepted + not accepted) among non-excluded quotes whose DateApproved falls in June. Accepted requires verified online acceptance or an exact converted-job link — never quote stage or status alone.">Acceptance Rate</span> · June</div>
+        <div class="big tnum">22.8%</div>
+        <div class="meta">
+          <span class="mgn tnum">43 of 189 quotes accepted</span>
+          <span class="chipd dn tnum" data-def="Display-rounded: 31.4% (Jun ’25) − 22.8% (Jun ’26) = 8.6 pts. Deltas are computed on the one-decimal rates shown.">↓ 8.6 pts vs Jun ’25</span>
+          <span class="chipd neutral tnum">↓ 10.5 pts vs May</span>
+        </div>
+        <div class="cov" style="display:flex;gap:22px;flex-wrap:wrap;margin-top:12px">
+          <span><span style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6bd3a0">Won</span><b class="tnum" style="font-size:16px;color:#e9ebf4">$189,074</b> <span style="color:#9ba2b6">· 8.8% of quoted value</span></span>
+          <span><span style="display:block;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#f0937f">Open — not yet accepted</span><b class="tnum" style="font-size:16px;color:#e9ebf4">$1,963,611</b> <span style="color:#9ba2b6">· 146 quotes <span class="def" data-def="Simpro records no declined status — an open quote counts as in play until verified acceptance, conversion, or archival. Age is the practical dead-signal.">still in play</span></span></span>
+        </div>
+        <div class="dgrid">
+          <div class="dcell"><div class="dl2"><span class="def" data-def="Count of non-excluded quotes with DateApproved in June. DateApproved sets the month only — it is not acceptance evidence. Vs May: +12.5%.">Quotes Sent</span></div><div class="dv2 tnum">189<span class="u">↑ 80.0%</span></div></div>
+          <div class="dcell"><div class="dl2"><span class="def" data-def="Σ quote total (ex-tax) across the June cohort. Vs May: +32.0%.">Quote Value</span></div><div class="dv2 tnum">$2,152,685<span class="u">↑ 38.7%</span></div></div>
+          <div class="dcell"><div class="dl2"><span class="def" data-def="Σ quote total across June quotes classified Accepted (verified online acceptance or exact converted job). Vs May: −52.3%.">Won Value</span></div><div class="dv2 tnum">$189,074<span class="u">↑ 74.2%</span></div></div>
+          <div class="dcell"><div class="dl2"><span class="def" data-def="Accepted value ÷ accepted count for June. Vs May: −37.9%.">Avg Accepted Deal</span></div><div class="dv2 tnum">$4,397<span class="u">↑ 33.7%</span></div></div>
+        </div>
+        <div id="heroBullet" style="margin-top:auto;padding-top:18px"></div>
+        <div class="cov" style="padding-top:14px">Tile deltas compare to Jun ’25 · a rate drop on 80% more volume still means more won work</div>
+      </div>
+      <div class="card">
+        <div class="hd">
+          <div><div class="ti">Acceptance Trend</div><div class="st">Jul 2025 – Jun 2026 · hover or tap for monthly detail</div></div>
+          <div class="legend" style="padding:0" id="fLegend"></div>
+        </div>
+        <div class="pickrow" id="mpick"></div>
+        <div class="bd"><div id="trend"></div><div id="annNote" class="fnote" style="display:none">Peak callouts move into the tooltips at this width — hover or tap any point.</div></div>
+      </div>
+    </div>
+
+    <div class="tabs" id="pageTabs">
+      <button class="on" data-tab="overview">Overview</button>
+      <button data-tab="history">History</button>
+    </div>
+
+    <div id="tab-overview">
+      <!-- Follow-up queue: the $1.96M lever, first -->
+      <div class="card" style="margin-top:0">
+        <div class="hd"><div><div class="ti">Open Quotes — Follow-Up Queue</div><div class="st" id="bigSub">June cohort · $1.96M open, oldest first · amber past 30d, red past 45d · click for detail</div></div>
+          <div class="seg" data-seg="bigmode"><button class="on" data-val="quote">By quote</button><button data-val="customer">By customer</button></div></div>
+        <div id="bigRows"></div>
+        <div class="foot"><span id="bigFoot"></span><span style="font-weight:600;color:var(--acc);cursor:pointer;white-space:nowrap">View all →</span></div>
+      </div>
+
+      <!-- Deal sizes + heatmap -->
+      <div class="g57">
+        <div class="card">
+          <div class="hd"><div><div class="ti">Acceptance by Deal Size</div><div class="st">June quotes by value tier · bar = size relative to the largest tier</div></div></div>
+          <div class="bd fillbd" id="tiers"></div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column">
+          <div class="hd"><div><div class="ti">Acceptance by Deal Size and Month</div><div class="st">Count-based acceptance per tier · Jul 2025 – Jun 2026 · hover or tap any cell</div></div>
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:9px;font-size:12px;color:var(--muted);flex-wrap:wrap;max-width:380px">
+              <span class="tnum" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#b8453a"></i>&lt;15%</span>
+              <span class="tnum" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#d4d8f9"></i>15–25</span>
+              <span class="tnum" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#a3a9ef"></i>25–35</span>
+              <span class="tnum" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#5a63c8"></i>35–45</span>
+              <span class="tnum" style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#4b52c0"></i>45%+</span>
+              <span class="def" data-def="Hatched cells are representative, pending per-month reconciliation — the June column is verified against Simpro." style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#a3a9ef;background-image:repeating-linear-gradient(45deg,transparent 0 2.5px,rgba(16,20,34,.22) 2.5px 4px)"></i>hatched = representative</span>
+            </div>
+          </div>
+          <div class="heat" id="heat" style="padding-top:6px;flex:1;align-content:start;row-gap:6px"></div>
+          <div class="bd" style="padding-top:0"><div class="fnote">June column verified against Simpro · the pattern: big deals rarely clear 15%.</div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="tab-history" style="display:none">
+      <div class="card">
+        <div class="hd"><div><div class="ti">Monthly Breakdown</div><div class="st">Trailing 12 complete months</div></div>
+          <button class="ctl" style="height:34px;font-size:13.5px"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Download CSV</button></div>
+        <div class="tblwrap"><table>
+          <thead><tr><th>Month</th><th class="num">Sent</th><th class="num hide-sm">Quote Value</th><th class="num">Accepted</th><th class="num hide-sm">Accepted Value</th><th class="num hide-sm">Avg Deal</th><th class="num">Rate (Count)</th><th class="num hide-sm">Rate (Value)</th></tr></thead>
+          <tbody id="histRows"></tbody>
+          <tfoot><tr id="histFoot"></tr></tfoot>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- State treatments (rendered only with ?states=1) -->
+    <div class="states">
+      <div class="shdr">State treatments (design reference)</div>
+      <div class="srow">
+        <div class="mini"><div class="ml">Loading</div><div class="skel" style="width:55%"></div><div class="skel" style="width:85%"></div><div class="skel" style="width:70%"></div></div>
+        <div class="mini"><div class="ml">Partial month (pace)</div><div class="empt"><b style="color:var(--ink)">July so far:</b> 14 quotes / $91,636 through day 14 — on pace for ~31. Comparisons switch to same-day prior year.</div></div>
+        <div class="mini"><div class="ml">Empty tier cell</div><div class="empt">A month with no quotes in a tier shows — (never 0%).</div></div>
+        <div class="mini"><div class="ml">Error</div><div class="err"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="12" height="12"><path d="M12 5v9M12 18.4v.1"/></svg></span><span>Quote data could not be loaded.<br><span class="retry">Try again</span></span></div></div>
+      </div>
+    </div>
+
+    <div class="footline">Source: Simpro quotes · month assigned by DateApproved · acceptance requires verified online acceptance or an exact converted job</div>
+  </div></main>
+</div>
+
+<div class="scrim"></div>
+<aside class="drawer"><div class="dh"><div><div class="ti"></div><div class="st"></div></div><button class="x">✕</button></div><div class="db"></div></aside>
+
+<script src="assets/kit.js"></script>
+<script>
+const {fmt, trendChart, heatmap, segInit, drawerInit, tabsInit, $} = PSKit;
+
+const M = ["Jul 25","Aug","Sep","Oct","Nov","Dec","Jan 26","Feb","Mar","Apr","May","Jun"];
+const SENT = [165,159,124,163,126,126,193,168,167,156,168,189];
+const VAL  = [2457158,1058123,724665,1890855,1554078,1454970,2272111,2814350,1743115,2313459,1631073,2152685];
+const ACC  = [52,66,44,65,52,63,67,50,45,52,56,43];
+const ACCV = [297420,320511,202796,224333,190176,382922,287014,323818,256104,287778,396608,189074];
+const RATE_C = SENT.map((s,i)=>ACC[i]/s*100);
+const RATE_V = VAL.map((v,i)=>ACCV[i]/v*100);
+const roll3 = arr => arr.map((_,i)=>{const sl=arr.slice(Math.max(0,i-2),i+1);return sl.reduce((a,b)=>a+b,0)/sl.length;});
+const T12C = ACC.reduce((a,b)=>a+b,0)/SENT.reduce((a,b)=>a+b,0)*100;
+const T12V = ACCV.reduce((a,b)=>a+b,0)/VAL.reduce((a,b)=>a+b,0)*100;
+
+/* Metric picker: count/value rates co-plot on one % axis; Volume is an
+   exclusive stacked-bar view. Context lines render only for a single rate. */
+const QPICK = [
+  ["count","By count","#5b63d3"],
+  ["value","By value","#6d7890"],
+  ["volume","Volume","#c9cfda"],
+];
+let qsel = ["count","value"];
+function drawTrend(){
+  $("#mpick").innerHTML = QPICK.map(([k,l,c])=>
+    `<button class="mchip${qsel.includes(k)?" on":""}" data-m="${k}" style="--c:${c}"><i style="background:${c}"></i>${l}</button>`).join("");
+  const pf = v=>v.toFixed(1)+"%";
+  const annNote = ()=>{ $("#annNote").style.display = ($("#trend").clientWidth||560) >= 520 ? "none" : ""; };
+  if(qsel.includes("volume")){
+    $("#fLegend").innerHTML = `<span><i style="background:#404a60"></i>Quotes sent</span><span><i style="background:#5b63d3"></i>Won</span>`;
+    trendChart($("#trend"), {labels:M, everyX:1, h:340, band:11,
+      bandLabel:`Jun · ${SENT[11]} sent · ${ACC[11]} accepted`, yFmt:fmt.n, yMin:0,
+      annotations:[{s:1,i:6,text:"~55 accepted/month",sub:"closes hold flat while volume swings"}],
+      tipExtra:i=>PSKit.tipRow("#9aa2b2","Acceptance rate",RATE_C[i].toFixed(1)+"%")+PSKit.tipRow("#9aa2b2","Quoted value",fmt.money(VAL[i])),
+      series:[
+        {name:"Quotes sent",color:"#404a60",values:SENT,tipFmt:fmt.n},
+        {name:"Won",color:"#5b63d3",star:true,fill:true,values:ACC,endLabel:false,tipFmt:fmt.n},
+      ]});
+    annNote();
+    return;
+  }
+  const both = qsel.length===2;
+  const valOnly = !both && qsel[0]==="value";
+  const series = [];
+  if(!both){
+    const base = valOnly ? RATE_V : RATE_C;
+    const t12 = valOnly ? T12V : T12C;
+    series.push({name:"Trailing-12",color:"#c9cede",dash:"3 4",values:base.map(()=>t12),tipFmt:pf});
+    series.push({name:"3-mo rolling",color:"#9aa2b2",values:roll3(base),tipFmt:pf});
+  }
+  if(qsel.includes("count")) series.push({name:"By count",color:"#5b63d3",star:!both||undefined,fill:!both,values:RATE_C,endLabel:false,tipFmt:pf});
+  if(qsel.includes("value")) series.push({name:"By value",color:"#6d7890",values:RATE_V,endLabel:false,tipFmt:pf});
+  const base = qsel.includes("count") ? RATE_C : RATE_V;
+  const pk = base.indexOf(Math.max(...base));
+  const pkSub = M[pk].split(" ")[0]+" — "+(both ? "count-rate peak" : valOnly ? "value-rate peak" : "best month");
+  $("#fLegend").innerHTML = both
+    ? `<span><i style="background:#5b63d3"></i>By count</span><span><i style="background:#6d7890"></i>By value</span>`
+    : `<span><i style="background:${valOnly?"#6d7890":"#5b63d3"}"></i>${valOnly?"By value":"By count"}</span><span><i style="background:#9aa2b2"></i>3-mo rolling</span><span><i style="background:none;border-top:2px dashed #c9cede;height:0"></i>Trailing-12</span>`;
+  const bandLabel = both
+    ? `Jun · ${RATE_C[11].toFixed(1)}% / ${RATE_V[11].toFixed(1)}%`
+    : `Jun · ${base[11].toFixed(1)}%`;
+  trendChart($("#trend"), {labels:M, everyX:1, h:340, band:11, bandLabel,
+    yFmt:v=>v.toFixed(0)+"%", yMin:0, yMax:valOnly?40:50, ticks:valOnly?4:5,
+    annotations:[{s:series.length-(both?2:1),i:pk,text:base[pk].toFixed(1)+"%",sub:pkSub}],
+    series});
+  annNote();
+}
+$("#mpick").addEventListener("click", e=>{
+  const b = e.target.closest("[data-m]");
+  if(!b) return;
+  const k = b.dataset.m;
+  if(k==="volume"){ qsel = ["volume"]; }
+  else if(qsel.includes("volume")){ qsel = [k]; }
+  else if(qsel.includes(k)){ if(qsel.length>1) qsel = qsel.filter(x=>x!==k); }
+  else qsel.push(k);
+  drawTrend();
+});
+drawTrend();
+
+
+/* Tiers */
+const TIERS = [
+  {n:"Under $750", q:13, v:5726, acc:38.5, accv:40.2},
+  {n:"$750–$2K", q:44, v:57976, acc:25.0, accv:24.6},
+  {n:"$2K–$10K", q:91, v:428917, acc:25.3, accv:24.1},
+  {n:"$10K+", q:41, v:1660066, acc:9.8, accv:4.8},
+];
+$("#tiers").innerHTML = TIERS.map(t=>{
+  const low = t.acc<15;
+  return `<div style="padding:12px 0;border-bottom:1px solid var(--hair-2)">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+      <span class="id1 tnum">${t.n}</span>
+      <b class="tnum" style="font-size:19px;letter-spacing:-.02em;color:${low?"var(--down)":"var(--ink)"}">${t.acc.toFixed(1)}%</b>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <div style="flex:1;height:6px;background:#f1f2f6;border-radius:4px;overflow:hidden">
+        <div style="width:${Math.max(t.q/91*100,4)}%;height:100%;background:#9aa2b2;border-radius:4px"></div></div>
+      <span class="id2 tnum" style="margin:0;flex:none">${t.q} quotes</span>
+    </div>
+    <div class="id2 tnum" style="margin-top:5px">${fmt.moneyFull(t.v)} quoted · ${t.accv.toFixed(1)}% accepted by value</div>
+  </div>`;
+}).join("") + `
+  <div class="insight" style="margin-top:14px"><i class="idot"></i><span><b>The rate drop is mostly mix.</b> June sent 80% more quotes than last June, weighted toward $10K+ — 41 big quotes carried 77% of the value but close at 9.8% by count, 4.8% by value.</span></div>`;
+
+/* Heatmap — June verified; earlier cells representative.
+   Narrow screens show the last 6 months with readable cells instead of 12 color chips. */
+const HM = {
+  "Under $750": [38,45,50,42,48,57,40,33,25,31,36,{v:38.5,real:1}],
+  "$750–$2K":   [30,42,36,40,44,52,36,30,27,33,32,{v:25.0,real:1}],
+  "$2K–$10K":   [33,44,38,42,40,54,37,31,28,35,36,{v:25.3,real:1}],
+  "$10K+":      [12,20,16,14,18,24,13,10,8,11,15,{v:9.8,real:1}],
+};
+(function renderHeat(){
+  const narrow = matchMedia("(max-width:480px)").matches;
+  const keep = narrow ? 6 : 12;
+  $("#heat").style.setProperty("--hm-cols", keep);
+  heatmap($("#heat"), M.slice(-keep).map(m=>m.replace(" "," ’")), Object.entries(HM).map(([name,cells])=>({
+    name, cells: cells.slice(-keep).map(c => typeof c==="object" ? {v:c.v} : {v:c, repr:true}),
+  })), {highlightLast:true});
+  if(narrow) $("#heat").insertAdjacentHTML("beforeend",
+    `<div style="grid-column:1/-1;font-size:12px;color:var(--subtle);padding-top:6px">Jan – Jun 2026 · the full year shows on wider screens</div>`);
+})();
+
+/* Largest not accepted (real records) */
+PSKit.bullet($("#heroBullet"), {
+  cur:{m:"June", v:22.8},
+  comp:{m:"Jun ’25", v:31.4},
+  high:{m:"Dec ’25", v:50.0},
+  fmt:v=>v.toFixed(1)+"%",
+});
+/* Collision guard: if the comparison label runs into the right-pinned High
+   label, move High to the free top-right slot (same 11px style). */
+(function(){
+  const rows = $("#heroBullet").children;
+  if(rows.length<3) return;
+  const bot=[...rows[2].querySelectorAll("span")].filter(s=>s.textContent.trim());
+  const high=bot.find(s=>/^High/.test(s.textContent.trim()));
+  const comp=bot.find(s=>s!==high);
+  if(high&&comp&&comp.getBoundingClientRect().right+8>high.getBoundingClientRect().left){
+    high.style.fontSize="11px"; high.style.fontWeight="400"; high.style.color="#8b90a6";
+    rows[0].appendChild(high);
+  }
+})();
+
+const BIG = [
+  {id:2467,name:"Boiler Replacement — Hotel Lulu",site:"Hotel Lulu, BW Premier Collection",status:"Viewed by customer",days:43,v:323087,appr:"Jun 2"},
+  {id:2537,name:"Heat Pump Water Heater Install with Structural",site:"Best Western #259",status:"Sent",days:34,v:178438,appr:"Jun 11"},
+  {id:2466,name:"Dual Hydronic Replacement",site:"Park Plaza HOA",status:"Viewed by customer",days:43,v:114218,appr:"Jun 2"},
+  {id:2504,name:"Dual Boiler Replacement",site:"Hotel Lulu, BW Premier Collection",status:"Viewed by customer",days:37,v:96691,appr:"Jun 8"},
+  {id:2498,name:"Boiler 1 Replace & Boiler 2 Repair",site:"Hotel Lulu, BW Premier Collection",status:"Viewed by customer",days:37,v:84850,appr:"Jun 8"},
+  {id:2529,name:"Single Boiler Replacement — XFIIRE WH7-0800B",site:"JW Marriott Anaheim",status:"Sent",days:34,v:56425,appr:"Jun 11"},
+  {id:2457,name:"Preventive Maintenance Plan",site:"Symphony at Del Sur Apartments",status:"Sent",days:44,v:50750,appr:"Jun 1"},
+  {id:2477,name:"Water Heater Replacement — (4) tankless",site:"Lake Murray Terrace",status:"Sent",days:41,v:47485,appr:"Jun 4"},
+];
+BIG.sort((a,b)=>b.days-a.days || b.v-a.v);
+const maxV = Math.max(...BIG.map(q=>q.v));
+const ageChip = d => d>45 ? `background:#fbeae7;color:#b23c30` : d>30 ? `background:#faf3df;color:#8a6a14` : `background:#f1f2f7;color:var(--muted)`;
+const CUSTOMERS = [
+  {n:"Hotel Lulu, BW Premier Collection", q:3, days:"37–43", v:504628},
+  {n:"Best Western #259", q:1, days:"34", v:178438},
+  {n:"Park Plaza HOA", q:1, days:"43", v:114218},
+  {n:"JW Marriott Anaheim", q:1, days:"34", v:56425},
+  {n:"Symphony at Del Sur Apartments", q:1, days:"44", v:50750},
+  {n:"Lake Murray Terrace", q:1, days:"41", v:47485},
+];
+function drawBig(mode){
+  if(mode==="customer"){
+    const maxC = CUSTOMERS[0].v;
+    $("#bigSub").textContent = "June cohort · $1.96M open, grouped by customer, largest first · click for detail";
+    $("#bigRows").innerHTML = CUSTOMERS.map((c,i)=>`
+      <div class="brow rowlink" data-cust="${i}" style="padding:12px 20px">
+        <span class="bbar" style="width:${Math.max(3,c.v/maxC*100)}%"></span>
+        <div class="bname"><div class="id1">${c.n}</div><div class="id2 tnum">${c.q} open quote${c.q===1?"":"s"} · ${c.days} days open</div></div>
+        <b class="bval tnum" style="font-size:15px;width:92px">${fmt.moneyFull(c.v)}</b>
+      </div>`).join("") + `
+      <div class="brow brem" style="padding:12px 20px">
+        <span class="bbar" style="width:100%;background:#f1f2f6"></span>
+        <div class="bname"><div class="id1">All other customers</div><div class="id2">138 quotes under $47K each</div></div>
+        <b class="bval tnum" style="font-size:14px">$1,011,667</b>
+      </div>`;
+    $("#bigFoot").textContent = "Hotel Lulu alone holds $504,628 across three open quotes — the largest single exposure · ages as of Jul 15";
+    return;
+  }
+  $("#bigSub").textContent = "June cohort · $1.96M open, oldest first · amber past 30d, red past 45d · click for detail";
+  $("#bigRows").innerHTML = BIG.map((q,i)=>`
+    <div class="brow rowlink" data-big="${i}" style="padding:12px 20px">
+      <span class="bbar" style="width:${Math.max(3,q.v/maxV*100)}%"></span>
+      <div class="bname">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+          <span class="id1 qtitle" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${q.name}</span>
+          <span class="srcpill${q.status==="Viewed by customer"?" viewed":""}" style="flex:none"><i></i>${q.status}</span>
+        </div>
+        <div class="id2"><span class="def" data-def="Date the quote was internally approved and issued (Simpro DateApproved — this field also assigns the quote’s reporting month). Issue dates match in all current records.">sent ${q.appr}</span> · Quote ${q.id} · ${q.site}</div>
+      </div>
+      <span class="tnum" style="flex:none;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;${ageChip(q.days)}">${q.days}d</span>
+      <b class="bval tnum" style="font-size:15px;width:86px">${fmt.moneyFull(q.v)}</b>
+    </div>`).join("") + `
+    <div class="brow brem" style="padding:12px 20px">
+      <span class="bbar" style="width:100%;background:#f1f2f6"></span>
+      <div class="bname"><div class="id1">Remaining 138 open quotes</div><div class="id2">everything under $47K</div></div>
+      <b class="bval tnum" style="font-size:14px">$1,011,667</b>
+    </div>`;
+  $("#bigFoot").textContent = "Top 8 of 146, oldest first · bar length = value share of the largest · aging cleared by any quote activity · ages as of Jul 15";
+}
+drawBig("quote");
+
+drawerInit();
+document.addEventListener("click", e=>{
+  const r = e.target.closest("[data-big],[data-cust]");
+  if(!r) return;
+  if(r.dataset.big !== undefined){
+    const q = BIG[+r.dataset.big];
+    openDrawer(q.name, `Quote ${q.id} · ${q.site}`, `
+      <div class="kv">
+        <div class="cell"><div class="l">Value</div><div class="v tnum">${fmt.moneyFull(q.v)}</div></div>
+        <div class="cell"><div class="l"><span class="def" data-def="Simpro DateApproved — the internal approve-and-issue date; it also assigns the quote’s reporting month.">Sent</span></div><div class="v" style="font-size:14px">${q.appr}, 2026</div></div>
+        <div class="cell"><div class="l">Days open</div><div class="v tnum">${q.days}</div></div>
+        <div class="cell"><div class="l">Status</div><div class="v" style="font-size:14px">${q.status}</div></div>
+      </div>
+      <div class="dsec">Classification</div>
+      <div class="dnote">Not Accepted — no verified online acceptance and no exact converted-job relationship yet. It flips to Accepted automatically the moment either appears in Simpro.</div>
+      <div class="dsec">Suggested action</div>
+      <div class="dnote">${q.days > 40 ? "Open six weeks — worth a direct follow-up call this week." : "Follow up before the customer’s budget window moves."}</div>`);
+    return;
+  }
+  const c = CUSTOMERS[+r.dataset.cust];
+  const qs = BIG.filter(q=>q.site===c.n).sort((a,b)=>b.v-a.v);
+  const oldest = Math.max(...qs.map(q=>q.days));
+  openDrawer(c.n, `${c.q} open quote${c.q===1?"":"s"} · June cohort`, `
+    <div class="kv">
+      <div class="cell"><div class="l">Open quotes</div><div class="v tnum">${c.q}</div></div>
+      <div class="cell"><div class="l">Total value</div><div class="v tnum">${fmt.moneyFull(c.v)}</div></div>
+      <div class="cell"><div class="l">Oldest</div><div class="v tnum">${oldest}d</div></div>
+      <div class="cell"><div class="l">Newest</div><div class="v tnum">${Math.min(...qs.map(q=>q.days))}d</div></div>
+    </div>
+    <div class="dsec">Open quotes</div>
+    ${qs.map(q=>`<div class="dnote" style="display:flex;justify-content:space-between;gap:12px;padding:3px 0"><span style="min-width:0">Quote ${q.id} · ${q.name}</span><b class="tnum" style="flex:none;color:var(--ink)">${fmt.moneyFull(q.v)} · ${q.days}d</b></div>`).join("")}
+    <div class="dsec">Suggested action</div>
+    <div class="dnote">${c.q>1 ? `${c.q} quotes and ${fmt.moneyFull(c.v)} sit with one customer — bundle a single decision-maker call covering all of them.` : (oldest > 40 ? "Open six weeks — worth a direct follow-up call this week." : "Follow up before the customer’s budget window moves.")}</div>`);
+});
+
+/* History */
+$("#histRows").innerHTML = M.map((m,i)=>`
+  <tr${i===11?' style="background:var(--acc-weak)"':''}>
+    <td class="id1 tnum">${m}</td>
+    <td class="num tnum">${SENT[i]}</td>
+    <td class="num tnum hide-sm">${fmt.moneyFull(VAL[i])}</td>
+    <td class="num tnum">${ACC[i]}</td>
+    <td class="num tnum hide-sm">${fmt.moneyFull(ACCV[i])}</td>
+    <td class="num tnum hide-sm">${fmt.moneyFull(ACCV[i]/ACC[i])}</td>
+    <td class="num tnum">${RATE_C[i].toFixed(1)}%</td>
+    <td class="num tnum hide-sm">${RATE_V[i].toFixed(1)}%</td>
+  </tr>`).reverse().join("");
+const sum = a=>a.reduce((x,y)=>x+y,0);
+const footTd = 'style="font-weight:700;padding:13px 20px;border-top:1px solid var(--hair)"';
+$("#histFoot").innerHTML = `
+  <td ${footTd}>Trailing 12</td>
+  <td class="num tnum" ${footTd}>${fmt.n(sum(SENT))}</td>
+  <td class="num tnum hide-sm" ${footTd}>${fmt.moneyFull(sum(VAL))}</td>
+  <td class="num tnum" ${footTd}>${fmt.n(sum(ACC))}</td>
+  <td class="num tnum hide-sm" ${footTd}>${fmt.moneyFull(sum(ACCV))}</td>
+  <td class="num tnum hide-sm" ${footTd}>${fmt.moneyFull(sum(ACCV)/sum(ACC))}</td>
+  <td class="num tnum" ${footTd}>${T12C.toFixed(1)}%</td>
+  <td class="num tnum hide-sm" ${footTd}>${T12V.toFixed(1)}%</td>`;
+
+tabsInit(tab=>{
+  $("#tab-overview").style.display = tab==="overview" ? "" : "none";
+  $("#tab-history").style.display = tab==="history" ? "" : "none";
+});
+segInit(undefined, (seg,val)=>{ if(seg==="bigmode") drawBig(val); });
+if(location.search.includes("history=1")) document.querySelector('[data-tab="history"]').click();
+if(location.search.includes("mode=volume")){ qsel = ["volume"]; drawTrend(); }
+if(location.search.includes("big=customer")) document.querySelector('[data-seg="bigmode"] [data-val="customer"]').click();
+</script>
+</body>
+</html>

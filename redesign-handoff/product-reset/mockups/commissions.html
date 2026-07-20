@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Technician Commissions — Pro Star Metrics</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/tokens.css">
+<style>
+/* page-local: stat-label two-line balance (C28) + wider ×-column for the exact composite factor (C1/C2) */
+.stat .l{text-wrap:balance}
+.lrow .lmult{width:68px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><div><img src="assets/prostar-logo-white.png" alt="Pro Star Mechanical"><div class="bsub">Operations Metrics</div></div></div>
+    <div class="navsec">Dashboards</div>
+    <nav class="nav">
+      <a href="today.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>Today</a>
+      <a href="quotes.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M9 14h6M9 17h4"/></svg>Quote Metrics</a>
+      <a href="jobs.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>Job Metrics</a>
+      <a href="technicians.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.4 2.9-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.5 14.6c2.4.2 4.3 1.7 4.9 4.4"/></svg>Technician Performance</a>
+      <a class="active" href="commissions.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M14.8 9.2c-.6-.9-1.6-1.4-2.8-1.4-1.7 0-3 .9-3 2.2 0 2.9 6 1.5 6 4.3 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.6-3-1.5"/></svg>Technician Commissions</a>
+    </nav>
+    <div class="owner"><div class="av">A</div><div><b>Asad Karamally</b><span>Owner</span></div></div>
+  </aside>
+
+  <main class="main"><div class="content">
+    <div class="top">
+      <div>
+        <div class="eyebrow">Operations</div>
+        <div class="h1">Technician Commissions</div>
+        <div class="sub">Calculated amounts only — nothing on this page confirms that a payment was made.</div>
+      </div>
+      <div class="controls">
+        <div class="ctl stepper"><button class="stepbtn" title="May 2026">‹</button><span class="lbl"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>June 2026</span><button class="stepbtn" title="July 2026 (month to date)">›</button></div>
+        <button class="pill"><span class="dot"></span>Updated 9 min ago</button>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="focal" style="padding-bottom:24px">
+        <div class="lab"><span class="pip"></span><span class="def" data-def="Pool = completed-cohort work value × pool percent (June: 0.50% × $435,978.86 = $2,179.89), distributed by each technician’s allocated share (interim equal-split; timesheet hours-share in implementation) with rank boosts, normalized so payouts always sum exactly to the pool. Calculated — not proof of payment.">Calculated Commission Due</span> · June</div>
+        <div class="big tnum" id="heroPool">$2,179<span style="font-size:.48em;vertical-align:.26em">.89</span></div>
+        <div class="meta">
+          <span class="mgn tnum" id="heroMeta">0.50% of $435,979 completed work value</span>
+        </div>
+        <div class="cov" id="heroCov">8 technicians earning · rank boosts Gold&nbsp;×1.30, Silver&nbsp;×1.20, Bronze&nbsp;×1.10</div>
+        <div style="margin-top:auto;padding-top:18px">
+          <div id="heroBar" style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:rgba(255,255,255,.08)"></div>
+          <div class="herolegend" id="heroStripLbl" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="l"><span class="def" data-def="Σ Simpro job Total (ex-tax) across the June completed cohort — the same cohort as the Jobs page.">Revenue</span></div><div class="v tnum">$435,979</div>
+          <div class="r"><span class="dl tnum"><span class="c">272 completed jobs</span></span></div></div>
+        <div class="stat"><div class="l"><span class="def" data-def="Pool = work value × this percent. Payouts use deterministic cent allocation and always sum exactly to the pool.">Pool Percent</span></div><div class="v tnum" id="statPool">0.50%</div>
+          <div class="r"><span class="dl tnum"><span class="c">of revenue</span></span></div></div>
+        <div class="stat"><div class="l"><span class="def" data-def="Technicians whose calculated final bonus is above zero this month.">Technicians Earning</span></div><div class="v tnum" id="statEarn">8</div>
+          <div class="r"><span class="dl tnum"><span class="c">of 9 eligible</span></span></div></div>
+        <div class="stat"><div class="l"><span class="def" data-def="The largest single calculated payout under the current settings — after rank boosts, the efficiency adjustment (when on), and re-scaling to the pool.">Top Calculated Payout</span></div><div class="v tnum" id="statTop">$413.63</div>
+          <div class="r"><span class="dl tnum"><span class="c" id="statTopC">Juan Serrato · Gold</span></span></div></div>
+      </div>
+    </div>
+
+    <div class="tabs" id="pageTabs">
+      <button class="on" data-tab="monthly">Worksheet</button>
+      <button data-tab="summary">Summary</button>
+    </div>
+
+    <div id="tab-monthly">
+      <!-- Controls -->
+      <div class="toolbar">
+        <label style="display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:600;color:var(--ink-2)">Commission pool
+          <select class="ctl-sel" id="poolSel"></select>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer">
+          <span class="switch" id="effSwitch"></span><span>Efficiency adjustment · <span id="effState" style="color:var(--subtle)">off</span></span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:600;color:var(--muted);opacity:.45;transition:opacity .15s" id="sliderWrap">Max adjustment
+          <input type="range" min="5" max="50" step="1" value="20" id="effSlider" disabled style="width:130px">
+          <b class="tnum" id="sliderVal" style="color:var(--faint)">±20%</b>
+        </label>
+        <span id="effHelp" style="margin-left:auto;font-size:13px;color:var(--subtle);display:none">Faster than the estimate boosts the share, slower trims it — the pool total never changes.</span>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="card">
+        <div class="hd"><div><div class="ti">Commission by Technician</div><div class="st">Ranked by calculated payout · bar shows how each payout is built · click a row for job detail<span id="stAdj" style="display:none"> · <span class="def" data-def="Payout adjustment — the efficiency ratio remapped to the ±max, then re-scaled so the pool total is unchanged; shown to 5 decimals so the trace arithmetic reproduces exactly.">× column = payout adjustment</span></span></div></div>
+        <div class="legend" style="padding:0;justify-content:flex-end;row-gap:6px"><span><i style="background:#8087ec"></i>Base share</span><span><i style="background:#4b52c0"></i>Rank boost</span><span id="legEffP" style="display:none"><i style="background:#1a8a5a"></i>Efficiency +</span><span id="legEffN" style="display:none"><i style="background:#eab3ac"></i>Efficiency −</span></div></div>
+        <div id="board"></div>
+        <div class="bd" style="padding-top:4px">
+          <div class="insight" style="margin-top:0;margin-bottom:12px"><i class="idot"></i><span><b>$20.6K of June’s revenue came from people outside the roster</b> (Furtado, Sarmiento, archived V. Contreras). It stays in the pool and is redistributed to technicians with June hours (8 this month) — your call to include or exclude.</span></div>
+          <div class="fnote" style="margin-top:0">Shares are <span class="repr" data-def="Interim equal split of each job’s value among its assigned technicians — implementation allocates by exact timesheet hours per job.">interim equal-split</span> until timesheet hours-share ships; the $20.6K of outside-roster work never changes the pool.</div>
+        </div>
+      </div>
+
+      <!-- Efficiency comparison -->
+      <div class="card" id="effCard" style="display:none">
+        <div class="hd"><div><div class="ti">Efficiency Effect</div><div class="st">Dollar impact of the efficiency adjustment on each payout · <span class="repr" data-def="Per-technician ratios are representative — 69 of 73 covered June jobs have no job-level technician assignment; the team ratio 0.93× is verified. Timesheet attribution ships in implementation.">representative ratio</span> beside each name · the pool total is unchanged</div></div></div>
+        <div class="bd">
+          <div id="effChart"></div>
+          <div class="fnote">Ratio = Σ estimated ÷ Σ actual on <span class="def" data-def="Quote-linked June jobs only; not covered = neutral ×1.00. The ratio is linearly remapped from 0.5×–1.5× onto the ±max, and payouts are then re-scaled so the pool total is unchanged.">quote-linked June jobs</span>, remapped to the ±max — effects sum to $0 after re-scaling.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-summary" style="display:none">
+      <div class="card">
+        <div class="hd">
+          <div><div class="ti">Commission Summary — 2026</div><div class="st">Pool per period at the saved 0.50% setting</div></div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <div class="seg" data-seg="summode"><button class="on" data-val="monthly">Monthly</button><button data-val="quarterly">Quarterly</button><button data-val="annual">Annual</button></div>
+            <button class="ctl" style="height:34px;font-size:13.5px"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Download CSV</button>
+          </div>
+        </div>
+        <div class="bd" style="padding-bottom:6px">
+          <div class="kv kv4">
+            <div class="cell"><div class="l">Year to date</div><div class="v tnum">$11,264.99</div></div>
+            <div class="cell"><div class="l">Average month</div><div class="v tnum">$1,877.50</div></div>
+            <div class="cell"><div class="l">Peak month</div><div class="v tnum">Mar · $2,303.86</div></div>
+            <div class="cell"><div class="l">Earning technicians · YTD</div><div class="v tnum">9</div></div>
+          </div>
+          <div id="poolChart" style="margin-top:18px"></div>
+        </div>
+        <div class="tblwrap"><table id="sumTable">
+          <thead id="sumHead"></thead>
+          <tbody id="sumRows"></tbody>
+        </table></div>
+        <div class="bd" style="padding-top:4px"><div class="fnote" style="margin-top:0">Jan–May pools are <span class="repr" data-def="Draft runs — recomputed on the approved roster before they become final; per-month history verification is pending.">draft runs</span> until recomputed on the approved roster; months without a run show N/A, never $0.</div></div>
+      </div>
+    </div>
+
+    <!-- State treatments -->
+    <div class="states">
+      <div class="shdr">State treatments (design reference)</div>
+      <div class="srow">
+        <div class="mini"><div class="ml">Loading</div><div class="skel" style="width:55%"></div><div class="skel" style="width:85%"></div><div class="skel" style="width:70%"></div></div>
+        <div class="mini"><div class="ml">No finalized months</div><div class="empt">Summary shows “No finalized months yet for 2026” — KPIs render N/A, never $0.</div></div>
+        <div class="mini"><div class="ml">Below minimum</div><div class="empt">A bonus under 5% of the average is forfeited and redistributed — the row stays visible, marked “below minimum.”</div></div>
+        <div class="mini"><div class="ml">Error</div><div class="err"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="12" height="12"><path d="M12 5v9M12 18.4v.1"/></svg></span><span>Commission data could not be loaded.<br><span class="retry">Try again</span></span></div></div>
+      </div>
+    </div>
+
+    <div class="footline">Source: Simpro completed jobs · pool = completed work value × pool percent · calculated amounts are not payment records</div>
+  </div></main>
+</div>
+
+<div class="scrim"></div>
+<aside class="drawer"><div class="dh"><div><div class="ti"></div><div class="st"></div></div><button class="x">✕</button></div><div class="db"></div></aside>
+
+<script src="assets/kit.js"></script>
+<script>
+const {fmt, histogram, segInit, drawerInit, tabsInit, $, $$} = PSKit;
+
+const WORK_VALUE = 435978.86;
+const TECHS = [
+  {n:"Juan Serrato", alloc:66294, ratio:0.98, est:91.0, act:93.3, jobs:41},
+  {n:"Jim Ochoa", alloc:63738, ratio:0.93, est:67.5, act:72.6, jobs:42},
+  {n:"Cole Bender", alloc:62706, ratio:1.02, est:83.5, act:82.1, jobs:47},
+  {n:"Justin Molina", alloc:58686, ratio:0.99, est:53.4, act:53.6, jobs:43},
+  {n:"Jeffrey Perry", alloc:56920, ratio:1.03, est:67.5, act:65.3, jobs:47},
+  {n:"Rob Sires", alloc:51671, ratio:1.18, est:65.0, act:54.9, jobs:54},
+  {n:"Ismael Contreras", alloc:31922, ratio:0.88, est:41.8, act:47.6, jobs:35},
+  {n:"Tadeo Jimenez", alloc:23348, ratio:0.89, est:29.7, act:33.2, jobs:16},
+  {n:"Roberto Villalta", alloc:0, ratio:null, est:0, act:0, jobs:0},
+];
+const TIER = [["Gold",1.30,"gold"],["Silver",1.20,"silver"],["Bronze",1.10,"bronze"]];
+const DETAIL = {
+  "Juan Serrato":[
+    {j:"16754 · Pacific Shores HOA — boiler + tank replacement", v:36219, share:"1/6", a:6036},
+    {j:"17034 · Queen’s Surf — dual boiler, price matched", v:28883, share:"1/6", a:4814},
+    {j:"16745 · Grove Unit HOA — boiler #3 replacement", v:28006, share:"1/5", a:5601},
+  ],
+};
+
+let state = {pool:0.50, eff:false, max:20, open:"Juan Serrato"};
+
+function engine(){
+  const pool = WORK_VALUE*state.pool/100;
+  const elig = TECHS;
+  const totalAlloc = elig.reduce((s,t)=>s+t.alloc,0);
+  let rows = elig.map(t=>({...t, base: t.alloc/totalAlloc*pool}));
+  rows.sort((a,b)=>b.alloc-a.alloc);
+  rows.forEach((r,i)=>{ const t = i<3&&r.alloc>0 ? TIER[i] : ["Standard",1.0,"std"]; r.tier=t[0]; r.mult=t[1]; r.tcls=t[2]; r.weighted=r.base*r.mult; });
+  const wsum = rows.reduce((s,r)=>s+r.weighted,0);
+  rows.forEach(r=>r.bonus = wsum>0 ? r.weighted/wsum*pool : 0);
+  const avg = pool/rows.length, minB = avg*0.05;
+  let forfeited = 0;
+  rows.forEach(r=>{ if(r.bonus>0 && r.bonus<minB){ forfeited+=r.bonus; r.forfeit=true; r.bonus=0; } });
+  if(forfeited>0){ const s=rows.reduce((a,r)=>a+r.bonus,0); rows.forEach(r=>{ if(r.bonus>0) r.bonus += forfeited*r.bonus/s; }); }
+  if(state.eff){
+    const lo=1-state.max/100, hi=1+state.max/100;
+    rows.forEach(r=>{
+      const x = r.ratio==null?1:(r.ratio<=0.5?lo:r.ratio>=1.5?hi:lo+(r.ratio-0.5)*(hi-lo));
+      r.emult = Math.round(x*1e4)/1e4;
+      r.preEff = r.bonus;
+      r.bonus = r.bonus*r.emult;
+    });
+    const tot = rows.reduce((s,r)=>s+r.bonus,0);
+    const target = rows.reduce((s,r)=>s+r.preEff,0);
+    rows.forEach(r=>r.bonus = tot>0 ? r.bonus*target/tot : 0);
+  }
+  rows.forEach(r=>r.bonus = Math.round(r.bonus*100)/100);
+  return {pool, rows};
+}
+
+function render(){
+  const {pool, rows} = engine();
+  rows.sort((a,b)=>b.bonus-a.bonus || b.alloc-a.alloc);
+  const poolTxt = fmt.cents(pool), dot = poolTxt.lastIndexOf(".");
+  $("#heroPool").innerHTML = `${poolTxt.slice(0,dot)}<span style="font-size:.48em;vertical-align:.26em">${poolTxt.slice(dot)}</span>`;
+  $("#heroMeta").textContent = state.pool.toFixed(2)+"% of $435,979 completed work value";
+  $("#statPool").textContent = state.pool.toFixed(2)+"%";
+  $("#statEarn").textContent = rows.filter(r=>r.bonus>0).length;
+  $("#statTop").textContent = fmt.cents(rows[0].bonus);
+  $("#statTopC").textContent = `${rows[0].n} · ${rows[0].tier}`;
+  // Monotonic 8-step indigo→grey rank ramp; never reuses the "Rank boost" legend color #4b52c0.
+  const colors = ["#8087ec","#6a72e0","#5b63d3","#4650b8","#3c42a0","#8a92a4","#a9b0bf","#c3cad6"];
+  const earning = rows.filter(r=>r.bonus>0);
+  $("#heroBar").innerHTML = earning.map((r,i)=>
+    `<div style="width:${r.bonus/pool*100}%;background:${colors[i%colors.length]}" title="${r.n} · ${fmt.cents(r.bonus)}"></div>`).join("");
+  $("#heroStripLbl").innerHTML = earning.slice(0,3).map((r,i)=>
+    `<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:9px;height:9px;border-radius:3px;background:${colors[i]};display:inline-block"></i>#${i+1} ${r.n} · ${fmt.cents(r.bonus)}</span>`).join("")
+    + (earning.length>3 ? `<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:9px;height:9px;border-radius:3px;background:#a9b0bf;display:inline-block"></i>+ ${earning.length-3} more</span>` : "");
+  const preEffOf = r => state.eff && r.preEff != null ? r.preEff : r.bonus;
+  const maxB = Math.max(...rows.map(r=>Math.max(r.bonus, preEffOf(r))));
+  $("#board").innerHTML = rows.map((r,i)=>{
+    const open = state.open===r.n;
+    const det = DETAIL[r.n];
+    const normalized = state.eff && r.preEff != null ? r.preEff : r.bonus;
+    // Composite payout adjustment (emult × pool re-scale), computed from the PRINTED operands
+    // (cents-rounded pre-efficiency value) at 5 decimals so the trace multiplication reproduces
+    // the printed payout exactly at every pool/±max setting.
+    const ceff = state.eff && r.preEff > 0 ? +(r.bonus/(Math.round(r.preEff*100)/100)).toFixed(5) : null;
+    const ratioTxt = r.ratio==null
+      ? "not covered — neutral ×1.00, then re-scaled to the pool"
+      : `ratio <span class="repr" data-def="Per-technician ratios are representative — 69 of 73 covered June jobs have no job-level technician assignment; the team ratio 0.93× is verified.">${r.ratio.toFixed(2)}×</span> remapped, then re-scaled to the pool`;
+    const trace = r.alloc > 0 ? `<div style="margin-top:10px;padding:9px 12px;background:#f8f9fc;border:1px solid var(--hair-2);border-radius:9px;font-size:13px;color:var(--muted);line-height:1.7">
+        <b style="color:var(--ink-2)">How this was calculated:</b>
+        allocated <b class="tnum">${fmt.money(r.alloc)}</b> (<span class="repr" data-def="Interim equal split of each job’s value among its assigned technicians — implementation allocates by exact timesheet hours per job.">interim equal-split</span> of June jobs)
+        → base share <b class="tnum">${fmt.cents(r.base)}</b>
+        → ${r.mult>1?`${r.tier} boost ×${r.mult.toFixed(2)} → <b class="tnum">${fmt.cents(r.weighted)}</b>`:"Standard ×1.00"}
+        → scaled so the total stays exactly <b class="tnum">${fmt.cents(pool)}</b> → <b class="tnum">${fmt.cents(normalized)}</b>${ceff!=null?`
+        → efficiency <b class="tnum">×${ceff.toFixed(5)}</b> (${ratioTxt}) → <b class="tnum" style="color:var(--ink)">${fmt.cents(r.bonus)}</b>`:""}
+      </div>` : "";
+    const detailBlock = open ? (det ? `<div class="ldetail"><table style="font-size:13px">
+        <thead><tr><th style="padding:8px 12px 8px 0">Job</th><th class="num hide-sm" style="padding:8px 12px">Job value</th><th class="num hide-sm" style="padding:8px 12px">Share</th><th class="num" style="padding:8px 0 8px 12px">Allocated</th></tr></thead>
+        <tbody>${det.slice().sort((a,b)=>b.a-a.a).map(d=>`<tr><td style="padding:8px 12px 8px 0;border:0">${d.j}</td><td class="num tnum hide-sm" style="padding:8px 12px;border:0">${fmt.moneyFull(d.v)}</td><td class="num tnum hide-sm" style="padding:8px 12px;border:0">${d.share}</td><td class="num tnum" style="padding:8px 0 8px 12px;border:0;font-weight:700">${fmt.moneyFull(d.a)}</td></tr>`).join("")}
+        <tr><td colspan="4" style="padding:8px 12px 0 0;border:0;color:var(--subtle);font-size:13px">Top 3 of ${r.jobs} allocations by allocated value — implementation lists all.</td></tr></tbody>
+      </table>${trace}</div>` : `<div class="ldetail" style="font-size:13px;padding-bottom:14px"><span style="color:var(--subtle)">${r.jobs>0?`Job-by-job allocation for ${r.n} — ${r.jobs} June jobs — lists here in implementation.`:"No June allocations."}</span>${trace}</div>`) : "";
+    const N = preEffOf(r), D = r.bonus - N;
+    const baseSeg = r.weighted>0 ? N*(r.base/r.weighted) : N;
+    const boostSeg = N - baseSeg;
+    const u = v => maxB>0 ? Math.max(0,v)/maxB*100 : 0;
+    let segs = r.bonus>0 || N>0 ? `<div style="width:${u(baseSeg)}%;background:#8087ec;border-radius:0"></div>` : "";
+    if(boostSeg>0.005) segs += `<div style="width:${u(boostSeg)}%;background:#4b52c0;border-radius:0"></div>`;
+    if(D>0.005) segs += `<div style="width:${u(D)}%;background:#1a8a5a;border-radius:0"></div>`;
+    if(D<-0.005) segs += `<div style="width:${u(-D)}%;background:#eab3ac;border-radius:0"></div>`;
+    return `<div style="border-bottom:1px solid var(--hair-2)">
+      <div class="rowlink lrow${open?" open":""}" data-tech="${r.n}">
+        <span class="lrank tnum">${i+1}</span>
+        <div class="lname"><div class="id1">${r.n}</div><div class="id2 tnum">${r.jobs>0?r.jobs+" jobs · "+fmt.money(r.alloc)+" allocated":"no June work"}</div></div>
+        <div class="lbar" style="display:flex">${segs}</div>
+        ${r.alloc>0?`<span class="tierchip ${r.tcls} def" data-def="Rank boosts go to the top three by allocated June value: Gold ×1.30, Silver ×1.20, Bronze ×1.10 — everyone else ×1.00. Boosts shift relative shares; the pool total never changes.">${r.tier}${r.mult>1?" ×"+r.mult.toFixed(2):""}</span>`:`<span class="tierchip" style="visibility:hidden" aria-hidden="true">—</span>`}
+        ${state.eff?(ceff!=null?`<span class="lmult tnum def" data-def="Payout adjustment — the efficiency ratio remapped to ±${state.max}%, then re-scaled so the pool total is unchanged; shown to 5 decimals so the trace arithmetic reproduces exactly." style="color:${ceff>1?"var(--up)":ceff<1?"var(--down)":"var(--subtle)"}">×${ceff.toFixed(5)}</span>`:`<span class="lmult" aria-hidden="true"></span>`):""}
+        <b class="lamt tnum">${r.bonus>0?fmt.cents(r.bonus):"$0.00"}</b>
+        <span class="lcaret">▸</span>
+      </div>
+      ${detailBlock}
+    </div>`;
+  }).join("");
+  $("#effCard").style.display = state.eff ? "" : "none";
+  $("#effHelp").style.display = state.eff ? "" : "none";
+  $("#stAdj").style.display = state.eff ? "" : "none";
+  $("#legEffP").style.display = state.eff ? "" : "none";
+  $("#legEffN").style.display = state.eff ? "" : "none";
+  if(state.eff){
+    const effs = rows.filter(r=>r.jobs>0).map(r=>({
+      name:`${r.n} · ${r.ratio==null?"not covered":r.ratio.toFixed(2)+"×"}`,
+      v: r.preEff!=null ? r.bonus-r.preEff : 0,
+    })).sort((a,b)=>b.v-a.v);
+    const ext = Math.max(...effs.map(e=>Math.abs(e.v)), 1)*1.15;
+    PSKit.devBars($("#effChart"), effs, {ref:0, min:-ext, max:ext, labelW:190,
+      refLabel:"$0 — no effect", fmt:v=>(v>=0?"+":"−")+fmt.cents(Math.abs(v)), pos:"#1a8a5a", neg:"#d0463a"});
+  }
+}
+
+const sel = $("#poolSel");
+for(let p=0.25; p<=1.004; p+=0.05){
+  const o = document.createElement("option");
+  o.value = p.toFixed(2); o.textContent = p.toFixed(2)+"%";
+  if(Math.abs(p-0.5)<0.001) o.selected = true;
+  sel.appendChild(o);
+}
+sel.addEventListener("change", ()=>{ state.pool = parseFloat(sel.value); render(); });
+$("#effSwitch").addEventListener("click", ()=>{
+  state.eff = !state.eff;
+  $("#effSwitch").classList.toggle("on", state.eff);
+  $("#effState").textContent = state.eff ? "on" : "off";
+  $("#effSlider").disabled = !state.eff;
+  $("#sliderWrap").style.opacity = state.eff ? "1" : ".45";
+  $("#sliderWrap").style.color = state.eff ? "var(--ink-2)" : "var(--muted)";
+  $("#sliderVal").style.color = state.eff ? "var(--ink-2)" : "var(--faint)";
+  render();
+});
+$("#effSlider").addEventListener("input", e=>{
+  state.max = +e.target.value;
+  $("#sliderVal").textContent = "±"+state.max+"%";
+  render();
+});
+document.addEventListener("click", e=>{
+  const r = e.target.closest("[data-tech]");
+  if(!r) return;
+  const n = r.dataset.tech;
+  state.open = state.open===n ? null : n;
+  render();
+  if(state.open) document.querySelector(".lrow.open")?.scrollIntoView({behavior:"smooth",block:"nearest"});
+});
+
+/* Summary */
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const POOLS = [1776.72,1758.49,2303.86,1901.69,1344.34,2179.89,null,null,null,null,null,null];
+const WV =    [355343,351699,460773,380337,268869,435979,null,null,null,null,null,null];
+const JOBS =  [283,347,246,225,204,272,null,null,null,null,null,null];
+let sumMode = "monthly";
+function drawSummary(mode){
+  sumMode = mode;
+  const th = (s,cls)=>`<th class="num${cls?" "+cls:""}">${s}</th>`;
+  const sum = a=>a.reduce((x,y)=>x+y,0);
+  const chartEl = $("#poolChart");
+  chartEl.style.display = "";
+  if(mode==="quarterly"){
+    const qs = [["Q1",0,3],["Q2",3,6],["Q3",6,9],["Q4",9,12]]
+      .map(([label,a,b],qi)=>({label, ps:POOLS.slice(a,b).filter(v=>v!=null), qi}))
+      .filter(q=>q.ps.length);
+    histogram(chartEl, qs.map((q,i)=>({
+      label:q.label, count:sum(q.ps), accent:i===qs.length-1, tipLabel:`${q.label} 2026 pool`,
+    })), {h:190, seriesName:"Pool", valFmt:v=>fmt.cents(v), yFmt:fmt.money});
+  } else {
+    // Monthly and annual views share the 6-bar monthly histogram (C10); Jan–May are draft runs (C31).
+    histogram(chartEl, MONTHS.slice(0,6).map((m,i)=>({
+      label:m, count:POOLS[i], accent:i===5, tipLabel:`${m} 2026 pool${i<5?" (draft)":""}`,
+    })), {h:190, seriesName:"Pool", valFmt:v=>fmt.cents(v), yFmt:fmt.money});
+  }
+  if(mode==="monthly"){
+    $("#sumHead").innerHTML = `<tr><th>Month</th>${th("Pool")}${th("Status")}</tr>`;
+    $("#sumRows").innerHTML = MONTHS.slice(0,6).map((m,i)=>`
+      <tr><td class="id1 tnum">${m} 2026</td>
+      <td class="num tnum" style="font-weight:700">${POOLS[i]?fmt.cents(POOLS[i]):"N/A"}</td>
+      <td class="num">${POOLS[i]?(i===5?`<span class="srcpill">Current</span>`:`<span class="srcpill def" data-def="Draft run — recomputed on the approved roster before it becomes final." style="background:#faf3df;color:#8a6a14">Draft</span>`):`<span class="srcpill" style="opacity:.6">No run</span>`}</td></tr>`).join("")
+      + `<tr><td class="id1" style="color:var(--subtle);font-weight:500">Jul–Dec 2026</td>
+      <td class="num tnum" style="color:var(--subtle)">N/A</td>
+      <td class="num"><span class="srcpill" style="opacity:.6">No runs yet</span></td></tr>`;
+  } else if(mode==="quarterly"){
+    const q = [["Q1",0,3],["Q2",3,6],["Q3",6,9],["Q4",9,12]];
+    $("#sumHead").innerHTML = `<tr><th>Quarter</th>${th("Pool")}${th("Months with a run")}</tr>`;
+    $("#sumRows").innerHTML = q.map(([label,a,b])=>{
+      const ps = POOLS.slice(a,b).filter(v=>v!=null);
+      return `<tr><td class="id1 tnum">${label} 2026</td>
+        <td class="num tnum" style="font-weight:700">${ps.length?fmt.cents(sum(ps)):"N/A"}</td>
+        <td class="num tnum">${ps.length} of 3</td></tr>`;
+    }).join("");
+  } else {
+    const h1 = POOLS.slice(0,6).filter(v=>v!=null), h2 = POOLS.slice(6).filter(v=>v!=null);
+    const loaded = h1.length + h2.length;
+    let pk = -1; POOLS.forEach((v,i)=>{ if(v!=null && (pk<0 || v>POOLS[pk])) pk=i; });
+    $("#sumHead").innerHTML = `<tr><th>Year</th>${th("H1 pool")}${th("H2 pool")}${th("Total")}${th("Peak month","hide-sm")}</tr>`;
+    $("#sumRows").innerHTML = `<tr><td class="id1 tnum">2026 · ${loaded} mo loaded</td>
+      <td class="num tnum">${h1.length?fmt.cents(sum(h1)):"N/A"}</td>
+      <td class="num tnum">${h2.length?fmt.cents(sum(h2)):"N/A"}</td>
+      <td class="num tnum" style="font-weight:700">${loaded?fmt.cents(sum(h1)+sum(h2)):"N/A"}</td>
+      <td class="num tnum hide-sm">${pk>=0?`${MONTHS[pk]} · ${fmt.cents(POOLS[pk])}`:"N/A"}</td></tr>`;
+  }
+}
+tabsInit(tab=>{
+  $("#tab-monthly").style.display = tab==="monthly" ? "" : "none";
+  $("#tab-summary").style.display = tab==="summary" ? "" : "none";
+  if(tab==="summary") drawSummary(sumMode); // redraw at real width once visible
+});
+segInit(undefined, (seg,val)=>{ if(seg==="summode") drawSummary(val); });
+drawerInit();
+render();
+if(location.search.includes("eff=1")) $("#effSwitch").click();
+if(location.search.includes("summary=1")) document.querySelector('[data-tab="summary"]').click();
+if(location.search.includes("mode=quarterly")) document.querySelector('[data-val="quarterly"]').click();
+if(location.search.includes("mode=annual")) document.querySelector('[data-val="annual"]').click();
+</script>
+</body>
+</html>

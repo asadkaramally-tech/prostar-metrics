@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Today — Pro Star Metrics</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/tokens.css">
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><div><img src="assets/prostar-logo-white.png" alt="Pro Star Mechanical"><div class="bsub">Operations Metrics</div></div></div>
+    <div class="navsec">Dashboards</div>
+    <nav class="nav">
+      <a class="active" href="today.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>Today</a>
+      <a href="quotes.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M9 14h6M9 17h4"/></svg>Quote Metrics</a>
+      <a href="jobs.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>Job Metrics</a>
+      <a href="technicians.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.4 2.9-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.5 14.6c2.4.2 4.3 1.7 4.9 4.4"/></svg>Technician Performance</a>
+      <a href="commissions.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M14.8 9.2c-.6-.9-1.6-1.4-2.8-1.4-1.7 0-3 .9-3 2.2 0 2.9 6 1.5 6 4.3 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.6-3-1.5"/></svg>Technician Commissions</a>
+    </nav>
+    <div class="owner"><div class="av">A</div><div><b>Asad Karamally</b><span>Owner</span></div></div>
+  </aside>
+
+  <main class="main"><div class="content">
+    <div class="top">
+      <div>
+        <div class="eyebrow">Operations</div>
+        <div class="h1">Today</div>
+        <div class="sub">July in progress — the live pace against June and last July, and what needs a decision now.</div>
+      </div>
+      <div class="controls">
+        <div class="ctl stepper"><button class="stepbtn" title="June 2026">‹</button><span class="lbl"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>July 2026 · through Jul 14</span><button class="stepbtn" disabled style="opacity:.35;cursor:default" title="July is the live month">›</button></div>
+        <button class="pill"><span class="dot"></span>Updated 2 min ago</button>
+      </div>
+    </div>
+
+    <!-- Flagship: headline + live pace curve fused -->
+    <div class="hero split">
+      <div class="focal" style="padding-bottom:24px">
+        <div class="lab"><span class="pip"></span><span class="def" data-def="Σ Simpro job Total (ex-tax) across jobs completed Jul 1–14 — same cohort rule as the Jobs page: CompletedDate sets the month, stage must be Complete or Archived. Pulled live from Simpro.">Revenue</span> · July so far</div>
+        <div class="big tnum">$261,425</div>
+        <div class="meta">
+          <span class="mgn tnum">$139,937 net · 53.5% margin</span>
+          <span class="chipd tnum">↑ 75.9% vs Jul ’25 · day 14</span>
+          <span class="chipd tnum">↑ 18.6% vs Jun ’26 · day 14</span>
+        </div>
+        <div class="dgrid">
+          <div class="dcell"><div class="dl2"><span class="def" data-def="Jobs with CompletedDate Jul 1–14 and Simpro stage Complete or Archived. Average = $261,425 ÷ 101.">Completed Jobs</span></div><div class="dv2 tnum">101<span class="s">avg $2,588</span></div></div>
+          <div class="dcell"><div class="dl2"><span class="def" data-def="Quotes issued Jul 1–14. Acceptance isn’t judged this early — most July quotes are still inside their normal decision window.">Quotes Sent</span></div><div class="dv2 tnum">14<span class="s">$91,636 total</span></div></div>
+          <div class="dcell"><div class="dl2"><span class="def" data-def="0.50% of July-to-date completed work value ($261,425) = $1,307.13 — the Commissions-page pool math, calculated, not paid; it moves with every completion.">Pool So Far</span></div><div class="dv2 tnum">$1,307.13<span class="s" style="white-space:nowrap">0.50% rate</span></div></div>
+          <div class="dcell"><div class="dl2"><span class="def" data-def="All recorded timesheet hours Jul 1–14 across the 9-technician roster. MTD capacity = 10 workdays × 8 productive hours × 9 technicians = 720h, flat by rule — the Jul 3 observed holiday is not deducted.">Team Hours</span></div><div class="dv2 tnum">822.75h<span class="s" style="color:#e6c07a">114% of cap</span></div></div>
+        </div>
+        <div style="margin-top:auto;padding-top:18px">
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#8b90a6">
+            <span style="width:112px;flex:none" class="def" data-def="14 of 31 July days elapsed at the Jul 15 pull — every comparison on this page uses the same day-14 cut.">Month elapsed</span>
+            <span style="flex:1;height:6px;border-radius:4px;background:rgba(255,255,255,.08)"><span style="display:block;width:45%;height:100%;border-radius:4px;background:var(--acc-2)"></span></span>
+            <b class="tnum" style="color:#e9ebf4;flex:none;font-size:12.5px">45%</b>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#8b90a6;margin-top:8px">
+            <span style="width:112px;flex:none" class="def" data-def="July-to-date revenue ÷ June’s full-month total ($261,425 ÷ $435,979). Booked 60% of last month’s total in 45% of the days.">Of June’s total</span>
+            <span style="flex:1;height:6px;border-radius:4px;background:rgba(255,255,255,.08)"><span style="display:block;width:60%;height:100%;border-radius:4px;background:var(--acc-2)"></span></span>
+            <b class="tnum" style="color:#e9ebf4;flex:none;font-size:12.5px">60%</b>
+          </div>
+        </div>
+        <div class="cov" style="padding-top:14px">Fewer, larger jobs than last July: 101 vs 117 at day 14, at 76% more value</div>
+      </div>
+      <div class="card">
+        <div class="hd">
+          <div><div class="ti"><span class="def" data-def="Each point is the running Σ of Simpro job Total (ex-tax) for jobs completed that month, through that day. The Jul ’26 line is live — data through Jul 14.">Cumulative Revenue</span></div><div class="st">Running month total by day · hover or tap any day</div></div>
+          <div class="legend" style="padding:0;flex-wrap:nowrap"><span><i style="background:#8a92a4"></i>Jul ’25</span><span><i style="background:#6d7585"></i>Jun ’26</span><span><i style="background:#5b63d3"></i>Jul ’26</span></div>
+        </div>
+        <div class="bd"><div id="pace"></div>
+          <div class="fnote">Jun ’26 finished at $435,979 and Jul ’25 at $451,054 — the Jul ’26 line stops at its solid live dot (data through Jul 14), ahead of both.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Queue + July specifics -->
+    <div class="g75">
+      <div class="card" style="align-self:start">
+        <div class="hd"><div><div class="ti">Needs a Decision</div><div class="st">Everything time-sensitive this morning, oldest first · each row opens its page</div></div></div>
+        <div class="alist">
+          <a class="arow" href="quotes.html">
+            <span class="fi warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 3.5 2.8 19.5h18.4Z"/><path d="M12 9.8v4.4M12 16.9v.1"/></svg></span>
+            <span class="atext"><b>Symphony at Del Sur Apartments</b> — PM plan, quote 2457, $50,750, unanswered since Jun 1. Crosses the 45-day&nbsp;line <b>tomorrow</b>.</span>
+            <span class="atag amber tnum">44d</span><span class="acaret"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M9.2 5.2 16 12l-6.8 6.8"/></svg></span>
+          </a>
+          <a class="arow" href="quotes.html">
+            <span class="fi warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 3.5 2.8 19.5h18.4Z"/><path d="M12 9.8v4.4M12 16.9v.1"/></svg></span>
+            <span class="atext"><b>Park Plaza HOA</b> — dual hydronic replacement, quote 2466, $114,218, viewed but unanswered since Jun 2.</span>
+            <span class="atag amber tnum">43d</span><span class="acaret"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M9.2 5.2 16 12l-6.8 6.8"/></svg></span>
+          </a>
+          <a class="arow" href="quotes.html">
+            <span class="fi warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 3.5 2.8 19.5h18.4Z"/><path d="M12 9.8v4.4M12 16.9v.1"/></svg></span>
+            <span class="atext"><b>Hotel Lulu, BW Premier Collection</b> — $504,628 open across 3 boiler quotes, oldest sent Jun 2. Largest single exposure.</span>
+            <span class="atag amber tnum">43d</span><span class="acaret"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M9.2 5.2 16 12l-6.8 6.8"/></svg></span>
+          </a>
+          <a class="arow" href="quotes.html">
+            <span class="fi warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 3.5 2.8 19.5h18.4Z"/><path d="M12 9.8v4.4M12 16.9v.1"/></svg></span>
+            <span class="atext"><b>Lake Murray Terrace</b> — tankless water heater replacement, quote 2477, $47,485, unanswered since Jun 4.</span>
+            <span class="atag amber tnum">41d</span><span class="acaret"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M9.2 5.2 16 12l-6.8 6.8"/></svg></span>
+          </a>
+          <a class="arow" href="quotes.html">
+            <span class="fi warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 3.5 2.8 19.5h18.4Z"/><path d="M12 9.8v4.4M12 16.9v.1"/></svg></span>
+            <span class="atext"><b>Best Western #259</b> — heat pump water heater install, quote 2537, $178,438, unanswered since Jun 11.</span>
+            <span class="atag amber tnum">34d</span><span class="acaret"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M9.2 5.2 16 12l-6.8 6.8"/></svg></span>
+          </a>
+          <a class="arow" href="quotes.html">
+            <span class="fi warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 3.5 2.8 19.5h18.4Z"/><path d="M12 9.8v4.4M12 16.9v.1"/></svg></span>
+            <span class="atext"><b>JW Marriott Anaheim</b> — single boiler replacement, quote 2529, $56,425, unanswered since Jun 11.</span>
+            <span class="atag amber tnum">34d</span><span class="acaret"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M9.2 5.2 16 12l-6.8 6.8"/></svg></span>
+          </a>
+        </div>
+        <div class="bd" style="padding-top:4px;padding-bottom:12px">
+          <div class="fnote">Ages as of Jul 15 · amber past 30 days, red past 45, cleared by any quote activity · $951,944 of open value is on this list.</div>
+        </div>
+        <div style="padding:12px 20px 2px;border-top:1px solid var(--hair);font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)">Roster</div>
+        <div class="alist">
+          <a class="arow" href="technicians.html">
+            <span class="fi down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 4.5v13M6.2 12.2l5.8 5.8 5.8-5.8"/></svg></span>
+            <span class="atext"><b>Roberto Villalta</b> — 0h recorded in July, after 8.5h in all of June.</span>
+            <span class="atag red tnum">0h</span><span class="acaret"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M9.2 5.2 16 12l-6.8 6.8"/></svg></span>
+          </a>
+          <a class="arow" href="technicians.html">
+            <span class="fi info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="8.6"/><path d="M12 11v5.4M12 7.4v.1"/></svg></span>
+            <span class="atext"><b>8 of 9 technicians</b> above month-to-date capacity — 822.75h against <span class="def" data-def="MTD capacity = 10 workdays × 8 productive hours × 9 technicians = 720h, flat by rule — the Jul 3 observed holiday is not deducted.">720h available</span>.</span>
+            <span class="atag amber tnum">114%</span><span class="acaret"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="14" height="14"><path d="M9.2 5.2 16 12l-6.8 6.8"/></svg></span>
+          </a>
+        </div>
+        <div class="bd" style="padding-top:4px">
+          <div class="fnote" style="margin-top:0;padding-top:0;border-top:0">Roster flags track timesheets through Jul 14 — the quote-aging rules above don’t apply here.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div class="card" style="margin-top:0">
+          <div class="hd"><div><div class="ti">Losses So Far</div><div class="st">July jobs below zero net · bar = size of the loss · live from Simpro</div></div></div>
+          <div class="bd" style="padding-bottom:12px">
+            <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+              <span class="tnum" style="font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--down)">−$1,460</span>
+              <span style="font-size:13.5px;color:var(--muted)">across 7 jobs — June finished at <b class="tnum">−$25,866</b> across 111 jobs</span>
+            </div>
+          </div>
+          <div>
+            <div class="brow" style="cursor:default;border-top:1px solid var(--hair-2)">
+              <span class="bbar neg" style="width:100%"></span>
+              <div class="bname"><div class="id1">Citrus Crossing Senior Apartments — exhaust fan recalibration</div><div class="id2">$59 diagnostic call</div></div>
+              <b class="bval tnum" style="color:var(--down)">−$479</b>
+            </div>
+            <div class="brow" style="cursor:default">
+              <span class="bbar neg" style="width:95%"></span>
+              <div class="bname"><div class="id1">Embassy Suites #8425 — burner replacement</div><div class="id2">$0 billed</div></div>
+              <b class="bval tnum" style="color:var(--down)">−$457</b>
+            </div>
+            <div class="brow" style="cursor:default">
+              <span class="bbar neg" style="width:57%"></span>
+              <div class="bname"><div class="id1">Aqua 488 HOA — MUA-2 fault</div><div class="id2">$59 diagnostic call</div></div>
+              <b class="bval tnum" style="color:var(--down)">−$272</b>
+            </div>
+            <div class="brow brem" style="cursor:default">
+              <span class="bbar" style="width:53%;background:#f1f2f6"></span>
+              <div class="bname"><div class="id1">4 more jobs</div><div class="id2">average −$63 each</div></div>
+              <b class="bval tnum" style="color:var(--down)">−$252</b>
+            </div>
+          </div>
+          <div class="bd" style="padding-top:2px">
+            <div class="insight" style="margin-top:10px"><i class="idot"></i><span><b>Margin discipline is holding.</b> July’s −$1,460 so far is 6% of what June lost across its full month — still mostly $59 diagnostic calls.</span></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:0">
+          <div class="hd"><div><div class="ti">Biggest Completions</div><div class="st">July’s largest finished jobs · bar = value relative to the largest</div></div></div>
+          <div style="margin-top:8px">
+            <div class="brow" style="cursor:default">
+              <span class="bbar" style="width:100%"></span>
+              <div class="bname"><div class="id1">Creekwood at River Run — 8-system boiler install</div><div class="id2">completed Jul 2</div></div>
+              <span class="bval tnum"><b style="font-size:14px">$102,986</b> <span style="color:var(--up);font-size:13px">$47,044 net</span></span>
+            </div>
+            <div class="brow" style="cursor:default">
+              <span class="bbar" style="width:15%"></span>
+              <div class="bname"><div class="id1">Sunland Park — MH-17 (recurring maintenance)</div><div class="id2">Job 17067 · completed Jul 6</div></div>
+              <span class="bval tnum"><b style="font-size:14px">$15,159</b> <span style="color:var(--up);font-size:13px">$9,673 net</span></span>
+            </div>
+            <div class="brow" style="cursor:default">
+              <span class="bbar" style="width:15%"></span>
+              <div class="bname"><div class="id1">JW Marriott Anaheim — single boiler replacement</div><div class="id2">Job 17236 · completed Jul 9 — separate from open quote 2529 in the queue</div></div>
+              <span class="bval tnum"><b style="font-size:14px">$15,141</b> <span style="color:var(--up);font-size:13px">$11,044 net</span></span>
+            </div>
+            <div class="brow" style="cursor:default">
+              <span class="bbar" style="width:10%"></span>
+              <div class="bname"><div class="id1">De Soto Gardens — water heater replacement</div><div class="id2">completed Jul 8</div></div>
+              <span class="bval tnum"><b style="font-size:14px">$10,709</b> <span style="color:var(--up);font-size:13px">$3,865 net</span></span>
+            </div>
+          </div>
+          <div class="bd" style="padding-top:2px">
+            <div class="fnote" style="margin-top:8px">The Creekwood install alone is 39% of July’s value so far — and all four ran profitably.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State treatments (rendered only with ?states=1) -->
+    <div class="states">
+      <div class="shdr">State treatments (design reference)</div>
+      <div class="srow">
+        <div class="mini"><div class="ml">Loading</div><div class="skel" style="width:55%"></div><div class="skel" style="width:85%"></div><div class="skel" style="width:70%"></div></div>
+        <div class="mini"><div class="ml">Quiet morning</div><div class="empt">No completions yet today — the pace line holds yesterday’s total until the first job closes.</div></div>
+        <div class="mini"><div class="ml">Partial / stale</div><div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span class="pill warn" style="height:32px"><span class="dot"></span>Updated 3 hrs ago</span><span class="empt">Header pill turns amber; figures stay visible with an as-of note.</span></div></div>
+        <div class="mini"><div class="ml">Error</div><div class="err"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="12" height="12"><path d="M12 5v9M12 18.4v.1"/></svg></span><span>Live Simpro pull failed.<br><span class="retry">Try again</span></span></div></div>
+      </div>
+    </div>
+
+    <div class="footline">Source: Simpro · live month-to-date figures under the monthly pages’ cohort rules · comparisons are same-day-count</div>
+  </div></main>
+</div>
+
+<script src="assets/kit.js"></script>
+<script>
+const { fmt, trendChart, $ } = window.PSKit;
+
+/* Daily cumulative revenue — pulled from Simpro 2026-07-15 (real, per-day) */
+const JUL26 = [11689,123361,123361,125520,126895,147184,160821,184846,207179,223822,225838,225838,246691,261425];
+const JUN26 = [11026,26307,35938,47064,148346,150029,150029,173999,184527,199829,205497,219412,220458,220458,224707,237675,244966,248361,276315,276433,276433,282220,287153,331224,335641,376029,376029,376088,395125,435979];
+const JUL25 = [18299,29856,63739,63739,64163,64163,76706,89046,98453,105858,140027,141447,141447,148640,160564,163036,196773,265770,265770,266786,298378,370458,388425,397579,410882,412661,413226,424318,435649,442738,451054];
+const pad = (a,n) => a.concat(Array(Math.max(0,n-a.length)).fill(null));
+
+trendChart($("#pace"), {
+  labels: Array.from({length:31}, (_,i)=>String(i+1)),
+  everyX: 2, h: 300, ticks: 5, yMax: 500000, band: 13,
+  bandLabel: "Live · day 14 · $261K vs $220K vs $149K",
+  tipLabel: i => `Day ${i+1} of the month`,
+  yFmt: fmt.money,
+  series: [
+    {name:"Jul ’25", color:"#8a92a4", values:JUL25, tipFmt:fmt.money},
+    {name:"Jun ’26", color:"#6d7585", values:pad(JUN26,31), tipFmt:fmt.money},
+    {name:"Jul ’26", color:"#5b63d3", star:true, fill:true, endLabel:false, values:pad(JUL26,31), tipFmt:fmt.money},
+  ],
+});
+</script>
+</body>
+</html>

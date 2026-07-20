@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.env
+.env.local
+*.log
+coverage
+dist
+tmp
+tsconfig.tsbuildinfo
+.playwright-cli
+.work
+docs/prostar-metrics/verification
+docs/prostar-metrics/reconciliation
+docs/prostar-metrics/feature-status.json

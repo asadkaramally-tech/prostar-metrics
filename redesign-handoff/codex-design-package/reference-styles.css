@@ -1,0 +1,77 @@
+/* Pro Star Metrics — reference stylesheet extracted from jobs_ref.html (canonical mockup).
+   Fonts: see fonts/ + the @font-face block below. This is the pixel source Codex should port
+   into globals.css + the shared components. Every value here is exact. */
+@font-face{font-family:'Inter';font-weight:400;font-style:normal;font-display:swap;src:url('/fonts/inter-latin-400-normal.woff2') format('woff2');}
+@font-face{font-family:'Inter';font-weight:500;font-style:normal;font-display:swap;src:url('/fonts/inter-latin-500-normal.woff2') format('woff2');}
+@font-face{font-family:'Inter';font-weight:600;font-style:normal;font-display:swap;src:url('/fonts/inter-latin-600-normal.woff2') format('woff2');}
+@font-face{font-family:'Inter';font-weight:700;font-style:normal;font-display:swap;src:url('/fonts/inter-latin-700-normal.woff2') format('woff2');}
+@font-face{font-family:'Inter';font-weight:800;font-style:normal;font-display:swap;src:url('/fonts/inter-latin-800-normal.woff2') format('woff2');}
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--acc:#5b63d3;--ink:#101422;--ink2:#2a3140;--mut:#5c6474;--sub:#8b93a3;--fnt:#aeb4c0;--hair:#e9ebf0;--hair2:#f1f2f6}
+html,body{font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--ink);font-feature-settings:"cv05" 1,"ss01" 1;background:#07080b}
+.tnum{font-variant-numeric:tabular-nums;letter-spacing:-.012em}
+.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+.rail{position:relative;background:#0a0b0f;border-right:1px solid rgba(255,255,255,.055)}
+.rail::after{content:"";position:absolute;inset:0;background:radial-gradient(380px 200px at 30% 4%,rgba(91,99,211,.14),transparent 70%);pointer-events:none}
+.brand{display:flex;align-items:center;gap:12px;padding:26px 24px 24px;position:relative}
+.brand .mk{width:34px;height:34px;border-radius:10px;background:linear-gradient(140deg,#6a72e0,#4b52c0);display:grid;place-items:center;box-shadow:0 6px 18px rgba(75,82,192,.45),inset 0 1px 0 rgba(255,255,255,.3)}
+.brand b{color:#f4f5fa;font-weight:700;font-size:15px;letter-spacing:-.02em;display:block;line-height:1}
+.brand span{color:#6f7686;font-size:11px;font-weight:500}
+.navsec{padding:0 26px;color:#565d6e;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin:14px 0 8px}
+.nav{padding:0 14px}
+.nav a{display:flex;align-items:center;gap:12px;padding:9px 13px;margin:2px 0;border-radius:9px;color:#9298a6;font-size:13.5px;font-weight:500;text-decoration:none;position:relative}
+.nav a .i{width:17px;height:17px;opacity:.85}
+.nav a.active{color:#f4f5fa;font-weight:600;background:rgba(255,255,255,.045);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.nav a.active .i{opacity:1;color:#8087ec}
+.nav a.active::before{content:"";position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:2.5px;height:18px;border-radius:0 3px 3px 0;background:#5b63d3;box-shadow:0 0 10px rgba(91,99,211,.9)}
+.owner{position:absolute;bottom:0;left:0;right:0;padding:16px 24px;border-top:1px solid rgba(255,255,255,.05);display:flex;align-items:center;gap:11px}
+.owner .av{width:31px;height:31px;border-radius:50%;background:linear-gradient(140deg,#5b63d3,#3c42a0);display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700}
+.owner .nm{color:#e7e9f1;font-size:12.5px;font-weight:600;line-height:1.1}.owner .rl{color:#6f7686;font-size:10.5px}
+.wrap{background:radial-gradient(900px 460px at 82% -10%,#ffffff,rgba(255,255,255,0) 55%),linear-gradient(180deg,#f8f9fb,#f2f4f7);min-height:100vh}
+.main{padding:32px 42px 52px;max-width:1180px}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px}
+.eyebrow{color:var(--sub);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px}
+.h1{font-size:26px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.h1+.sub{color:var(--mut);font-size:13px;margin-top:8px;max-width:600px;line-height:1.5}
+.controls{display:flex;gap:9px}
+.ctl{display:flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:11px;background:#fff;border:1px solid var(--hair);font-size:13px;font-weight:600;color:var(--ink2);box-shadow:0 1px 2px rgba(16,24,40,.05)}
+.ctl .i{width:15px;height:15px;color:var(--sub)}
+.pill{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:11px;font-size:12.5px;font-weight:600;background:#fff;color:#177a4f;border:1px solid #d6ebe0;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:#1a8a5a;box-shadow:0 0 0 3px rgba(26,138,90,.16)}
+.hero{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;margin-bottom:18px}
+.focal{position:relative;overflow:hidden;border-radius:20px;padding:26px 28px 0;color:#e9ebf4;background:linear-gradient(160deg,#171a26,#101320 60%,#0c0e18);box-shadow:0 24px 48px -16px rgba(12,14,24,.55),inset 0 1px 0 rgba(255,255,255,.06)}
+.focal::before{content:"";position:absolute;top:-70px;right:-30px;width:300px;height:250px;background:radial-gradient(closest-side,rgba(91,99,211,.42),transparent);pointer-events:none}
+.focal .lab{position:relative;font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:#8b90a6;display:flex;align-items:center;gap:8px}
+.focal .lab .pip{width:6px;height:6px;border-radius:50%;background:#8087ec;box-shadow:0 0 10px rgba(128,135,236,.9)}
+.focal .big{position:relative;font-size:54px;font-weight:800;letter-spacing:-.045em;color:#fff;line-height:1;margin-top:14px}
+.focal .meta{position:relative;display:flex;align-items:center;gap:12px;margin-top:14px}
+.focal .mgn{font-size:14px;font-weight:600;color:#c3c8db}
+.chipd{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:rgba(30,150,95,.18);color:#5fd39b;border:1px solid rgba(40,170,110,.32)}
+.focal .cov{position:relative;color:#868ca2;font-size:12px;margin-top:16px;padding-bottom:4px}
+.focal .hs{margin:8px -28px 0}
+.snap{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.stat{position:relative;background:#fff;border:1px solid var(--hair);border-radius:16px;padding:16px 18px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 10px 24px -16px rgba(16,24,40,.14);display:flex;flex-direction:column;justify-content:space-between}
+.stat .l{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--sub)}
+.stat .v{font-size:25px;font-weight:700;letter-spacing:-.03em;margin-top:8px}
+.stat .r{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:10px}
+.stat .c{font-size:11.5px;color:var(--mut)}
+.dl{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#1a8a5a}
+.dl.dn{color:#d0463a}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+.card{position:relative;background:#fff;border:1px solid var(--hair);border-radius:18px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 14px 30px -18px rgba(16,24,40,.18);overflow:hidden}
+.card .hd{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:18px 20px 2px}
+.card .ti{font-size:15px;font-weight:700;letter-spacing:-.02em}
+.card .st{font-size:11.5px;color:var(--mut);margin-top:3px}
+.legend{display:flex;gap:16px;padding:2px 20px}
+.legend span{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:var(--ink2);font-weight:500}
+.legend i{width:14px;height:3px;border-radius:2px}
+.tcard{margin-top:18px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fnt);padding:13px 20px;border-bottom:1px solid var(--hair)}
+thead th.num{text-align:right}
+tbody td{padding:14px 20px;border-bottom:1px solid var(--hair2);color:var(--ink2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:#f9fafc}
+.foot{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--hair);color:var(--mut);font-size:12px}
+.export{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:10px;background:#fff;border:1px solid var(--hair);font-size:12.5px;font-weight:600;color:var(--ink2)}
+.meth{margin-top:18px;display:flex;gap:11px;align-items:flex-start;padding:14px 18px;border-radius:14px;background:#f4f5fa;border:1px solid #e6e8f2;color:#454c60;font-size:12px;line-height:1.5}
+.meth b{color:#5b63d3}

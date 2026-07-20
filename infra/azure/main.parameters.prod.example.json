@@ -1,0 +1,107 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "westus2"
+    },
+    "containerAppsEnvironmentName": {
+      "value": "cae-prostar-dispatch-prod"
+    },
+    "containerAppName": {
+      "value": "aca-prostar-metrics-prod"
+    },
+    "activeRevisionsMode": {
+      "value": "Single"
+    },
+    "ingestionJobName": {
+      "value": "job-prostar-metrics-ingest"
+    },
+    "reconciliationJobName": {
+      "value": "job-prostar-metrics-reconcile"
+    },
+    "acrLoginServer": {
+      "value": "acrprostardispatchprod.azurecr.io"
+    },
+    "managedIdentityName": {
+      "value": "id-prostar-dispatch-prod"
+    },
+    "managedIdentityClientId": {
+      "value": "c60a7d88-298b-4787-93a7-922c58437042"
+    },
+    "managedIdentityPrincipalId": {
+      "value": "72ce35ae-3e99-41ee-959d-0f7b5e673708"
+    },
+    "exportStorageAccountName": {
+      "value": "stprostarmetricsexports"
+    },
+    "commissionExportContainerName": {
+      "value": "commission-exports"
+    },
+    "containerImage": {
+      "value": "acrprostardispatchprod.azurecr.io/prostar-metrics:latest"
+    },
+    "useKeyVaultSecretReferences": {
+      "value": true
+    },
+    "keyVaultName": {
+      "value": "kv-prostar-metrics-prod"
+    },
+    "azurePostgresConnectionStringSecretName": {
+      "value": "azure-postgres-connection-string"
+    },
+    "simproBearerTokenSecretName": {
+      "value": "simpro-bearer-token"
+    },
+    "microsoftProviderAuthenticationSecretName": {
+      "value": "microsoft-provider-authentication-secret"
+    },
+    "postgresSslCaCertBase64SecretName": {
+      "value": "postgres-ssl-ca-cert-base64"
+    },
+    "includePostgresSslCaCertSecret": {
+      "value": false
+    },
+    "simproBaseUrl": {
+      "value": "https://prostarmechanical.simprosuite.com/api/v1.0"
+    },
+    "simproCompanyId": {
+      "value": "0"
+    },
+    "metricsAdminEmails": {
+      "value": "asad@prostarmechanical.com,laila@prostarmechanical.com"
+    },
+    "metricsFinanceEmails": {
+      "value": "asad@prostarmechanical.com,laila@prostarmechanical.com"
+    },
+    "metricsOperatorEmails": {
+      "value": ""
+    },
+    "metricsViewerEmails": {
+      "value": ""
+    },
+    "metricsAuthMode": {
+      "value": "easy-auth"
+    },
+    "microsoftProviderClientId": {
+      "value": "369bef95-48a6-45db-bad6-1e16278fa229"
+    },
+    "microsoftProviderOpenIdIssuer": {
+      "value": "https://login.microsoftonline.com/515fbfd7-12b1-4238-bb6c-f827588dd488/v2.0"
+    },
+    "microsoftProviderAllowedAudiences": {
+      "value": [
+        "369bef95-48a6-45db-bad6-1e16278fa229",
+        "api://369bef95-48a6-45db-bad6-1e16278fa229"
+      ]
+    },
+    "customDomains": {
+      "value": [
+        {
+          "name": "metrics.psm.photos",
+          "certificateId": "/subscriptions/d7a98155-9693-4c6b-ad27-39e945c0f751/resourceGroups/prostar-payroll/providers/Microsoft.App/managedEnvironments/cae-prostar-dispatch-prod/managedCertificates/mc-cae-prostar-di-metrics-psm-phot-4893"
+        }
+      ]
+    }
+  }
+}

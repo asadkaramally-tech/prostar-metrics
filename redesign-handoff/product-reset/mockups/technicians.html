@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Technician Performance — Pro Star Metrics</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/tokens.css">
+<style>th.sortable.sorted.asc::after{content:"▴"}</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><div><img src="assets/prostar-logo-white.png" alt="Pro Star Mechanical"><div class="bsub">Operations Metrics</div></div></div>
+    <div class="navsec">Dashboards</div>
+    <nav class="nav">
+      <a href="today.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>Today</a>
+      <a href="quotes.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M9 14h6M9 17h4"/></svg>Quote Metrics</a>
+      <a href="jobs.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>Job Metrics</a>
+      <a class="active" href="technicians.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.4 2.9-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.5 14.6c2.4.2 4.3 1.7 4.9 4.4"/></svg>Technician Performance</a>
+      <a href="commissions.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M14.8 9.2c-.6-.9-1.6-1.4-2.8-1.4-1.7 0-3 .9-3 2.2 0 2.9 6 1.5 6 4.3 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.6-3-1.5"/></svg>Technician Commissions</a>
+    </nav>
+    <div class="owner"><div class="av">A</div><div><b>Asad Karamally</b><span>Owner</span></div></div>
+  </aside>
+
+  <main class="main"><div class="content">
+    <div class="top">
+      <div>
+        <div class="eyebrow">Operations</div>
+        <div class="h1">Technician Performance</div>
+        <div class="sub">Capacity, productive time, efficiency and punctuality across the 9-technician roster.</div>
+      </div>
+      <div class="controls">
+        <div class="ctl stepper"><button class="stepbtn" title="May 2026">‹</button><span class="lbl"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>June 2026</span><button class="stepbtn" title="July 2026 (month to date)">›</button></div>
+        <button class="pill"><span class="dot"></span>Updated 26 min ago</button>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="focal" style="padding-bottom:24px">
+        <div class="lab"><span class="pip"></span><span class="def" data-def="Job-assigned timesheet hours ÷ all recorded hours, using timesheets dated in June, across the verified 9-person field roster only.">Productive Utilization</span> · June</div>
+        <div class="big tnum">59%</div>
+        <div class="meta">
+          <span class="mgn tnum">955h on jobs of 1,610h recorded</span>
+          <span class="chipd tnum" style="background:rgba(230,192,122,.15);color:#e6c07a;border-color:rgba(230,192,122,.35)">102% of capacity · 26h over</span>
+        </div>
+        <div class="cov">9 technicians · 22 workdays · capacity 8h/day (Mon–Fri 8:30–5:00, 30-min lunch) = 1,584h</div>
+        <div class="cov">No prior-period comparison yet — timesheet history verification is pending.</div>
+        <div style="margin-top:auto;padding-top:20px">
+          <div style="position:relative;height:14px;border-radius:7px;background:rgba(255,255,255,.08)">
+            <div style="position:absolute;top:0;bottom:0;left:0;width:59.3%;background:#8087ec;border-radius:7px 0 0 7px"></div>
+            <div style="position:absolute;top:0;bottom:0;left:59.3%;right:0;background:rgba(255,255,255,.3);border-radius:0 7px 7px 0"></div>
+            <div style="position:absolute;top:-3px;bottom:-3px;left:98.4%;width:2px;background:rgba(255,255,255,.9);border-radius:1px" title="Capacity 1,584h"></div>
+            <div style="position:absolute;top:-3px;bottom:-3px;left:65%;width:2px;background:#e6c07a;border-radius:1px" title="Utilization target (example)"></div>
+          </div>
+          <div class="herolegend">
+            <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:9px;height:9px;border-radius:3px;background:#8087ec;display:inline-block"></i>Job-assigned · 955h</span>
+            <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:9px;height:9px;border-radius:3px;background:rgba(255,255,255,.3);display:inline-block"></i>Unbilled · 655h</span>
+            <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:2px;height:10px;border-radius:1px;background:rgba(255,255,255,.9);display:inline-block"></i>Capacity · 1,584h</span>
+            <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:2px;height:10px;border-radius:1px;background:#e6c07a;display:inline-block"></i>Target 65% (example)</span>
+          </div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="l"><span class="def" data-def="All recorded hours minus job-assigned hours — travel, shop, training and unassigned time. At 40.7% of recorded time, this is the team’s biggest leak.">Unbilled Hours</span></div><div class="v tnum">655h</div>
+          <div class="r"><span class="dl tnum"><span class="c">40.7% of recorded</span></span></div></div>
+        <div class="stat"><div class="l"><span class="def" data-def="All recorded hours ÷ available capacity. Capacity = 22 workdays × 8 productive hours × 9 technicians = 1,584h.">Capacity Used</span></div><div class="v tnum">102%</div>
+          <div class="r"><span class="dl tnum" style="color:#b4791a">4 techs <span class="c">above 115%</span></span></div></div>
+        <div class="stat"><div class="l"><span class="def" data-def="Σ estimated ÷ Σ actual hours on quote-linked June jobs where both are present: 614.0h ÷ 661.5h. Above 1.00× beats the estimate; 12 more jobs have actuals but no estimate.">Quote Labor Efficiency</span></div><div class="v tnum">0.93×</div>
+          <div class="r"><span class="dl tnum"><span class="c">team · 73 of 85 quote-linked jobs</span></span></div></div>
+        <div class="stat"><div class="l"><span class="def" data-def="Arrival within 15 minutes of planned start — early arrivals count on-time — over visits with a verified mobile arrival event; missing events are uncovered, never counted late.">On-Time Arrival</span></div><div class="v tnum"><span class="repr" data-def="Representative until mobile-arrival matching is re-verified — team coverage is 342 of 384 June visits.">89%</span></div>
+          <div class="r"><span class="dl tnum"><span class="c">305 of 342 verified visits</span></span></div></div>
+      </div>
+    </div>
+
+    <!-- Exceptions -->
+    <div class="flags">
+      <div class="flag warn"><span class="fi warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 3.5 2.8 19.5h18.4Z"/><path d="M12 9.8v4.4M12 16.9v.1"/></svg></span><span><b>Juan Serrato</b> recorded 252h vs 176h capacity — <b>+76h over</b>, incl. weekends</span></div>
+      <div class="flag down"><span class="fi down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 4.5v13M6.2 12.2l5.8 5.8 5.8-5.8"/></svg></span><span><b>Roberto Villalta</b> is an active technician with <b>8.5h</b> recorded in June</span></div>
+      <div class="flag info"><span class="fi info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="8.6"/><path d="M12 11v5.4M12 7.4v.1"/></svg></span><span><b>Victor Contreras</b> is archived but worked 1 June job — history kept, no current capacity</span></div>
+    </div>
+
+    <!-- Scorecard -->
+    <div class="card" id="scorecard">
+      <div class="hd"><div><div class="ti">Technician Scorecard</div><div class="st">The month in one table — hours, utilization, efficiency, punctuality · click a technician for the full drilldown</div></div></div>
+      <div class="tblwrap"><table>
+        <thead id="scoreHead"><tr>
+          <th>Technician</th>
+          <th class="num sortable" data-sort="job">Job Hrs</th>
+          <th class="num sortable" data-sort="unb"><span class="def" data-def="All recorded hours minus job-assigned hours — travel, shop, training and unassigned time. The team total is 655h this June.">Unbilled</span></th>
+          <th class="num sortable" data-sort="util"><span class="abbr-sm">Utilization</span><span class="show-sm">Util.</span></th>
+          <th class="num hide-sm sortable" data-sort="cap">Capacity Use</th>
+          <th class="num sortable" data-sort="effQ"><span class="abbr-sm">Quote Eff.</span><span class="show-sm">Eff.</span></th>
+          <th class="num hide-lg sortable" data-sort="ot">On-Time</th>
+        </tr></thead>
+        <tbody id="scoreRows"></tbody>
+        <tfoot id="scoreFoot"></tfoot>
+      </table></div>
+      <div class="foot"><span>Roster: 8 Service Technicians + 1 Apprentice, verified from Simpro positions · sorted by job hours (descending) — click a column to re-sort</span><span></span></div>
+    </div>
+
+    <!-- Drilldown state -->
+    <div class="card" id="drill" style="display:none">
+      <div class="hd">
+        <div><div class="ti" id="drillName">Rob Sires</div><div class="st" id="drillSub">Service Technician · hired Aug 2007 · June 2026</div></div>
+        <button class="ctl" style="height:34px" id="drillBack">← All technicians</button>
+      </div>
+      <div class="bd">
+        <div class="kv kv4" id="drillKpis"></div>
+        <div class="dsec" style="margin-top:20px">June efficiency — quote-linked jobs</div>
+        <div class="tblwrap"><table>
+          <thead><tr><th>Job</th><th class="num">Estimated</th><th class="num">Actual</th><th class="num hide-sm">Result</th></tr></thead>
+          <tbody id="drillJobs"></tbody>
+        </table></div>
+        <div class="dsec" style="margin-top:20px">Completed-job economics — separate cohort</div>
+        <div class="dnote" id="drillEcon"></div>
+      </div>
+    </div>
+
+
+    <!-- Flagship capacity chart -->
+    <div class="card">
+      <div class="hd"><div><div class="ti">Recorded Time vs Capacity</div><div class="st">Sorted by job hours · dark tick = 176h monthly capacity · amber = above 115% · hover or tap any row</div></div>
+        <div class="legend" style="padding:0"><span><i style="background:#5b63d3"></i>Job-assigned</span><span><i style="background:#8a92a4"></i>Unbilled</span><span><i style="background:#1c2230;height:10px;width:2.5px"></i>Capacity</span></div>
+      </div>
+      <div class="bd"><div id="capChart"></div></div>
+    </div>
+
+    <!-- Efficiency + punctuality -->
+    <div class="g75">
+      <div class="card">
+        <div class="hd">
+          <div><div class="ti">Labor Efficiency</div><div class="st">Estimated ÷ actual hours — above 1.00× beats the estimate · <span class="repr" data-def="Per-technician split is representative until timesheet attribution is re-verified — 69 of 73 covered jobs carry no job-level technician assignment. The 0.93× team ratio (614.0h ÷ 661.5h) is verified.">per-tech split representative</span></div></div>
+          <div class="seg" data-seg="effmode"><button class="on" data-val="quote">Quote-linked</button><button data-val="recurring">Recurring</button></div>
+        </div>
+        <div class="bd"><div id="effChart"></div>
+        <div class="fnote"><span style="color:#1a8a5a">●</span> right of the line = beat the estimate&nbsp;&nbsp;<span style="color:#d0463a">●</span> left = over · 73 covered jobs (team) — the team’s 0.93× is verified, the per-tech split is not yet.</div>
+        <div class="fnote" id="effNote" style="display:none;border-top:none;padding-top:0">Recurring-work efficiency is <span class="repr" data-def="Recurring estimates are copied templates in Simpro; per-technician recurring ratios are directional until those estimates are re-verified.">representative</span> until recurring estimates are re-verified per technician.</div></div>
+      </div>
+      <div class="card">
+        <div class="hd"><div><div class="ti">Punctuality</div><div class="st">Verified arrivals vs planned start · <span class="repr" data-def="Verified-arrival coverage is 342 of 384 June visits; per-technician rates are representative until mobile-event matching is re-verified.">representative until mobile-event matching is re-verified</span></div></div></div>
+        <div class="bd"><div id="punct" style="max-width:620px;margin:0 auto"></div>
+        <div class="tnum" style="max-width:620px;margin:2px auto 0;text-align:center;font-size:12px;color:var(--subtle)"><span class="def" data-def="Buckets are minutes between the verified arrival and the planned start; arriving early counts as on-time.">minutes vs planned start</span></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12.5px;color:var(--muted)">
+          <span style="flex:none">Coverage</span>
+          <span style="flex:1;height:6px;border-radius:4px;background:#f1f2f6;overflow:hidden"><span style="display:block;width:89.1%;height:100%;background:#8a92a4"></span></span>
+          <b class="tnum" style="flex:none">342 of 384 verified</b>
+        </div>
+        <div class="fnote">On-time is 89% of verified visits (79% if every uncovered visit were late) — the 26-visit 30+ tail outweighs the 16–30 band.</div></div>
+      </div>
+    </div>
+
+    <!-- Economics -->
+    <div class="card">
+      <div class="hd"><div><div class="ti">Completed-Job Economics</div><div class="st">Ranked by allocated net profit · June-completed jobs, including pre-June hours on those jobs · hatched = interim allocation · hover or tap a row</div></div>
+        <div class="legend" style="padding:0"><span><i class="hatch" style="background:#5b63d3;width:12px;height:12px;border-radius:4px"></i>Net profit</span><span><i class="hatch" style="background:#8a92a4;width:12px;height:12px;border-radius:4px"></i>Revenue</span></div>
+      </div>
+      <div class="bd"><div id="econChart"></div>
+      <div class="fnote">Allocation is an <span class="repr" data-def="Each completed job’s value is split equally among its technicians in this mockup; implementation allocates by exact timesheet hours-share — same totals, shares shift slightly.">interim equal-split per job</span> · $20.6K sits outside the 9-tech roster — Furtado ($8.6K) and Sarmiento ($10.4K) are not on the field roster, Victor Contreras ($1.6K) is archived · Roberto Villalta has no June allocation.</div></div>
+    </div>
+
+    <!-- State treatments (rendered only with ?states=1) -->
+    <div class="states">
+      <div class="shdr">State treatments (design reference)</div>
+      <div class="srow">
+        <div class="mini"><div class="ml">Loading</div><div class="skel" style="width:55%"></div><div class="skel" style="width:85%"></div><div class="skel" style="width:70%"></div></div>
+        <div class="mini"><div class="ml">No punctuality coverage</div><div class="empt">A technician with no verified visits shows “no coverage” — never 0% or 100%.</div></div>
+        <div class="mini"><div class="ml">Mid-month roster change</div><div class="empt">Archived on the 14th → capacity accrues through the 13th only; history stays.</div></div>
+        <div class="mini"><div class="ml">Error</div><div class="err"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="12" height="12"><path d="M12 5v9M12 18.4v.1"/></svg></span><span>Technician data could not be loaded.<br><span class="retry">Try again</span></span></div></div>
+      </div>
+    </div>
+
+    <div class="footline">Source: Simpro — roster from positions, archived state and hire dates; work metrics use June-dated timesheets, with completed-job economics labeled as a separate cohort.</div>
+  </div></main>
+</div>
+
+<div class="scrim"></div>
+<aside class="drawer"><div class="dh"><div><div class="ti"></div><div class="st"></div></div><button class="x">✕</button></div><div class="db"></div></aside>
+
+<script src="assets/kit.js"></script>
+<script>
+const {fmt, hStack, histogram, segInit, drawerInit, tipShow, tipHide, tipTitle, tipRow, $, $$} = PSKit;
+
+const CAP = 176;
+const TEAM_EFF = "0.93×"; // verified team ratio: Σest 614.0h ÷ Σact 661.5h, 73 of 85 quote-linked June jobs
+const EFF_DEF = "Per-technician split is representative until timesheet attribution is re-verified — 69 of 73 covered jobs carry no job-level technician assignment. The 0.93× team ratio (614.0h ÷ 661.5h) is verified.";
+const OT_DEF = "Representative until mobile-arrival matching is re-verified — team coverage is 342 of 384 June visits.";
+const TECHS = [
+  {n:"Rob Sires", job:135, rec:193.75, effQ:1.18, effR:null, sell:51671, np:21123, jobs:54, hired:"Aug 2007"},
+  {n:"Juan Serrato", job:127.5, rec:252, effQ:0.98, effR:0.99, sell:66294, np:27398, jobs:41, hired:"Dec 2023"},
+  {n:"Justin Molina", job:120.25, rec:214.25, effQ:0.99, effR:0.80, sell:58686, np:29689, jobs:43, hired:"May 2024"},
+  {n:"Jeffrey Perry", job:114, rec:215.25, effQ:1.03, effR:1.17, sell:56920, np:26162, jobs:47, hired:"Apr 2025"},
+  {n:"Cole Bender", job:121.5, rec:226.25, effQ:1.02, effR:0.76, sell:62706, np:25161, jobs:47, hired:"Oct 2025"},
+  {n:"Ismael Contreras", job:111, rec:195, effQ:0.88, effR:0.71, sell:31922, np:11497, jobs:35, hired:"Apr 2026"},
+  {n:"Jim Ochoa", job:156.5, rec:194.5, effQ:0.93, effR:0.46, sell:63738, np:45907, jobs:42, hired:"Apr 2026"},
+  {n:"Tadeo Jimenez", job:61, rec:110.5, effQ:0.89, effR:null, sell:23348, np:14061, jobs:16, hired:"Jun 2025", role:"Apprentice"},
+  {n:"Roberto Villalta", job:8.5, rec:8.5, effQ:null, effR:null, sell:0, np:0, jobs:0, hired:"Nov 2022"},
+];
+const inactive = t => t.rec < CAP*0.2;
+
+hStack($("#capChart"), [...TECHS].sort((a,b)=>b.job-a.job).map(t=>({
+  name:t.n,
+  segs:[{v:t.job,color:"#5b63d3"},{v:t.rec-t.job,color:"#8a92a4"}],
+  cap:CAP,
+  over:false,
+  noteColor: inactive(t) ? "#6b7383" : t.rec>CAP*1.15 ? "#b4791a" : undefined,
+  note: inactive(t) ? `inactive · ${fmt.hrs(t.rec)}` : `${Math.round(t.rec/CAP*100)}% · ${Math.round(t.job/t.rec*100)}% jobs`,
+  noteShort: inactive(t) ? "inactive" : `${Math.round(t.rec/CAP*100)}%`,
+  tip:`<div style="display:flex;flex-direction:column;gap:3px">
+    ${["Job-assigned|"+fmt.hrs(t.job)+"|#5b63d3","Unbilled|"+fmt.hrs(t.rec-t.job)+"|#8a92a4","Capacity|176h|#1c2230"].map(s=>{const [a,b,c]=s.split("|");
+    return `<div style="display:flex;align-items:center;gap:7px"><i style="width:8px;height:8px;border-radius:3px;background:${c}"></i><span style="color:#5c6474">${a}</span><b style="margin-left:auto;padding-left:16px">${b}</b></div>`;}).join("")}</div>`,
+})), {labelW:132, rowH:40, noteW:162});
+
+function drawEff(mode){
+  $("#effNote").style.display = mode==="recurring" ? "" : "none";
+  PSKit.devBars($("#effChart"), TECHS.filter(t=>t.jobs>0).map(t=>({
+    name:t.n, v: mode==="recurring" ? t.effR : t.effQ,
+  })).sort((a,b)=>(b.v??-9)-(a.v??-9)), {ref:1, min:0.7, max:1.3, labelW:132,
+    refLabel:"1.00× — estimate met exactly", fmt:v=>v.toFixed(2)+"×", pos:"#1a8a5a", neg:"#d0463a"});
+}
+drawEff("quote");
+
+const PUNCT = [
+  {label:"Early",count:153},{label:"≤ 15 min",count:152},{label:"16–30 min",count:11,neg:true},
+  {label:"30+ min",count:26,neg:true},
+];
+histogram($("#punct"), PUNCT, {h:300, seriesName:"Visits"});
+/* ≥3:1 fills on white: darken the kit's non-negative grey bars and rebind
+   their tooltips so the swatch matches the bar color. */
+$$("#punct path").forEach((p,i)=>{
+  const b = PUNCT[i];
+  if(!b || b.neg) return;
+  const q = p.cloneNode(true);
+  q.setAttribute("fill","#8a92a4");
+  q.addEventListener("pointerenter", e=>tipShow(tipTitle(b.label)+tipRow("#8a92a4","Visits",String(b.count)), e.clientX, e.clientY));
+  q.addEventListener("pointerleave", tipHide);
+  p.replaceWith(q);
+});
+
+const OT = {"Rob Sires":"94%","Juan Serrato":"88%","Justin Molina":"91%","Jeffrey Perry":"85%","Cole Bender":"87%","Ismael Contreras":"90%","Jim Ochoa":"93%","Tadeo Jimenez":"89%"};
+let scoreSort = "job", scoreDir = -1; // default: job hours, descending (labeled in the card foot)
+function renderScore(){
+  const gv = t =>
+    scoreSort==="util" ? (inactive(t) ? null : t.job/t.rec)
+    : scoreSort==="cap" ? (inactive(t) ? null : t.rec/CAP)
+    : scoreSort==="unb" ? t.rec-t.job
+    : scoreSort==="ot" ? (t.jobs>0 && OT[t.n] ? parseFloat(OT[t.n]) : null)
+    : (t[scoreSort] ?? null);
+  const rows = [...TECHS.entries()].sort(([,a],[,b])=>{
+    const va = gv(a), vb = gv(b);
+    if(va==null && vb==null) return 0;
+    if(va==null) return 1; // "—" rows always sort last
+    if(vb==null) return -1;
+    return scoreDir*(va-vb);
+  });
+  $("#scoreRows").innerHTML = rows.map(([i,t])=>{
+    const ia = inactive(t);
+    const util = ia ? null : t.job/t.rec*100;
+    const capUse = ia ? null : t.rec/CAP*100;
+    const ot = t.jobs>0 ? (OT[t.n]||"—") : "—";
+    return `<tr class="rowlink" data-tech="${i}">
+      <td><div class="id1">${t.n}</div><div class="id2 tnum">${t.jobs}&nbsp;jobs${t.role?` <span style="white-space:nowrap">· ${t.role}</span>`:""}${ia?` <span style="white-space:nowrap">· inactive</span>`:""}</div></td>
+      <td class="num tnum">${fmt.hrs(t.job)}</td>
+      <td class="num tnum">${fmt.hrs(t.rec-t.job)}</td>
+      <td class="num">${util==null ? `<b class="tnum">—</b>` : `<span class="meter" style="justify-content:flex-end"><span class="track"><span class="fill" style="width:${util}%"></span></span><b class="tnum">${util.toFixed(0)}%</b></span>`}</td>
+      <td class="num tnum hide-sm" style="${capUse!=null&&capUse>115?"color:#b4791a;font-weight:700":""}">${capUse==null?"—":capUse.toFixed(0)+"%"}</td>
+      <td class="num tnum">${t.effQ==null?"—":`<span class="repr" data-def="${EFF_DEF}">${t.effQ.toFixed(2)}×</span>`}</td>
+      <td class="num tnum hide-lg">${ot==="—"?"—":`<span class="repr" data-def="${OT_DEF}">${ot}</span>`}</td>
+    </tr>`;}).join("");
+  const totJob = TECHS.reduce((s,t)=>s+t.job,0), totRec = TECHS.reduce((s,t)=>s+t.rec,0);
+  const ftd = 'style="font-weight:700;color:var(--ink);padding:13px 20px;border-top:1px solid var(--hair);background:linear-gradient(#fbfcfe,#f7f9fc)"';
+  $("#scoreFoot").innerHTML = `<tr>
+    <td ${ftd}>Team · 9 technicians</td>
+    <td class="num tnum" ${ftd}>${Math.round(totJob)}h</td>
+    <td class="num tnum" ${ftd}>${Math.round(totRec-totJob)}h</td>
+    <td class="num tnum" ${ftd}>${Math.round(totJob/totRec*100)}%</td>
+    <td class="num tnum hide-sm" ${ftd}>${Math.round(totRec/1584*100)}%</td>
+    <td class="num tnum" ${ftd}>${TEAM_EFF}</td>
+    <td class="num tnum hide-lg" ${ftd}><span class="repr" data-def="${OT_DEF}">89%</span></td>
+  </tr>`;
+  $("#scoreHead").querySelectorAll("th.sortable").forEach(th=>{
+    th.classList.toggle("sorted", th.dataset.sort===scoreSort);
+    th.classList.toggle("asc", th.dataset.sort===scoreSort && scoreDir===1);
+  });
+}
+renderScore();
+$("#scoreHead").addEventListener("click", e=>{
+  const th = e.target.closest("th.sortable");
+  if(!th) return;
+  if(scoreSort===th.dataset.sort) scoreDir = -scoreDir;
+  else { scoreSort = th.dataset.sort; scoreDir = -1; }
+  renderScore();
+});
+
+/* Drilldown state */
+const DRILL_JOBS = {
+  "Rob Sires":[
+    {j:"17093 · Villa Storia — WH PM recommendations", est:8, act:7.25, ok:1},
+    {j:"17197 · Potiker City Heights — recirculation pump", est:3, act:1, ok:1},
+    {j:"16939 · Boiler service recommendations", est:12, act:9.5, ok:1},
+  ],
+};
+function openDrill(i){
+  const t = TECHS[i];
+  const first = t.n.split(" ")[0];
+  const ia = inactive(t);
+  $("#drillName").textContent = t.n;
+  $("#drillSub").textContent = `${t.role||"Service Technician"} · hired ${t.hired} · viewing June 2026`;
+  $("#drillKpis").innerHTML = [
+    ["Job hours", fmt.hrs(t.job)],
+    ["Unbilled", fmt.hrs(t.rec-t.job)],
+    ["Recorded", fmt.hrs(t.rec)],
+    ["Utilization", ia ? "—" : (t.job/t.rec*100).toFixed(0)+"%"],
+    ["Capacity use", ia ? "—" : (t.rec/CAP*100).toFixed(0)+"%"],
+    ["Quote eff.", t.effQ==null ? "—" : `<span class="repr" data-def="${EFF_DEF}">${t.effQ.toFixed(2)}×</span>`],
+    ["On-time", t.jobs>0 && OT[t.n] ? `<span class="repr" data-def="${OT_DEF}">${OT[t.n]}</span>` : "—"],
+    ["June jobs", t.jobs],
+  ].map(([l,v])=>`<div class="cell"><div class="l">${l}</div><div class="v tnum">${v}</div></div>`).join("");
+  const jobs = t.effQ==null
+    ? [{j:"No covered quote-linked jobs in June", est:"", act:""}]
+    : DRILL_JOBS[t.n] || [{j:`Representative — implementation lists ${first}’s covered quote-linked jobs`, est:"", act:""}];
+  $("#drillJobs").innerHTML = jobs.map(x=>`
+    <tr><td class="id1" style="font-weight:500">${x.j}</td>
+    <td class="num tnum">${x.est&&x.est+"h"||"—"}</td><td class="num tnum">${x.act&&x.act+"h"||"—"}</td>
+    <td class="num hide-sm"><span class="mom ${x.act<=x.est?"up":"dn"}">${x.est?((x.est/x.act).toFixed(2)+"×"):""}</span></td></tr>`).join("")
+    + (t.effQ!=null ? `<tr><td colspan="4" style="border:0;padding-top:10px;color:var(--subtle);font-size:13px">${DRILL_JOBS[t.n]?"Rows above are representative — implementation lists every covered job. ":""}${first}’s <span class="repr" data-def="${EFF_DEF}">${t.effQ.toFixed(2)}× is representative</span>; the verified team ratio is ${TEAM_EFF} across 73 covered jobs.</td></tr>` : "");
+  $("#drillEcon").innerHTML = t.sell>0
+    ? `Jobs completed in June that ${first} worked on carry <b class="tnum">${fmt.moneyFull(t.sell)}</b> allocated revenue and <b class="tnum">${fmt.moneyFull(t.np)}</b> allocated net profit (interim equal-split; hours-share in implementation). This cohort includes hours recorded before June on jobs that finished in June — it is contribution context, not June earnings.`
+    : `No jobs completed in June carry ${first}’s hours — no allocation this month.`;
+  $("#scorecard").style.display = "none";
+  $("#drill").style.display = "";
+}
+document.addEventListener("click", e=>{
+  const r = e.target.closest("[data-tech]");
+  if(r){ openDrill(+r.dataset.tech); document.querySelector("#drill")?.scrollIntoView({behavior:"smooth",block:"nearest"}); }
+});
+$("#drillBack").addEventListener("click", ()=>{
+  $("#drill").style.display = "none";
+  $("#scorecard").style.display = "";
+});
+if(location.search.includes("drill=1")) openDrill(0);
+
+/* Economics */
+(function(){
+  const rows = TECHS.filter(t=>t.sell>0).sort((a,b)=>b.np-a.np);
+  const max = Math.max(...rows.map(t=>t.sell));
+  const teamNp = rows.reduce((s,t)=>s+t.np,0);
+  $("#econChart").innerHTML = rows.map(t=>`
+    <div class="erow">
+      <span class="ename">${t.n}</span>
+      <div class="ebar">
+        <div class="hatch" style="width:${t.sell/max*100}%;height:100%;background-color:#8a92a4;border-radius:5px"></div>
+        <div class="hatch" style="width:${t.np/max*100}%;height:100%;background-color:#5b63d3;border-radius:5px;position:absolute;top:0;left:0"></div>
+      </div>
+      <span class="eval tnum"><b style="color:var(--ink)">${fmt.money(t.np)}</b> net · <b style="color:var(--ink)">${Math.round(t.np/teamNp*100)}%</b> of team net</span>
+    </div>`).join("");
+  $$("#econChart .erow").forEach((row,i)=>{
+    const t = rows[i];
+    row.addEventListener("pointerenter", e=>tipShow(tipTitle(t.n)+tipRow("#8a92a4","Revenue",fmt.moneyFull(t.sell))+tipRow("#5b63d3","Net profit",fmt.moneyFull(t.np)), e.clientX, e.clientY));
+    row.addEventListener("pointerleave", tipHide);
+  });
+})();
+
+drawerInit();
+segInit(undefined, (seg,val)=>{ if(seg==="effmode") drawEff(val); });
+</script>
+</body>
+</html>

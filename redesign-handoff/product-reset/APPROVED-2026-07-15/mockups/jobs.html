@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Job Metrics — Pro Star Metrics</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="assets/tokens.css">
+<style>
+/* Page fixes — defect pass 2026-07-15 */
+.hdwrap{flex-wrap:wrap}
+#mpick{gap:8px 14px}
+#mpick .mgrp{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.vfill{display:flex;flex-direction:column}
+.vfill .bd{flex:1;display:flex;flex-direction:column;min-height:0}
+.vfill #bridge{flex:1;min-height:280px}
+#lossRows{min-width:0} /* let long nowrap job names ellipsize instead of widening the grid track */
+#lossRows .brow{padding:12px 20px}
+@media (max-width:480px){#lossRows .brow{padding:11px 16px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><div><img src="assets/prostar-logo-white.png" alt="Pro Star Mechanical"><div class="bsub">Operations Metrics</div></div></div>
+    <div class="navsec">Dashboards</div>
+    <nav class="nav">
+      <a href="today.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>Today</a>
+      <a href="quotes.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M9 14h6M9 17h4"/></svg>Quote Metrics</a>
+      <a class="active" href="jobs.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>Job Metrics</a>
+      <a href="technicians.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.4 2.9-5.2 5.5-5.2s4.9 1.8 5.5 5.2"/><circle cx="17" cy="9.5" r="2.4"/><path d="M15.5 14.6c2.4.2 4.3 1.7 4.9 4.4"/></svg>Technician Performance</a>
+      <a href="commissions.html"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M14.8 9.2c-.6-.9-1.6-1.4-2.8-1.4-1.7 0-3 .9-3 2.2 0 2.9 6 1.5 6 4.3 0 1.3-1.3 2.2-3 2.2-1.3 0-2.4-.6-3-1.5"/></svg>Technician Commissions</a>
+    </nav>
+    <div class="owner"><div class="av">A</div><div><b>Asad Karamally</b><span>Owner</span></div></div>
+  </aside>
+
+  <main class="main"><div class="content">
+    <div class="top">
+      <div>
+        <div class="eyebrow">Operations</div>
+        <div class="h1">Job Metrics</div>
+        <div class="sub">Revenue, profit and outcomes for completed work.</div>
+      </div>
+      <div class="controls">
+        <div class="ctl stepper"><button class="stepbtn" title="May 2026">‹</button><span class="lbl"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>June 2026</span><button class="stepbtn" title="July 2026 (month to date)">›</button></div>
+        <button class="pill"><span class="dot"></span>Updated 12 min ago</button>
+      </div>
+    </div>
+
+    <!-- Flagship: headline + trend fused -->
+    <div class="hero split">
+      <div class="focal" style="padding-bottom:24px">
+        <div class="lab"><span class="pip"></span><span class="def" data-def="Σ Simpro NetProfit Actual across jobs completed in June (CompletedDate sets the month; stage must be Complete or Archived — job status is never used, and Invoiced is not completion). Commission actuals are treated as cost inputs only.">Net Profit</span> · Completed Jobs · June</div>
+        <div class="big tnum">$211,534</div>
+        <div class="meta">
+          <span class="mgn tnum">48.5% net margin <span style="font-size:13px;font-weight:700;color:#f0937f;margin-left:4px">↓ 7.9 pts vs Jun ’25</span></span>
+          <span class="chipd tnum">↑ 13.5% vs Jun ’25</span>
+          <span class="chipd neutral tnum">↑ 49.4% vs May</span><span class="mgn tnum" style="font-size:13px;color:#e6c07a">1.5 pts below the 50% target <span style="font-size:11.5px">(example)</span></span>
+        </div>
+        <div style="flex:1 1 0"></div>
+        <div class="dgrid" style="margin-top:0">
+          <div class="dcell"><div class="dl2"><span class="def" data-def="Σ Simpro job Total (ex-tax) across the June completed cohort — CompletedDate in June, stage Complete or Archived. Vs May: +62.2%.">Revenue</span></div><div class="dv2 tnum">$435,979<span class="u">↑ 32.0%</span></div></div>
+          <div class="dcell"><div class="dl2"><span class="def" data-def="Σ Simpro GrossProfit Actual across the June completed cohort. Margin = gross profit ÷ revenue. Vs May: +43.9%.">Gross Profit</span></div><div class="dv2 tnum">$291,641<span class="u">↑ 26.2%</span></div><div class="tnum" style="font-size:12px;font-weight:600;color:#8b90a6;margin-top:3px">66.9% gross margin</div></div>
+          <div class="dcell"><div class="dl2"><span class="def" data-def="Count of jobs with CompletedDate in June and Simpro stage Complete or Archived. Vs May: +33.3%.">Completed Jobs</span></div><div class="dv2 tnum">272<span class="u">↑ 19.8%</span></div></div>
+          <div class="dcell"><div class="dl2"><span class="def" data-def="June revenue ÷ completed jobs. Vs May: +21.6%.">Avg Job Value</span></div><div class="dv2 tnum">$1,603<span class="u">↑ 10.2%</span></div></div>
+        </div>
+        <div id="heroBullet" style="margin-top:auto;padding-top:18px"></div>
+        <div class="cov" style="padding-top:14px">Green deltas vs Jun ’25 · vs-May in each tile’s tooltip</div>
+      </div>
+      <div class="card">
+        <div class="hd">
+          <div><div class="ti">Monthly Trend</div><div class="st">Jan ’25 – Jun ’26 · pick up to four metrics · hover or tap for detail</div></div>
+        </div>
+        <div class="pickrow" id="mpick"></div>
+        <div class="bd"><div id="trend"></div>
+          <div class="fnote" id="fNote"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Where June's money went: one connected band -->
+    <div class="g75">
+      <div class="card vfill">
+        <div class="hd"><div><div class="ti">Revenue to Net Profit</div><div class="st">June cost components · Gross profit shown as a checkpoint · sums exactly to $211,534</div></div></div>
+        <div class="bd"><div id="bridge"></div></div>
+      </div>
+      <div class="card">
+        <div class="hd"><div><div class="ti">Profitability by Work Source</div><div class="st">June net margin by job source · bar = net dollars vs the largest source · losses point left</div></div></div>
+        <div class="bd fillbd" id="worksource"></div>
+      </div>
+    </div>
+
+    <!-- Loss module -->
+    <div class="card">
+      <div class="hd">
+        <div><div class="ti">Loss-Making Jobs</div><div class="st">June jobs below zero net · click a job for detail</div></div>
+      </div>
+      <div class="g57" style="margin:0;gap:0">
+        <div class="bd" style="border-right:1px solid var(--hair-2);display:flex;flex-direction:column;justify-content:center">
+          <div class="bigstat" style="margin-bottom:18px"><div class="n tnum" style="color:var(--down)">−$25,866</div><div class="d">111 of 272 June jobs finished below zero</div></div>
+          <div style="display:flex;height:22px;border-radius:7px;overflow:hidden;margin-bottom:10px">
+            <div style="width:63.9%;background:#d0463a" title="Diagnostic-fee calls"></div>
+            <div style="width:36.1%;background:#8a2f26" title="Execution losses"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;gap:14px;font-size:13px;color:var(--ink-2);flex-wrap:wrap">
+            <span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#d0463a;margin-right:6px"></i><b class="tnum">−$16,524</b> · 75 diagnostic-fee calls</span>
+            <span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:#8a2f26;margin-right:6px"></i><b class="tnum">−$9,342</b> · 36 execution losses</span>
+          </div>
+          <div class="insight" style="margin-top:16px"><i class="idot"></i><span><b>Two different problems.</b> The fee class is pricing policy — and 39 of 189 diagnostic calls produced a follow-up quote, so part of it is paid marketing. The 36 execution losses are job control.</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:center" id="lossRows"></div>
+      </div>
+      <div class="foot"><span>Six largest losses shown · all 111 appear in the completed-jobs drilldown</span><span></span></div>
+    </div>
+
+    <!-- Labor + profitability -->
+    <div class="g57">
+      <div class="card">
+        <div class="hd">
+          <div><div class="ti">Estimated vs Actual Labor</div><div class="st">Hours variance on covered jobs</div></div>
+          <div class="seg" data-seg="labormode"><button class="on" data-val="quote">Quote-linked</button><button data-val="recurring">Recurring</button></div>
+        </div>
+        <div class="bd fillbd" id="labor"></div>
+      </div>
+      <div class="card">
+        <div class="hd">
+          <div><div class="ti" id="profTitle">Profitability by Site</div><div class="st">June net profit · bars scaled to the largest row · click a row for its jobs</div></div>
+          <div class="seg" data-seg="profmode"><button class="on" data-val="site">By site</button><button data-val="category">By category</button></div>
+        </div>
+        <div id="profRows" style="padding-bottom:8px"></div>
+        <div class="foot"><span id="profFoot"></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- Drilldown -->
+    <div class="card">
+      <div class="hd hdwrap">
+        <div><div class="ti">Completed Jobs</div><div class="st">All 272 June jobs by sell value · click a row for detail</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="ctl" style="height:34px;font-size:13.5px"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Download CSV</button>
+          <select class="ctl-sel"><option>All categories</option><option>Water Heating</option><option>HVAC</option><option>Unclassified</option></select>
+          <select class="ctl-sel"><option>All sources</option><option>Quote-generated</option><option>Recurring</option><option>Direct service</option></select>
+          <select class="ctl-sel"><option>All technicians</option><option>Rob Sires</option><option>Juan Serrato</option><option>Justin Molina</option><option>Jeffrey Perry</option><option>Cole Bender</option><option>Ismael Contreras</option><option>Jim Ochoa</option><option>Tadeo Jimenez</option><option>Roberto Villalta</option></select>
+        </div>
+      </div>
+      <div class="tblwrap"><table>
+        <thead><tr><th class="jobcol">Job</th><th class="hide-sm">Source</th><th class="num">Sell</th><th class="num hide-sm">Gross</th><th class="num">Net</th><th class="num hide-lg">Net Margin</th></tr></thead>
+        <tbody id="jobRows"></tbody>
+      </table></div>
+      <div class="foot"><span id="jobShowing"></span><span class="pager" id="jobPager"></span></div>
+    </div>
+
+    <!-- State treatments (rendered only with ?states=1) -->
+    <div class="states">
+      <div class="shdr">State treatments (design reference)</div>
+      <div class="srow">
+        <div class="mini"><div class="ml">Loading</div><div class="skel" style="width:55%"></div><div class="skel" style="width:85%"></div><div class="skel" style="width:70%"></div></div>
+        <div class="mini"><div class="ml">Empty month</div><div class="empt">No jobs were completed in this month.</div></div>
+        <div class="mini"><div class="ml">Partial / stale</div><div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start"><span class="pill warn" style="height:32px"><span class="dot"></span>Updated 3 hrs ago</span><span class="empt">Header pill turns amber; charts stay visible with an as-of note.</span></div></div>
+        <div class="mini"><div class="ml">Error</div><div class="err"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="12" height="12"><path d="M12 5v9M12 18.4v.1"/></svg></span><span>Job data could not be loaded.<br><span class="retry">Try again</span></span></div></div>
+      </div>
+    </div>
+
+    <div class="footline">Source: Simpro completed jobs · Pacific-time months · net profit = Simpro NetProfit Actual</div>
+  </div></main>
+</div>
+
+<div class="scrim"></div>
+<aside class="drawer"><div class="dh"><div><div class="ti"></div><div class="st"></div></div><button class="x">✕</button></div><div class="db"></div></aside>
+
+<script src="assets/kit.js"></script>
+<script>
+const {fmt, trendChart, waterfall, histogram, segInit, drawerInit, $} = PSKit;
+
+const M = ["Jan ’25","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan ’26","Feb","Mar","Apr","May","Jun"];
+const REV = [335295,274807,333701,500650,573888,330313,451054,516070,411424,403992,324308,903875,355343,351699,460773,380337,268869,435979];
+const GP  = [232000,192000,232000,352000,406000,231035,318000,366000,291000,285000,229000,650000,247000,244000,322000,264000,202728,291641];
+const NP  = [200000,165000,200000,300000,350000,186351,270000,320000,255000,250000,200000,585000,195000,190000,245000,200000,141634,211534];
+const JOBS= [252,228,214,242,229,227,259,251,258,273,220,225,283,347,246,225,204,272];
+
+const tipMonth = i => M[i].includes(" ") ? M[i] : M[i] + (i < 12 ? " ’25" : " ’26");
+/* Metric picker: [key, label, color, axis, values, unit] — axis 2 = left scale (% or count). */
+const METRICS = [
+  ["rev","Revenue","#404a60",1,REV],
+  ["gp","Gross profit","#9aa2b2",1,GP],
+  ["np","Net profit","#5b63d3",1,NP],
+  ["ajv","Avg job value","#6d7890",1,REV.map((r,i)=>r/JOBS[i])],
+  ["gm","Gross margin %","#b98b3f",2,GP.map((g,i)=>g/REV[i]*100),"pct"],
+  ["nm","Net margin %","#404a60",2,NP.map((n,i)=>n/REV[i]*100),"pct"],
+  ["jobs","Completed jobs","#5f6b83",2,JOBS,"count"],
+];
+const MK = Object.fromEntries(METRICS.map(m=>[m[0],m]));
+let sel = ["np","nm"];
+const mfmt = (unit,v) => unit==="pct" ? v.toFixed(1)+"%" : unit==="count" ? fmt.n(v) : fmt.money(v);
+function drawTrend(){
+  const chip = ([k,l,c]) => `<button class="mchip${sel.includes(k)?" on":""}" data-m="${k}" style="--c:${c}"><i></i>${l}</button>`;
+  const grp = ms => `<span class="mgrp">${ms.map(chip).join("")}</span>`;
+  $("#mpick").innerHTML =
+    grp(METRICS.slice(0,4)) + grp(METRICS.slice(4,6)) + grp(METRICS.slice(6)) +
+    `<span class="mgrp"><button class="mchip${sel.includes("yoy")?" on":""}" data-m="yoy" style="--c:#c9cfda"><i></i>Net ’25 vs ’26</button></span>`;
+  const sw = c => `<i style="display:inline-block;width:14px;height:3px;border-radius:2px;background:${c};vertical-align:2px;margin-right:5px"></i>`;
+  if(sel.includes("yoy")){
+    $("#fNote").innerHTML = `${sw("#c9cfda")}Net ’25 · ${sw("#5b63d3")}Net ’26 — dashed spans are <span class="repr">representative</span>; solid spans and the marked Jun ’25 point are verified.`;
+    const M12 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    trendChart($("#trend"), {labels:M12, everyX:1, h:340, band:5, bandLabel:"Jun ’26 · $212K vs $186K",
+      tipLabel:i=>M12[i],
+      series:[
+        {name:"Net ’25",color:"#c9cfda",dash:"4 4.5",dots:[5],values:NP.slice(0,12),tipFmt:fmt.money},
+        {name:"Net ’26",color:"#5b63d3",star:true,fill:true,reprTo:4,values:NP.slice(12).concat([null,null,null,null,null,null]),endLabel:false,tipFmt:fmt.money},
+      ]});
+    return;
+  }
+  const drawn = METRICS.filter(m=>sel.includes(m[0]));
+  const reprNote = 'Dashed = <span class="repr">representative</span> history, solid = verified — revenue and job counts are Simpro-verified for all 18 months.';
+  const cleanNote = "Revenue and job counts are verified against Simpro for all 18 months.";
+  $("#fNote").innerHTML = sel.some(k=>["gp","np","gm","nm"].includes(k)) ? reprNote : cleanNote;
+  if(sel.length===1 && sel[0]==="jobs"){
+    histogram($("#trend"), M.map((m,i)=>({
+      label:m, count:JOBS[i], accent:i===17, tipLabel:tipMonth(i),
+      extra: PSKit.tipRow("#9aa2b2","Avg job value",fmt.moneyFull(REV[i]/JOBS[i])) + PSKit.tipRow("#9aa2b2","Revenue",fmt.money(REV[i]))
+        + (i>=12 ? PSKit.tipRow("#e2e6ec",`Jobs · ${M[i-12].split(" ")[0]} ’25`, JOBS[i-12]) : ""),
+    })), {h:340, seriesName:"Completed jobs"});
+    return;
+  }
+  const a2 = drawn.find(m=>m[3]===2);
+  const onlyPct = drawn.every(m=>m[5]==="pct");
+  const anns = [];
+  const ri = drawn.findIndex(m=>m[0]==="rev"), ni = drawn.findIndex(m=>m[0]==="np");
+  if(ri>=0) anns.push({s:ri,i:11,text:"$904K revenue",sub:"best month on record"});
+  if(ni>=0) anns.push({s:ni,i:16,text:"$142K net",sub:"May slowdown",dy:1});
+  trendChart($("#trend"), {labels:M, everyX:2, h:340, band:17,
+    bandLabel: sel.includes("np") ? "Jun · $212K net" : sel.includes("rev") ? "Jun · $436K revenue" : null,
+    tipLabel:tipMonth, annotations:anns,
+    yFmt:fmt.money, y2Fmt: a2 && a2[5]==="pct" ? (v=>v.toFixed(0)+"%") : fmt.n,
+    yMax: onlyPct ? 100 : undefined, yMin: onlyPct ? 0 : undefined,
+    tipExtra: i => i>=12 ? `<div style="border-top:1px solid #f1f2f6;margin-top:5px;padding-top:5px">`
+      + drawn.map(([k,l,c,ax,v,unit])=>PSKit.tipRow("#e2e6ec", `${l} · ${M[i-12].split(" ")[0]} ’25`, mfmt(unit,v[i-12]))).join("") + `</div>` : "",
+    series: drawn.map(([k,l,c,ax,v,unit])=>({
+      ...(["gp","np","gm","nm"].includes(k) ? {reprTo:16, dots:[5]} : {}),
+      name:l, color:c, values:v, axis:ax, star:k==="np", fill:k==="np", endLabel:false,
+      tipFmt: unit ? (x=>mfmt(unit,x)) : undefined,
+    })),
+  });
+}
+$("#mpick").addEventListener("click", e=>{
+  const b = e.target.closest("[data-m]");
+  if(!b) return;
+  const k = b.dataset.m;
+  if(k==="yoy"){ sel = sel.includes("yoy") ? ["np","nm"] : ["yoy"]; }
+  else if(sel.includes("yoy")){ sel = [k]; }
+  else if(sel.includes(k)){ if(sel.length>1) sel = sel.filter(x=>x!==k); }
+  else {
+    const unit = MK[k][5];
+    if(unit) sel = sel.filter(x=>!MK[x][5] || MK[x][5]===unit);
+    sel.push(k);
+    while(sel.length>4) sel.shift();
+  }
+  drawTrend();
+});
+drawTrend();
+if(location.search.includes("mode=jobs")){ sel=["jobs"]; drawTrend(); }
+if(location.search.includes("mode=yoy")){ sel=["yoy"]; drawTrend(); }
+
+
+PSKit.bullet($("#heroBullet"), {
+  cur:{m:"June", v:211534},
+  comp:{m:"Jun ’25", v:186351},
+  high:{m:'<span class="repr">Dec ’25</span>', v:585000},
+  fmt:v=>fmt.money(v),
+});
+
+/* Revenue → Net bridge: $435,979 − $88,941 − $55,397 = $291,641 gross (checkpoint),
+   − $80,107 = $211,534 — components sum exactly (largest-remainder rounding). */
+function drawBridge(){
+  const box = $("#bridge");
+  box.innerHTML = "";                       // measure the empty flex slot, not stale svg
+  const w = box.clientWidth || 520;
+  const h = Math.max(300, box.clientHeight || 0);
+  const compact = w < 520;
+  const L = compact ? ["Rev","Mat","Labor","Gross","Ovhd","Net"]
+                    : ["Revenue","Materials","Labor","Gross profit","Overhead","Net profit"];
+  waterfall(box, [
+    {label:L[0],value:435979,kind:"base"},
+    {label:L[1],value:88941,kind:"minus"},
+    {label:L[2],value:55397,kind:"minus"},
+    {label:L[3],value:291641,kind:"base"},
+    {label:L[4],value:80107,kind:"minus"},
+    {label:L[5],value:211534,kind:"net"},
+  ], {h});
+}
+
+/* Work source */
+const WS = [
+  {name:"Quote-generated", jobs:58, sell:348992, np:199112, nm:57.1},
+  {name:"Recurring", jobs:25, sell:36501, np:14439, nm:39.6},
+  {name:"Direct service", jobs:189, sell:50486, np:-2018, nm:-4.0},
+];
+const WSMAX = Math.max(...WS.map(w=>Math.abs(w.np))), WSZ = 8; /* zero line at 8% */
+$("#worksource").innerHTML = WS.map(w=>{
+  const neg = w.np<0;
+  const bw = Math.abs(w.np)/WSMAX*(100-WSZ);           /* no minimum width — honest scale */
+  const nmTxt = (w.nm<0?"−":"")+Math.abs(w.nm).toFixed(1)+"%";
+  return `<div style="padding:13px 0;border-bottom:1px solid var(--hair-2)">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+      <span class="id1">${w.name}</span>
+      <b class="tnum" style="font-size:19px;letter-spacing:-.02em;color:${neg?"var(--down)":"var(--ink)"}">${nmTxt}</b>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <div style="flex:1;height:6px;background:#f1f2f6;border-radius:4px;position:relative" title="bar = net dollars vs the largest source · losses point left from the zero line">
+        <span style="position:absolute;top:-3px;bottom:-3px;left:${WSZ}%;width:2px;border-radius:1px;background:#c9cfda"></span>
+        <span style="position:absolute;top:0;bottom:0;left:${(neg?WSZ-bw:WSZ).toFixed(2)}%;width:${bw.toFixed(2)}%;background:${neg?"var(--down)":"var(--acc)"};border-radius:${neg?"4px 0 0 4px":"0 4px 4px 0"}"></span></div>
+      <span class="id2 tnum" style="margin:0;flex:none">${fmt.moneyFull(w.np)} net</span>
+    </div>
+    <div class="id2 tnum" style="margin-top:5px">${w.jobs} jobs · ${fmt.moneyFull(w.sell)} revenue · avg ${fmt.moneyFull(w.sell/w.jobs)}</div>
+  </div>`;
+}).join("") + `
+  <div class="fnote" style="margin-top:10px">Direct service netted −$2,018 on 189 calls — the $59 diagnostic fee rarely covers the visit; per-source nets are rounded to dollars.</div>`;
+
+/* Labor — verified per-job variances, June quote-linked (Simpro re-pull 2026-07-15):
+   73 covered jobs sorted ascending · 25 over Σ+95.0h · 35 under Σ−47.5h · 13 on estimate. */
+const VAR_QL = [-10,-4.25,-3,-2.25,-2,-2,-1.75,-1.75,-1.5,-1.25,-1.25,-1.25,-1.25,-1,-1,-1,-1,-1,-1,-1,-0.75,-0.75,-0.75,-0.75,-0.5,-0.5,-0.5,-0.5,-0.5,-0.25,-0.25,-0.25,-0.25,-0.25,-0.25,0,0,0,0,0,0,0,0,0,0,0,0,0,0.25,0.25,0.5,0.5,0.5,0.5,0.5,0.5,0.75,0.75,1,1,1.25,1.75,1.75,2,2,2.25,2.5,5,7.25,7.5,13,16,25.75];
+const hSigned = v => (v<0?"−":"")+Math.abs(v).toFixed(2)+"h";
+function drawLabor(mode){
+  const d = mode==="recurring"
+    ? {est:79.3, act:106.8, cov:'estimate-covered recurring jobs only · <span class="repr">representative</span>', var:"+34.7%", repr:true,
+       overTitle:"Recorded hours with no plan estimate — excluded from the %", overNeutral:true,
+       over:[["17054 · Kittridge I — MH-13 preventive care","recurring visit · no plan estimate","29.8h"],
+             ["17055 · Kittridge II — MB-8 bi-annual boiler service","recurring visit · no plan estimate","7.8h"]]}
+    : {est:614.0, act:661.5, cov:'<span class="def" data-def="Quote-linked (85) counts every June job converted from a quote, including recurring-plan quotes — the work-source card’s Quote-generated (58) excludes recurring conversions. Verified against Simpro conversion records.">73 of 85 quote-linked jobs covered</span> · 12 more have actuals but no estimate', var:"+7.7%", repr:false, strip:VAR_QL,
+       stripTitle:"Per-job variance — 73 covered jobs, sorted · 25 over (+95.0h, red) · 35 under (−47.5h) · 13 on estimate",
+       over:[["17066 · St Andrews Gardens — MH-10, MB-2","8.75h quoted · 34.5h actual","+25.75h"],
+             ["17064 · Roscoe Park — MH-12","7.25h quoted · 23.25h actual","+16h"],
+             ["16831 · Aliso Creek Villas — Boiler PM Service Recommendations","39h quoted · 52h actual","+13h"]]};
+  const max=Math.max(d.est,d.act)*1.12;
+  $("#labor").innerHTML = `
+    <div style="display:flex;flex-direction:column;justify-content:space-between;flex:1;gap:15px;padding-top:8px">
+      ${[["Estimated",d.est,"#9aa2b2"],["Actual",d.act,"#5b63d3"]].map(([l,v,c])=>`
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="width:76px;font-size:13.5px;font-weight:600;color:var(--ink-2);flex:none">${l}</span>
+          <div style="flex:1;height:24px;background:#f1f2f6;border-radius:7px;overflow:hidden">
+            <div style="width:${v/max*100}%;height:100%;background:${c};border-radius:7px"></div></div>
+          <b class="tnum" style="width:64px;text-align:right;font-size:14px">${fmt.hrs(v)}</b>
+        </div>`).join("")}
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-top:2px">
+        <span style="font-size:13px;color:var(--muted)">${d.cov}</span>
+        <span style="text-align:right;flex:none"><span class="tnum" style="font-weight:800;font-size:26px;letter-spacing:-.03em;color:var(--down)">${d.var}</span>
+        <span class="def" data-def="Aggregated as (Σ actual − Σ estimated) ÷ Σ estimated across covered jobs — never an average of per-job percentages. Jobs with actuals but no estimate are excluded from the %; estimates come from the linked quote’s labor lines." style="display:block;font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--subtle)">over estimate</span></span>
+      </div>
+      <div>
+        ${d.strip?`<div style="font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:10px 0 2px;border-top:1px solid var(--hair-2)">${d.stripTitle}</div>
+        <div id="laborStrip"></div>`:""}
+        <div style="font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:10px 0 2px;${d.strip?"":"border-top:1px solid var(--hair-2)"}">${d.overTitle||"Largest overruns"}</div>
+        ${d.over.map(([j,det,delta])=>`
+          <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--hair-2)">
+            <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${j}</div>
+            <div class="id2 tnum">${det}</div></div>
+            <b class="tnum" style="color:${d.overNeutral?"var(--ink-2)":"var(--down)"};flex:none">${delta}</b>
+          </div>`).join("")}
+      </div>
+      ${d.repr?'<div class="fnote" style="margin-top:0"><span class="repr">Representative</span> until recurring estimates are re-verified per plan.</div>':""}
+    </div>`;
+  if(d.strip) PSKit.devStrip($("#laborStrip"), d.strip.map(v=>({v, label: v>0?`+${v}h over estimate`:v<0?`${hSigned(v).replace(".00","")} under estimate`:"on estimate"})), {h:130, unit:"Hours variance", fmt:hSigned});
+}
+let laborMode = "quote";
+drawLabor(laborMode);
+
+
+const LOSSES = [
+  {id:"17102",name:"Expansion Tanks for recent Installs",site:"Creekwood at River Run",sell:59,np:-2092.09,hrs:13.5,src:"Direct service",tech:"Jeffrey Perry"},
+  {id:"16885",name:"Boiler #1 down",site:"Hotel Lulu, BW Premier Collection",sell:863,np:-1179.43,hrs:10.25,src:"Direct service",tech:"Ismael Contreras"},
+  {id:"17137",name:"No hot water",site:"Potiker City Heights Senior",sell:59,np:-1074.02,hrs:7,src:"Direct service",tech:"Rob Sires"},
+  {id:"17142",name:"MB-5 · boiler service",site:"Monterey Villas Maintenance Assoc.",sell:305,np:-1027.15,hrs:7.25,src:"Recurring",tech:"Cole Bender"},
+  {id:"17040",name:"Two boilers down",site:"Vive Luxe",sell:59,np:-831.23,hrs:5.5,src:"Direct service",tech:"Rob Sires"},
+  {id:"17143",name:"Apt #184: No A/C",site:"Island Club",sell:59,np:-779.43,hrs:5.25,src:"Direct service",tech:"Jeffrey Perry, Rob Sires"},
+];
+const maxLoss = 2092.09;
+const art = v => String(Math.round(v))[0]==="8" ? "an" : "a"; /* “an $863 ticket” */
+$("#lossRows").innerHTML = LOSSES.map((j,i)=>{
+  const diag = j.sell<=59.01&&j.sell>0;
+  return `
+  <div class="brow rowlink" data-loss="${i}">
+    <span class="bbar neg" style="width:${Math.max(4,Math.abs(j.np)/maxLoss*100)}%"></span>
+    <div class="bname">
+      <div class="id1" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${j.name}</div>
+      <div class="id2">Job ${j.id} · ${j.site} · ${j.tech} · ${j.hrs}h on ${art(j.sell)} ${fmt.moneyFull(j.sell)} ticket</div>
+    </div>
+    <span class="srcpill ${diag?"diag":"exec"}" style="flex:none">${diag?"Diagnostic fee":"Execution"}</span>
+    <b class="bval tnum" style="color:var(--down);font-size:15px">${fmt.moneyFull(j.np)}</b>
+  </div>`;}).join("");
+
+const SITES = [
+  {n:"Holiday Inn Express #1955",jobs:2,sell:64478,np:34990},
+  {n:"Queen’s Surf Building",jobs:3,sell:31264,np:23595},
+  {n:"Pacific Shores HOA",jobs:1,sell:36219,np:17332},
+  {n:"Grove Unit HOA",jobs:2,sell:28065,np:10700},
+  {n:"Amli Old Pasadena",jobs:2,sell:17716,np:9902},
+  {n:"137 S Las Posas Rd, San Marcos",jobs:2,sell:11058,np:9575},
+  {n:"Aliso Creek Villas",jobs:4,sell:22088,np:7411},
+  {n:"Best Western #259",jobs:2,sell:10165,np:6762},
+];
+const CATS = [
+  {n:"Water Heating",jobs:178,sell:388628,np:200364},
+  {n:"HVAC",jobs:46,sell:24662,np:2806},
+  {n:"Unclassified",jobs:48,sell:22689,np:8363},
+];
+const TOTAL_NP = 211534;
+function drawProf(mode){
+  const rows = mode==="category" ? CATS : SITES;
+  const rem = mode==="site" ? {n:"Remaining 135 sites", jobs:254, sell:435979-SITES.reduce((s,r)=>s+r.sell,0), np:TOTAL_NP-SITES.reduce((s,r)=>s+r.np,0)} : null;
+  const all = rem ? [...rows, rem] : rows;
+  const maxNp = Math.max(...rows.map(r=>r.np)); /* scale = largest real row; remainder gets no bar */
+  $("#profRows").innerHTML = all.map((r,i)=>{
+    const isRem = rem && i===all.length-1;
+    const nm = r.np/r.sell*100, share = r.np/TOTAL_NP*100;
+    return `<div class="brow${isRem?" brem":""}" ${isRem?"":`data-prof="${mode}:${i}"`}>
+      ${isRem?"":`<span class="bbar" style="width:${Math.max(2,r.np/maxNp*100)}%"></span>`}
+      <div class="bname"><div class="id1">${r.n}</div><div class="id2 tnum">${r.jobs} job${r.jobs===1?"":"s"} · ${fmt.moneyFull(r.sell)} revenue</div></div>
+      <div class="bval"><b class="tnum" style="font-size:14px">${fmt.moneyFull(r.np)}</b>
+        <div class="id2 tnum">${nm.toFixed(1)}% margin · ${share.toFixed(1)}% of net</div></div>
+    </div>`;}).join("");
+  $("#profTitle").textContent = mode==="category" ? "Profitability by Category" : "Profitability by Site";
+  $("#profFoot").textContent = mode==="category"
+    ? "All 3 configured categories · Water Heating produced 94.7% of June net profit"
+    : "Top 8 of 143 sites by net profit · the long tail still carries 43.1% of net";
+}
+drawProf("site");
+document.addEventListener("click", e=>{
+  const p = e.target.closest("[data-prof]");
+  if(!p) return;
+  const [mode,idx] = p.dataset.prof.split(":");
+  const r = (mode==="category"?CATS:SITES)[+idx];
+  openDrawer(r.n, `June 2026 · ${r.jobs} completed jobs`, `
+    <div class="kv">
+      <div class="cell"><div class="l">Revenue</div><div class="v tnum">${fmt.moneyFull(r.sell)}</div></div>
+      <div class="cell"><div class="l">Net profit</div><div class="v tnum">${fmt.moneyFull(r.np)}</div></div>
+      <div class="cell"><div class="l">Net margin</div><div class="v tnum">${(r.np/r.sell*100).toFixed(1)}%</div></div>
+      <div class="cell"><div class="l">Share of June net</div><div class="v tnum">${(r.np/TOTAL_NP*100).toFixed(1)}%</div></div>
+    </div>
+    <div class="dsec">Drill-through</div>
+    <div class="dnote">In the application this opens the completed-jobs list filtered to ${mode==="category"?"this category":"this site"}, with every job’s revenue, gross and net.</div>`);
+});
+
+const TOPJOBS = [
+  {id:"16614",name:"Consolidated water heating system replacement",site:"Holiday Inn Express #1955",src:"Quote-generated",sell:64419,gp:42186,np:35053},
+  {id:"16754",name:"Boiler and tank replacement (Raypak WH3-499B)",site:"Pacific Shores HOA",src:"Quote-generated",sell:36219,gp:19417,np:17332},
+  {id:"17034",name:"Dual boiler replacement — price matched",site:"Queen’s Surf Building",src:"Quote-generated",sell:28883,gp:23840,np:21297},
+  {id:"16745",name:"Boiler #3 replacement — 399B + 115 tank",site:"Grove Unit HOA",src:"Quote-generated",sell:28006,gp:13785,np:10803},
+  {id:"16831",name:"Boiler PM Service Recommendations",site:"Aliso Creek Villas",src:"Quote-generated",sell:19812,gp:12322,np:7083},
+  {id:"16992",name:"Boiler PM service recommendations (w/o pump)",site:"Amli Old Pasadena",src:"Quote-generated",sell:12286,gp:9711,np:7575},
+  {id:"17037",name:"Replace tube bundle and transformer",site:"137 S Las Posas Rd, San Marcos",src:"Quote-generated",sell:11058,gp:10530,np:9814},
+  {id:"17200",name:"Boiler 1 — storage tank",site:"Best Western #259",src:"Quote-generated",sell:10106,gp:6909,np:6909},
+  {id:"17078",name:"Updated boiler PM recommendations",site:"Independent Square",src:"Quote-generated",sell:9814,gp:6944,np:5698},
+  {id:"17211",name:"Apt #80: A/C system replacement",site:"Birchmont Apartment Homes",src:"Quote-generated",sell:7514,gp:4102,np:2373},
+  {id:"16956",name:"Boiler repairs — replace leaking in/out header",site:"Kendallwood Apartments",src:"Quote-generated",sell:6796,gp:4701,np:3633},
+  {id:"15789",name:"MB-10 · MT-2 service plan",site:"Estates Condos",src:"Recurring",sell:6532,gp:4613,np:2597},
+  {id:"16841",name:"Boiler PM service recommendations",site:"Citrus Crossing Senior Apartments",src:"Quote-generated",sell:6256,gp:6208,np:6208},
+  {id:"16916",name:"Boiler #1 PM service recommendations",site:"Rossmoor HOA",src:"Quote-generated",sell:5696,gp:3127,np:2593},
+  {id:"17164",name:"Clubhouse compressor replacement",site:"Laguna Altura",src:"Quote-generated",sell:5487,gp:4798,np:3704},
+  {id:"16993",name:"Building 2 — pump only, boiler 2",site:"Amli Old Pasadena",src:"Quote-generated",sell:5430,gp:2327,np:2327},
+  {id:"17093",name:"Building 4254 water heater PM recommendations",site:"Villa Storia",src:"Quote-generated",sell:5212,gp:3733,np:3021},
+  {id:"16941",name:"Boiler #1 — burners, blower, sensors, chamber",site:"Pelican Cove",src:"Quote-generated",sell:5183,gp:3715,np:3715},
+  {id:"17064",name:"MH-12",site:"Roscoe Park",src:"Direct service",sell:5064,gp:4136,np:2586},
+  {id:"17066",name:"MH-10, MB-2",site:"St Andrews Gardens",src:"Recurring",sell:4856,gp:3813,np:2059},
+];
+const PAGE_SIZE = 10, TOTAL_JOBS = 272;
+let jobPage = 0;
+function renderJobs(){
+  const rows = TOPJOBS.slice(jobPage*PAGE_SIZE, (jobPage+1)*PAGE_SIZE);
+  $("#jobRows").innerHTML = rows.map((j,ri)=>{
+    const i = jobPage*PAGE_SIZE + ri;
+    return `<tr class="rowlink" data-job="${i}">
+      <td><div class="id1">${j.name}</div><div class="id2">Job ${j.id} · ${j.site}</div></td>
+      <td class="hide-sm"><span class="srcpill"><i></i>${j.src}</span></td>
+      <td class="num tnum">${fmt.moneyFull(j.sell)}</td>
+      <td class="num tnum hide-sm">${fmt.moneyFull(j.gp)}</td>
+      <td class="num tnum" style="font-weight:700">${fmt.moneyFull(j.np)}</td>
+      <td class="num tnum hide-lg">${(j.np/j.sell*100).toFixed(1)}%</td>
+    </tr>`;}).join("");
+  $("#jobShowing").textContent = `Showing ${jobPage*PAGE_SIZE+1}–${jobPage*PAGE_SIZE+rows.length} of ${TOTAL_JOBS} by sell value`;
+  const mockPg = 'title="Mockup carries the top 20 real jobs; the application pages through all 272"';
+  $("#jobPager").innerHTML = `
+    <button ${jobPage===0?"disabled":""} data-pg="prev">‹</button>
+    <button class="${jobPage===0?"on":""}" data-pg="0">1</button>
+    <button class="${jobPage===1?"on":""}" data-pg="1">2</button>
+    <button disabled ${mockPg}>3</button>
+    <span class="gap" title="Pages 3–28 are mockup-disabled">…</span>
+    <button disabled ${mockPg}>28</button>
+    <button ${jobPage===1?"disabled":""} data-pg="next">›</button>`;
+}
+renderJobs();
+$("#jobPager").addEventListener("click", e=>{
+  const b = e.target.closest("[data-pg]");
+  if(!b || b.disabled) return;
+  const p = b.dataset.pg;
+  jobPage = p==="prev" ? Math.max(0, jobPage-1) : p==="next" ? Math.min(1, jobPage+1) : +p;
+  renderJobs();
+});
+
+drawerInit();
+document.addEventListener("click", e=>{
+  const lossRow = e.target.closest("[data-loss]");
+  const jobRow = e.target.closest("[data-job]");
+  if(lossRow){
+    const j = LOSSES[+lossRow.dataset.loss];
+    openDrawer(j.name, `Job ${j.id} · ${j.site}`, drawerBody(j.sell, null, j.np, j.hrs, j.src, j.tech,
+      `${j.hrs}h recorded against ${art(j.sell)} ${fmt.moneyFull(j.sell)} ticket. If this call was contract-covered work, tagging it to the contract would move it out of the loss view.`));
+  }
+  if(jobRow){
+    const j = TOPJOBS[+jobRow.dataset.job];
+    openDrawer(j.name, `Job ${j.id} · ${j.site}`, drawerBody(j.sell, j.gp, j.np, null, j.src, null, null));
+  }
+});
+function drawerBody(sell,gp,np,hrs,src,tech,note){
+  const nmPct = sell>0 ? np/sell*100 : null;
+  const nmCell = nmPct==null ? "N/A"
+    : Math.abs(nmPct)>200 ? `n/m <span style="font-size:12px;font-weight:600;color:var(--muted)">· ${fmt.moneyFull(sell)} ticket</span>`
+    : (nmPct<0?"−":"")+Math.abs(nmPct).toFixed(1)+"%";
+  return `<div class="kv">
+    <div class="cell"><div class="l">Sell value</div><div class="v tnum">${fmt.moneyFull(sell)}</div></div>
+    ${gp!=null?`<div class="cell"><div class="l">Gross profit</div><div class="v tnum">${fmt.moneyFull(gp)}</div></div>`:""}
+    <div class="cell"><div class="l">Net profit</div><div class="v tnum" style="color:${np<0?"var(--down)":"var(--ink)"}">${fmt.moneyFull(np)}</div></div>
+    <div class="cell"><div class="l">Net margin</div><div class="v tnum">${nmCell}</div></div>
+    ${hrs!=null?`<div class="cell"><div class="l">Recorded hours</div><div class="v tnum">${hrs}h</div></div>`:""}
+    <div class="cell"><div class="l">Work source</div><div class="v" style="font-size:14px">${src}</div></div>
+    ${tech?`<div class="cell"><div class="l">Technicians</div><div class="v" style="font-size:14px">${tech}</div></div>`:""}
+  </div>
+  ${note?`<div class="dsec">Why this lost money</div><div class="dnote">${note}</div>`:""}
+  <div class="dsec">In Simpro</div><div class="dnote">Open the job record in Simpro for scope, notes, attachments and billing state.</div>`;
+}
+
+segInit(undefined, (seg,val)=>{
+  if(seg==="labormode"){ laborMode = val; drawLabor(val); }
+  if(seg==="profmode") drawProf(val);
+});
+
+/* Bridge drawn last: it sizes itself to the row height set by its work-source neighbor. */
+drawBridge();
+
+/* Container-true charts: redraw on viewport change so nothing stays mis-scaled. */
+let rzT;
+window.addEventListener("resize", ()=>{ clearTimeout(rzT); rzT = setTimeout(()=>{ drawTrend(); drawLabor(laborMode); drawBridge(); }, 120); });
+</script>
+</body>
+</html>
