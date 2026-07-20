@@ -46,7 +46,9 @@ for (const [name, cfg] of Object.entries(PAGES)) {
   if (ONLY.length && !ONLY.includes(name)) continue;
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.goto(BASE + cfg.url, { waitUntil: 'domcontentloaded', timeout: 150000 });
-  await page.waitForTimeout(400);
+  // streamed SSR: wait for the KPI band's values before measuring anything
+  await page.waitForSelector('.kpi .val, .focal .big', { timeout: 150000 });
+  await page.waitForTimeout(600);
 
   // 1. no horizontal overflow at several widths — page-level AND card-level
   for (const w of [1440, 1280, 1024, 768, 390]) {
@@ -240,12 +242,14 @@ for (const [name, cfg] of Object.entries(PAGES)) {
   await page.screenshot({ path: resolve(shots, `${name}-1440.png`), fullPage: true });
   const fold = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await fold.goto(BASE + cfg.url, { waitUntil: 'domcontentloaded', timeout: 150000 });
-  await fold.waitForTimeout(400);
+  await fold.waitForSelector('.kpi .val, .focal .big', { timeout: 150000 }).catch(() => {});
+  await fold.waitForTimeout(600);
   await fold.screenshot({ path: resolve(shots, `${name}-fold-1440x900.png`) });
   await fold.close();
   const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await mob.goto(BASE + cfg.url, { waitUntil: 'domcontentloaded', timeout: 150000 });
-  await mob.waitForTimeout(400);
+  await mob.waitForSelector('.kpi .val, .focal .big', { timeout: 150000 }).catch(() => {});
+  await mob.waitForTimeout(600);
   await mob.screenshot({ path: resolve(shots, `${name}-390.png`), fullPage: true });
   await mob.close();
 
