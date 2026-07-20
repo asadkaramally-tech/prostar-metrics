@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Material Sales — Pro Star Metrics (redesign mockup)</title>
+<link rel="stylesheet" href="assets/tokens.css?v=8">
+</head>
+<body>
+
+<nav class="appnav">
+  <div class="brand"><span>PRO<span class="star">★</span>STAR</span><span style="letter-spacing:.22em;font-weight:500">METRICS</span></div>
+  <div class="navlinks">
+    <a href="quotes.html">Quotes</a>
+    <a href="jobs.html">Jobs</a>
+    <a class="on" href="materials.html" aria-current="page">Materials</a>
+    <a href="technicians.html">Technicians</a>
+    <a href="commissions.html">Commissions</a>
+  </div>
+  <div class="right">
+    <button class="health btn" style="all:unset" aria-label="Data health, 5 active alerts"><span class="health">Data health <span class="badge">5 active</span></span></button>
+    <div class="user"><div class="av">A</div><div class="who"><b>asad</b><span>Owner · Admin</span></div></div>
+  </div>
+</nav>
+
+<main class="container">
+  <header class="pagehead">
+    <div>
+      <div class="eyebrow">Operations</div>
+      <h1>Material Sales</h1>
+      <div class="sub">Materials billed on completed jobs — volume, value and category mix.</div>
+    </div>
+    <div class="controls">
+      <div class="stepper"><button aria-label="Previous month">‹</button><span class="lbl">📅 July 2026</span><button aria-label="Next month" disabled style="opacity:.35">›</button></div>
+      <div class="updated"><span class="dot" style="background:var(--up)"></span>Updated today</div>
+    </div>
+  </header>
+
+  <!-- Row 1 — KPI band -->
+  <section class="kpis hero bandpair" aria-label="July materials">
+    <div class="kpi primary">
+      <span class="lblrow"><span class="lbl">Materials sold · MTD</span><span class="pills"><span class="pill up">↑ 25.9% vs Jul ’25</span></span></span>
+      <span class="val tnum">$145,444</span>
+      <span class="sub">on pace for ≈$237K full-month — even with June</span>
+      <div class="bullet" data-viz aria-label="Materials sold $161,384; ticks mark Jul ’25 day-aligned $115.5K and full June $267.9K">
+        <div class="btrack"><i style="width:55.2%"></i><span class="bmark m1" style="left:43.9%"></span><span class="bmark m2" style="left:96.2%"></span></div>
+        <div class="bcap"><span class="bkey"><i class="tick m1"></i>Jul ’25 · d18 <b>$115.5K</b></span><span class="bkey"><i class="tick m2"></i>Jun ’26 · full <b>$253.2K</b></span></div>
+      </div>
+    </div>
+    <section class="cardx" id="catbar" aria-label="Materials value by category">
+      <div class="hd">
+        <div>
+          <div class="ti">Materials Value by Category</div>
+          <div class="st">July · Simpro product groups</div>
+        </div>
+      </div>
+      <div data-viz>
+        <div class="stacked tall" role="img" aria-label="Materials value by category, July"><i style="width:58.5%;background:color-mix(in srgb, var(--warn), #fff 55%)"><span class="seglabel" style="color:var(--ink)">Special order / non-stock · 58%</span></i><i style="width:12.3%;background:var(--n400)"></i><i style="width:11.2%;background:var(--acc)"></i><i style="width:8.6%;background:var(--series-2)"></i><i style="width:3.1%;background:color-mix(in srgb, var(--acc), #fff 40%)"></i><i style="width:3.0%;background:color-mix(in srgb, var(--series-2), #fff 40%)"></i><i style="width:3.3%;background:var(--n300)"></i></div>
+        <div class="legend" style="margin-top:10px;row-gap:6px">
+          <span><span class="sw" style="background:color-mix(in srgb, var(--warn), #fff 55%)"></span>Special order / non-stock <b class="tnum" style="font-weight:600">$85,049</b> · 58.5%</span>
+          <span><span class="sw" style="background:var(--n400)"></span>Ungrouped <b class="tnum" style="font-weight:600">$17,958</b> · 12.3%</span>
+          <span><span class="sw" style="background:var(--acc)"></span>Raypak Parts <b class="tnum" style="font-weight:600">$16,330</b> · 11.2%</span>
+          <span><span class="sw" style="background:var(--series-2)"></span>Plumbing - Copper <b class="tnum" style="font-weight:600">$12,517</b> · 8.6%</span>
+          <span><span class="sw" style="background:color-mix(in srgb, var(--acc), #fff 40%)"></span>Pumps &amp; Misc <b class="tnum" style="font-weight:600">$4,444</b> · 3.1%</span>
+          <span><span class="sw" style="background:color-mix(in srgb, var(--series-2), #fff 40%)"></span>Plumbing - Valves <b class="tnum" style="font-weight:600">$4,379</b> · 3.0%</span>
+          <span><span class="sw" style="background:var(--n300)"></span>5 more categories <b class="tnum" style="font-weight:600">$4,768</b> · 3.3%</span>
+        </div>
+      </div>
+    </section>
+  </section>
+
+
+  <!-- Row 3 — all materials table -->
+  <div class="grid12">
+    <section class="cardx span12" aria-label="All materials sold">
+      <div class="hd">
+        <div>
+          <div class="ti">All Materials Sold — July</div>
+          <div class="st">Ordered by total sold value · Δ = qty change vs June</div>
+        </div>
+        <div class="tools"><button class="btn">⭳ Download CSV</button></div>
+      </div>
+      <div class="tblwrap">
+        <table class="data">
+          <thead><tr><th>Item</th><th>Category</th><th class="num">Qty</th><th class="num">Jun qty</th><th class="num">Δ</th><th class="num">Unit sell</th><th class="num">Extended</th><th class="num">Jobs</th></tr></thead>
+        <tbody>
+            <tr class="click"><td><b>WH1-HD201 Cupronickel Heat Exchanger Medium Pump Part #RWH1H</b><span class="cellsub">—</span></td><td>Special order / non-stock</td><td class="num">8</td><td class="num">0</td><td class="num"><span class="">+8</span></td><td class="num">$6,670.35</td><td class="money">$53,363</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>ULN 100-199-AS NG 100 GAL 199K BTU ULTRA LO NOX HTR S/N: M25</b><span class="cellsub">ASWULN100199</span></td><td>Ungrouped</td><td class="num">1</td><td class="num">0</td><td class="num"><span class="">+1</span></td><td class="num">$10,300.00</td><td class="money">$10,300</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>Replacement Water Heater</b><span class="cellsub">—</span></td><td>Special order / non-stock</td><td class="num">1</td><td class="num">0</td><td class="num"><span class="">+1</span></td><td class="num">$7,627.50</td><td class="money">$7,628</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>Copper Pipe Type L - 2</b><span class="cellsub">COP-PIPE-200</span></td><td>Plumbing - Copper</td><td class="num">70</td><td class="num">185</td><td class="num"><span class="neg">-115</span></td><td class="num">$50.58</td><td class="money">$3,541</td><td class="num">7</td></tr>
+            <tr class="click"><td><b>Taco 111/8s CIRC SST FLGD 1/8HP 1750RPM 115/1</b><span class="cellsub">111-8S</span></td><td>Ungrouped</td><td class="num">1</td><td class="num">0</td><td class="num"><span class="">+1</span></td><td class="num">$3,048.86</td><td class="money">$3,049</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>TUBE BUNDLE HD401ASME MATL WH1-KIT</b><span class="cellsub">016537F</span></td><td>Raypak Parts</td><td class="num">1</td><td class="num">0</td><td class="num"><span class="">+1</span></td><td class="num">$2,850.00</td><td class="money">$2,850</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>IGNITER HSI 120V-KIT</b><span class="cellsub">007400F</span></td><td>Raypak Parts</td><td class="num">24</td><td class="num">24</td><td class="num"><span class="">0</span></td><td class="num">$116.00</td><td class="money">$2,784</td><td class="num">18</td></tr>
+            <tr class="click"><td><b>Taco 111/8s CIRC SST FLGD 1/8HP 1750RPM 115/1</b><span class="cellsub">—</span></td><td>Special order / non-stock</td><td class="num">1</td><td class="num">0</td><td class="num"><span class="">+1</span></td><td class="num">$2,668.75</td><td class="money">$2,669</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>MOT03765: MOTOR; 5 HP AT 208-230/460/60/3, 3 HP AT
+Trane</b><span class="cellsub">—</span></td><td>Special order / non-stock</td><td class="num">1</td><td class="num">0</td><td class="num"><span class="">+1</span></td><td class="num">$2,660.10</td><td class="money">$2,660</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>Rinnai RX199
+
+(Hajoca)</b><span class="cellsub">—</span></td><td>Special order / non-stock</td><td class="num">1</td><td class="num">0</td><td class="num"><span class="">+1</span></td><td class="num">$2,099.25</td><td class="money">$2,099</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>1/2 HP Armstrong Raypak 2 Boiler Header Pump (2b1050)</b><span class="cellsub">ARM 110108MF-677</span></td><td>Pumps &amp; Misc</td><td class="num">1</td><td class="num">0</td><td class="num"><span class="">+1</span></td><td class="num">$2,041.92</td><td class="money">$2,042</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>3/4&quot; Gas</b><span class="cellsub">PREBUILD</span></td><td>Prebuild assemblies</td><td class="num">8</td><td class="num">1</td><td class="num"><span class="">+7</span></td><td class="num">$250.00</td><td class="money">$2,000</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>Copper Pipe Type L - 1.5</b><span class="cellsub">COP-PIPE-150</span></td><td>Plumbing - Copper</td><td class="num">67</td><td class="num">40</td><td class="num"><span class="">+27</span></td><td class="num">$29.75</td><td class="money">$1,993</td><td class="num">7</td></tr>
+            <tr class="click"><td><b>Armstrong Motor Mounts</b><span class="cellsub">874055-000</span></td><td>Ungrouped</td><td class="num">4</td><td class="num">0</td><td class="num"><span class="">+4</span></td><td class="num">$492.32</td><td class="money">$1,969</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>PC BOARD DISPLAY W/LIGHTS-KIT</b><span class="cellsub">007896F</span></td><td>Raypak Parts</td><td class="num">5</td><td class="num">1</td><td class="num"><span class="">+4</span></td><td class="num">$393.00</td><td class="money">$1,965</td><td class="num">2</td></tr>
+            <tr class="click"><td><b>8351-360:  GOV36H2BA INNOVAIR 24-36K BTU GT4 HP INVERTER CON</b><span class="cellsub">—</span></td><td>Special order / non-stock</td><td class="num">1</td><td class="num">0</td><td class="num"><span class="">+1</span></td><td class="num">$1,944.45</td><td class="money">$1,944</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>CIRC SST FLGD 115V</b><span class="cellsub">TA 0012-SF4</span></td><td>Pumps &amp; Misc</td><td class="num">2</td><td class="num">2</td><td class="num"><span class="">0</span></td><td class="num">$936.06</td><td class="money">$1,872</td><td class="num">1</td></tr>
+            <tr class="click"><td><b>Electrical--1/2&quot; Flexible Conduit, 1/2&quot; Straight and Elbow C</b><span class="cellsub">—</span></td><td>Special order / non-stock</td><td class="num">9</td><td class="num">2</td><td class="num"><span class="">+7</span></td><td class="num">$200.00</td><td class="money">$1,800</td><td class="num">2</td></tr>
+            <tr class="click"><td><b>FLOW SWITCH-KIT</b><span class="cellsub">007142F</span></td><td>Raypak Parts</td><td class="num">4</td><td class="num">18</td><td class="num"><span class="neg">-14</span></td><td class="num">$402.00</td><td class="money">$1,608</td><td class="num">4</td></tr>
+            <tr class="click"><td><b>SENSOR FLAME ELECTRODE-KIT</b><span class="cellsub">006535F</span></td><td>Raypak Parts</td><td class="num">20</td><td class="num">20</td><td class="num"><span class="">0</span></td><td class="num">$80.00</td><td class="money">$1,600</td><td class="num">14</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12.5px;color:var(--muted)">
+        <span>Showing 1–20 of 186 by total sold value sold value</span>
+        <span style="display:flex;gap:6px;align-items:center">
+          <button class="btn" style="padding:5px 9px">‹</button>
+          <button class="btn" style="padding:5px 10px;background:var(--acc);color:#fff;border-color:var(--acc)">1</button>
+          <button class="btn" style="padding:5px 10px">2</button><span>…</span><button class="btn" style="padding:5px 10px">10</button>
+          <button class="btn" style="padding:5px 9px">›</button>
+        </span>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="assets/charts.js?v=8"></script>
+<script src="assets/drill.js?v=8"></script>
+</body>
+</html>

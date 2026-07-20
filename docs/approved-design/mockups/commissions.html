@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Technician Commissions — Pro Star Metrics (redesign mockup)</title>
+<link rel="stylesheet" href="assets/tokens.css?v=8">
+</head>
+<body>
+
+<nav class="appnav">
+  <div class="brand"><span>PRO<span class="star">★</span>STAR</span><span style="letter-spacing:.22em;font-weight:500">METRICS</span></div>
+  <div class="navlinks">
+    <a href="quotes.html">Quotes</a>
+    <a href="jobs.html">Jobs</a>
+    <a href="materials.html">Materials</a>
+    <a href="technicians.html">Technicians</a>
+    <a class="on" href="commissions.html" aria-current="page">Commissions</a>
+  </div>
+  <div class="right">
+    <button class="health btn" style="all:unset" aria-label="Data health, 5 active alerts"><span class="health">Data health <span class="badge">5 active</span></span></button>
+    <div class="user"><div class="av">A</div><div class="who"><b>asad</b><span>Owner · Admin</span></div></div>
+  </div>
+</nav>
+
+<main class="container">
+  <header class="pagehead">
+    <div>
+      <div class="eyebrow">Operations</div>
+      <h1>Technician Commissions</h1>
+      <div class="sub">Calculated amounts only — nothing on this page confirms that a payment was made.</div>
+    </div>
+    <div class="controls">
+      <div class="stepper"><button aria-label="Previous month">‹</button><span class="lbl">📅 July 2026</span><button aria-label="Next month" disabled style="opacity:.35">›</button></div>
+      <div class="updated"><span class="dot"></span>Updated 4 days ago</div>
+    </div>
+  </header>
+
+  <!-- Row 1 — KPI band (5 tiles) -->
+  <section class="kpis hero" aria-label="July key metrics">
+    <div class="kpi primary">
+      <span class="lblrow"><span class="lbl">Calculated commission due</span></span>
+      <span class="val tnum">$1,230<span class="cents">.74</span></span>
+      <span class="sub">0.50% pool of completed work value</span>
+      <div class="bullet" data-viz aria-label="Commission pool $1,230.74; tick marks June $2,179.89; July 2025 had no run">
+        <div class="btrack"><i style="width:54.3%"></i><span class="bmark m2" style="left:96.1%"></span></div>
+        <div class="bcap"><span class="bkey"><i class="tick m2"></i>Jun ’26 · full <b>$2,179.89</b></span><span class="bkey">Jul ’25 · no run</span></div>
+      </div>
+    </div>
+    <div class="ktiles">
+      <div class="kpi">
+        <span class="lbl">Completed revenue</span>
+        <span class="val tnum">$246,147</span>
+        <span class="sub">86 completed jobs</span>
+      </div>
+      <div class="kpi">
+        <span class="lbl">Technicians earning</span>
+        <span class="val tnum">12</span>
+        <span class="sub">of 15 technicians</span>
+      </div>
+      <div class="kpi">
+        <span class="lbl">Top calculated payout</span>
+        <span class="val tnum">$269.29</span>
+        <span class="sub">Jeffrey Perry · Gold</span>
+      </div>
+      <div class="kpi">
+        <span class="lbl">Year to date</span>
+        <span class="val tnum">$12,495.73</span>
+        <span class="sub">2026 · pools Jan–Jul</span>
+      </div>
+    </div>
+  </section>
+  <p class="kpiband-note">Rank boosts: Gold ×1.30 · Silver ×1.20 · Bronze ×1.10.</p>
+
+
+  <!-- tabs -->
+  <div class="tabbar" role="tablist">
+    <a class="on" role="tab" aria-selected="true" href="#">Worksheet</a>
+    <a role="tab" aria-selected="false" href="#summary">Summary</a>
+  </div>
+
+  <!-- worksheet toolbar -->
+  <!-- implementation note: the efficiency toggle must be a real control (e.g. <button role="switch">
+       or <input type="checkbox">) and the max-adjustment slider a real <input type="range"> —
+       the styled spans here are mockup-only -->
+  <div class="toolbar">
+    <span class="tl">Commission pool</span>
+    <select class="ctl"><option>0.50%</option></select>
+    <span class="switch" role="switch" aria-checked="false" aria-label="Efficiency adjustment"></span>
+    <span><b>Efficiency adjustment</b> · off</span>
+    <span class="dim">Max adjustment</span>
+    <span style="display:inline-flex;align-items:center;gap:8px"><span style="width:120px;height:4px;border-radius:2px;background:var(--n200);position:relative"><span style="position:absolute;left:38%;top:-5px;width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid var(--n300);box-shadow:var(--sh-1)"></span></span><span class="dim">±20%</span></span>
+  </div>
+
+  <!-- worksheet leaderboard -->
+  <div class="grid12" style="margin-top:4px">
+    <section class="cardx span12" aria-label="Commission by technician">
+      <div class="hd">
+        <div>
+          <div class="ti">Commission by Technician</div>
+          <div class="st">Ranked by calculated payout · bar shows how each payout is built · click a row for job detail</div>
+        </div>
+        <div class="tools">
+          <div class="legend"><span><span class="sw" style="background:var(--acc-2)"></span>Base share</span><span><span class="sw" style="background:var(--acc)"></span>Rank boost</span></div>
+        </div>
+      </div>
+      <!-- implementation note: the per-technician include checkboxes must be real
+           <input type="checkbox"> elements — span[role=checkbox] here is mockup-only -->
+      <div class="lb" data-viz>
+        <div class="lrow" data-detail="ld-1">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Jeffrey Perry"></span>
+          <span class="rank">1</span>
+          <span class="who"><b>Jeffrey Perry</b><span>18 jobs · $46K allocated</span></span>
+          <div class="lbar"><span class="base" style="width:66.9%"></span><span class="boost" style="width:20.1%"></span></div>
+          <span class="tier"><span class="tierchip gold">Gold ×1.30</span></span>
+          <span class="pay tnum">$269.29</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="ldetail" id="ld-1">
+          <div class="tblwrap">
+            <table class="data">
+              <thead><tr><th>Job</th><th class="num">Job value</th><th class="num">Share</th><th class="num">Allocated</th></tr></thead>
+              <tbody>
+            <tr><td>16709 · Customer 5241 — Boiler Install--HD201(8 Systems)</td><td class="num">$102,986</td><td class="num">29%</td><td class="money">$29,358</td></tr>
+            <tr><td>17236 · Customer 6144 — Single Boiler Replacement--WH7 SS 0650C N</td><td class="num">$15,141</td><td class="num">29%</td><td class="money">$4,391</td></tr>
+            <tr><td>17061 · Customer 6000 — MH-7</td><td class="num">$5,914</td><td class="num">34%</td><td class="money">$2,008</td></tr>
+            <tr><td>17180 · Customer 5104 — MB-2 MC-2</td><td class="num">$1,567</td><td class="num">100%</td><td class="money">$1,567</td></tr>
+            <tr><td>17262 · Customer 4607 — Replacement Rinnai Tankless Unit (Residential)</td><td class="num">$1,233</td><td class="num">100%</td><td class="money">$1,233</td></tr>
+            <tr><td>17329 · Customer 5919 — No Hot</td><td class="num">$1,223</td><td class="num">100%</td><td class="money">$1,223</td></tr>
+            <tr><td>17331 · Customer 5919 — Emergency Recirc Pipe Repair</td><td class="num">$900</td><td class="num">100%</td><td class="money">$900</td></tr>
+            <tr><td>17295 · Customer 5134 — No hot water boiler near building 2350</td><td class="num">$784</td><td class="num">100%</td><td class="money">$784</td></tr>
+            <tr><td>17271 · Customer 4949 — Leak on the system; inspect and report finding</td><td class="num">$755</td><td class="num">100%</td><td class="money">$755</td></tr>
+            <tr><td>17263 · Customer 5823 — Apt #16: No A/C</td><td class="num">$588</td><td class="num">100%</td><td class="money">$588</td></tr>
+            <tr><td>17320 · Customer 5823 — Apt #215: Fan Coil Leaking</td><td class="num">$529</td><td class="num">100%</td><td class="money">$529</td></tr>
+            <tr><td>17302 · Customer 5933 — A/C: One Time PM</td><td class="num">$529</td><td class="num">100%</td><td class="money">$529</td></tr>
+            <tr><td>17309 · Customer 5874 — MB-1, MC-1</td><td class="num">$411</td><td class="num">100%</td><td class="money">$411</td></tr>
+            <tr><td>17340 · Customer 5823 — Unit 107- not cooling</td><td class="num">$318</td><td class="num">100%</td><td class="money">$318</td></tr>
+            <tr><td>17261 · Customer 4606 — Apt #254: No A/C</td><td class="num">$294</td><td class="num">100%</td><td class="money">$294</td></tr>
+            <tr><td>17273 · Customer 5823 — Apt #79: No A/C</td><td class="num">$294</td><td class="num">100%</td><td class="money">$294</td></tr>
+            <tr><td>17280 · Customer 4607 — Section 2, Water Heaters A & D: Troubleshoot</td><td class="num">$118</td><td class="num">100%</td><td class="money">$118</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="fnote">All 18 July allocations by allocated value.</p>
+          <div class="callout" style="margin-top:10px"><span class="diam">◆</span><b>How this was calculated:</b> allocated $46K (timesheet hours-share of July jobs) → base share $230.05 → Gold boost ×1.30 → $299.07 → scaled so the total stays exactly $1,230.74 → <b>$269.29</b>.</div>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Juan Serrato"></span>
+          <span class="rank">2</span>
+          <span class="who"><b>Juan Serrato</b><span>15 jobs · $45K allocated</span></span>
+          <div class="lbar"><span class="base" style="width:65.5%"></span><span class="boost" style="width:13.1%"></span></div>
+          <span class="tier"><span class="tierchip silver">Silver ×1.20</span></span>
+          <span class="pay tnum">$243.17</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Rob Sires"></span>
+          <span class="rank">3</span>
+          <span class="who"><b>Rob Sires</b><span>15 jobs · $44K allocated</span></span>
+          <div class="lbar"><span class="base" style="width:64.0%"></span><span class="boost" style="width:6.4%"></span></div>
+          <span class="tier"><span class="tierchip bronze">Bronze ×1.10</span></span>
+          <span class="pay tnum">$217.95</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Justin Molina"></span>
+          <span class="rank">4</span>
+          <span class="who"><b>Justin Molina</b><span>10 jobs · $38K allocated</span></span>
+          <div class="lbar"><span class="base" style="width:55.3%"></span></div>
+          <span class="tier"><span class="tierchip std">Standard</span></span>
+          <span class="pay tnum">$171.12</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Cole Bender"></span>
+          <span class="rank">5</span>
+          <span class="who"><b>Cole Bender</b><span>14 jobs · $30K allocated</span></span>
+          <div class="lbar"><span class="base" style="width:43.6%"></span></div>
+          <span class="tier"><span class="tierchip std">Standard</span></span>
+          <span class="pay tnum">$135.09</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Jim Ochoa"></span>
+          <span class="rank">6</span>
+          <span class="who"><b>Jim Ochoa</b><span>22 jobs · ~$12.9K allocated (est.)</span></span>
+          <div class="lbar"><span class="base" style="width:18.8%"></span></div>
+          <span class="tier"><span class="tierchip std">Standard</span></span>
+          <span class="pay tnum">$58.09</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Ismael Contreras"></span>
+          <span class="rank">7</span>
+          <span class="who"><b>Ismael Contreras</b><span>14 jobs · ~$11.6K allocated (est.)</span></span>
+          <div class="lbar"><span class="base" style="width:16.9%"></span></div>
+          <span class="tier"><span class="tierchip std">Standard</span></span>
+          <span class="pay tnum">$52.23</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Tadeo Jimenez"></span>
+          <span class="rank">8</span>
+          <span class="who"><b>Tadeo Jimenez</b><span>12 jobs · ~$11.4K allocated (est.)</span></span>
+          <div class="lbar"><span class="base" style="width:16.6%"></span></div>
+          <span class="tier"><span class="tierchip std">Standard</span></span>
+          <span class="pay tnum">$51.33</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Roberto Villalta"></span>
+          <span class="rank">9</span>
+          <span class="who"><b>Roberto Villalta</b><span>1 job · $5,313 allocated</span></span>
+          <div class="lbar"><span class="base" style="width:7.7%"></span></div>
+          <span class="tier"><span class="tierchip std">Standard</span></span>
+          <span class="pay tnum">$23.92</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Stephen Furtado"></span>
+          <span class="rank">10</span>
+          <span class="who"><b>Stephen Furtado</b><span>4 jobs · ~$1.1K allocated (est.)</span></span>
+          <div class="lbar"><span class="base" style="width:1.6%"></span></div>
+          <span class="tier"><span class="tierchip std">Standard</span></span>
+          <span class="pay tnum">$4.95</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include David Jarquin"></span>
+          <span class="rank">11</span>
+          <span class="who"><b>David Jarquin</b><span>2 jobs · ~$0.5K allocated (est.)</span></span>
+          <div class="lbar"><span class="base" style="width:0.7%"></span></div>
+          <span class="tier"><span class="tierchip std">Standard</span></span>
+          <span class="pay tnum">$2.25</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Piel Sarmiento"></span>
+          <span class="rank">12</span>
+          <span class="who"><b>Piel Sarmiento</b><span>1 job · ~$0.3K allocated (est.)</span></span>
+          <div class="lbar"><span class="base" style="width:0.4%"></span></div>
+          <span class="tier"><span class="tierchip std">Standard</span></span>
+          <span class="pay tnum">$1.35</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow zero">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Ernie Hernandez"></span>
+          <span class="rank">13</span>
+          <span class="who"><b style="color:var(--muted)">Ernie Hernandez</b><span>no July work</span></span>
+          <div class="lbar"></div>
+          <span class="tier"></span>
+          <span class="pay tnum">$0.00</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow zero">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Erick Eudave"></span>
+          <span class="rank">14</span>
+          <span class="who"><b style="color:var(--muted)">Erick Eudave</b><span>no July work</span></span>
+          <div class="lbar"></div>
+          <span class="tier"></span>
+          <span class="pay tnum">$0.00</span>
+          <span class="caret">▸</span>
+        </div>
+        <div class="lrow zero">
+          <span class="checkbox" role="checkbox" aria-checked="true" aria-label="Include Victor Contreras"></span>
+          <span class="rank">15</span>
+          <span class="who"><b style="color:var(--muted)">Victor Contreras</b><span>no July work</span></span>
+          <div class="lbar"></div>
+          <span class="tier"></span>
+          <span class="pay tnum">$0.00</span>
+          <span class="caret">▸</span>
+        </div>
+      </div>
+      <p class="fnote">Jan–Jun pools are draft runs until recomputed on the approved roster; months without a run show N/A, never $0.</p>
+    </section>
+  </div>
+
+  <p class="srcline">Source: Simpro completed jobs · pool = completed work value × pool percent · calculated amounts are not payment records</p>
+</main>
+
+<script src="assets/charts.js?v=8"></script>
+<script src="assets/drill.js?v=8"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.lb .lrow').forEach((row) => {
+    row.setAttribute('tabindex', '0');
+    row.classList.add('expandable');
+    const toggle = () => {
+      const id = row.dataset.detail;
+      if (id) {
+        const d = document.getElementById(id);
+        d.classList.toggle('open');
+        row.classList.toggle('expanded', d.classList.contains('open'));
+        return;
+      }
+      const who = row.querySelector('.who b').textContent;
+      const sub = row.querySelector('.who span').textContent;
+      const pay = row.querySelector('.pay').textContent;
+      drillPanel(who, 'Commission worksheet', kv('July work', sub) + kv('Calculated payout', pay) +
+        '<p style="font-size:12.5px;color:var(--faint);margin:10px 0 0">The per-job allocation table renders here inline — same pattern as the expanded row 1 (Jeffrey Perry).</p>');
+    };
+    row.addEventListener('click', toggle);
+    row.addEventListener('keydown', (e) => { if (e.key === 'Enter') toggle(); });
+  });
+});
+</script>
+</body>
+</html>
