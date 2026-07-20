@@ -70,7 +70,7 @@ for (const [name, cfg] of Object.entries(PAGES)) {
   await page.waitForTimeout(150);
 
   // 2. primary visualization fully above the fold (900px)
-  const box = await page.locator(cfg.primarySel).first().boundingBox();
+  const box = await page.locator(cfg.primarySel).first().boundingBox({ timeout: 3000 }).catch(() => null);
   if (!box) fail(name, 'fold', `primary selector ${cfg.primarySel} not found`);
   else if (box.y + box.height > 900) fail(name, 'fold', `${cfg.primarySel} bottom at ${Math.round(box.y + box.height)}px > 900px viewport`);
 
