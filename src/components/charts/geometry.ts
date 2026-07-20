@@ -113,26 +113,30 @@ export function histogramLayout(n: number, iw: number, L: number): { slot: numbe
   return { slot, xoff, bw };
 }
 
-/* Heatmap ramp — single-hue indigo; red is reserved for cells below the
-   stated 15% threshold. Returns [background, text] colors. */
+/* Heatmap ramp — the approved redesign's validated ordinal ramp (mockups
+   tokens.css .heatmap .b0–.b4; light-end 2.13:1 vs surface, monotone L):
+   color-mix tints over --acc, plus the semantic <15% band mixed from --down.
+   Ink text on the three light bands, white on the two dark. Returns
+   [background, text] colors. */
 export function heatCellStyle(v: number): [string, string] {
   return v < 15
-    ? ["#b8453a", "#fff"]
+    ? ["color-mix(in srgb,#d0463a,#fff 30%)", "#101422"]
     : v >= 45
-      ? ["#4b52c0", "#fff"]
+      ? ["color-mix(in srgb,#5b63d3,#000 22%)", "#fff"]
       : v >= 35
-        ? ["#5a63c8", "#fff"]
+        ? ["#5b63d3", "#fff"]
         : v >= 25
-          ? ["#a3a9ef", "#2a3140"]
-          : ["#d4d8f9", "#2a3140"];
+          ? ["color-mix(in srgb,#5b63d3,#fff 23%)", "#101422"]
+          : ["color-mix(in srgb,#5b63d3,#fff 46%)", "#101422"];
 }
 
 export const heatRamp = (v: number): string => heatCellStyle(v)[0];
 export const heatTextFor = (v: number): string => heatCellStyle(v)[1];
 
-/* Representative-cell hatch overlay, contrast-matched to the cell text. */
+/* Representative-cell hatch overlay: dark bands hatch with #00000024
+   stripes, light bands with #ffffff1f (mockups tokens.css .cell.hatch). */
 export function heatReprOverlay(v: number): string {
   return heatTextFor(v) === "#fff"
-    ? "background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(255,255,255,.26) 5px 8px)"
-    : "background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(16,20,34,.10) 5px 8px)";
+    ? "background-image:repeating-linear-gradient(45deg,transparent 0 5px,#00000024 5px 8px)"
+    : "background-image:repeating-linear-gradient(45deg,transparent 0 5px,#ffffff1f 5px 8px)";
 }

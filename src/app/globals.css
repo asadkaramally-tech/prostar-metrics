@@ -140,6 +140,12 @@
   --radius: var(--r-control);
   --shadow-card: var(--sh-card);
   --shadow-pop: 0 18px 50px -20px rgba(16, 20, 34, 0.36);
+
+  /* NEW TOKEN (redesign 2026-07-20): categorical series slot 2 — validated vs
+     --acc by the dataviz palette validator (dE 39.8 worst-CVD, chroma/
+     lightness/contrast PASS). Grey stays de-emphasis only, never a named
+     series. */
+  --series-2: #0e9aae;
 }
 
 * {
@@ -1120,3 +1126,135 @@ body.show-states .states{display:block}
 .idot{display:inline-block;width:8px;height:8px;background:var(--acc);border-radius:2px;transform:rotate(45deg);flex:none;margin:5px 2px 0 0}
 .insight{display:flex;gap:9px;align-items:flex-start}
 .arow .acaret svg{display:block}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Approved redesign layer (docs/approved-design/mockups, 2026-07-20).
+   Ported from mockups/assets/tokens.css with class names adjusted only
+   where the app already uses the mockup's name for something else:
+   .pill → .dpill (delta pill), .barlist .brow → .barlist .blrow.
+   Tokens only — no new hex beyond the validated --series-2 in :root.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── KPI band: primary dark stat card beside a 2×2 tile grid ── */
+.kpis{display:grid;grid-template-columns:max-content repeat(5,minmax(0,1fr));gap:12px}
+.kpis.hero{grid-template-columns:minmax(360px,5fr) 12fr}
+.kpis.hero .ktiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0}
+.kpi{min-height:96px;height:96px;padding:14px 16px;background:var(--surface);
+  border:1px solid var(--hair);border-radius:var(--r-card);box-shadow:var(--sh-stat);
+  display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden;text-align:left;color:var(--ink)}
+a.kpi{cursor:pointer}
+a.kpi:hover{border-color:var(--border-strong)}
+.kpi .lbl{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.kpi>.lbl{min-height:19px;display:flex;align-items:center;flex:none}
+.kpi .lblrow{display:flex;align-items:center;flex-wrap:nowrap;gap:6px;min-width:0;flex:none;min-height:19px}
+.kpi .lblrow .lbl{flex:none}
+.kpi .lblrow .pills{display:flex;gap:3px;flex-wrap:nowrap;justify-content:flex-end;flex:none;margin-left:auto}
+/* KPI values use proportional figures (tnum is reserved for aligned columns). */
+.kpi .val{margin-top:8px;font-variant-numeric:normal;display:flex;align-items:center;gap:8px;
+  font-size:26px;font-weight:700;line-height:1;color:var(--ink);white-space:nowrap;letter-spacing:-.02em}
+.kpi .sub{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.kpi>.sub,.kpi>.val,.kpi>.lbl{flex:none}
+.kpi>.sub{margin-top:auto}
+.kpi.primary{background:linear-gradient(135deg,var(--hero-a),var(--hero-b) 60%,var(--hero-c));
+  border-color:transparent;box-shadow:var(--sh-hero);height:204px;min-height:204px}
+.kpi.primary .lbl{color:color-mix(in srgb,#fff,transparent 35%)}
+.kpi.primary .val{color:#fff;font-size:34px;font-weight:750;margin-top:2px}
+.kpi.primary .sub{color:color-mix(in srgb,#fff,transparent 40%)}
+.kpi.alert .val{color:var(--state-failed-fg)}
+.kpiband-note{font-size:12px;color:var(--muted);margin:8px 2px 0}
+
+/* delta pills — every pill text names its comparison; bare % is banned */
+.dpill{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:600;
+  background:var(--surface-soft);border-radius:var(--r-pill);padding:1px 8px;line-height:1.3;white-space:nowrap}
+.dpill.up{color:var(--success-fg)}
+.dpill.down{color:var(--state-failed-fg)}
+.dpill.neutral{color:var(--muted)}
+.kpi.primary .dpill{background:color-mix(in srgb,#fff,transparent 90%)}
+.kpi.primary .dpill.up{color:color-mix(in srgb,var(--up),#fff 55%)}
+.kpi.primary .dpill.down{color:color-mix(in srgb,var(--down),#fff 55%)}
+
+/* ONE comparison bar (bullet): fill = month to date; ticks = prior month +
+   same month last year, keyed in the caption row */
+.bullet{margin-top:auto}
+.bullet .btrack{position:relative;height:10px;border-radius:5px;background:color-mix(in srgb,#fff,transparent 86%)}
+.bullet .btrack i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#fff}
+.bullet .bmark{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:1px}
+.bullet .bmark.m1{background:color-mix(in srgb,#fff,transparent 45%)}
+.bullet .bmark.m2{background:var(--acc-2)}
+.bullet .bcap{display:flex;gap:16px;margin-top:8px;font-size:11.5px;flex-wrap:wrap}
+.kpi.primary .bullet .bcap{color:color-mix(in srgb,#fff,transparent 28%)}
+.bullet .bcap b{color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+.bullet .tick{display:inline-block;width:2px;height:10px;border-radius:1px;margin-right:6px;vertical-align:-1px}
+.bullet .tick.m1{background:color-mix(in srgb,#fff,transparent 45%)}
+.bullet .tick.m2{background:var(--acc-2)}
+
+/* ── 12-col grid + stacked columns (cards hug content, never stretch) ── */
+.grid12{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:16px;align-items:start}
+.grid12>.card,.grid12 .colstack>.card{margin-top:0}
+.span6{grid-column:span 6}
+.span12{grid-column:span 12}
+.colstack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.colstack>.card{flex:1 1 auto}
+
+/* ── bar-list (deal tiers, sites, sources, overruns) ── */
+.barlist .blrow{padding:10px 0;border-bottom:1px solid var(--hair-2)}
+.barlist .blrow:last-child{border-bottom:0}
+.barlist .toprow{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.barlist .name{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.barlist .name small{color:var(--faint);font-weight:400}
+.barlist .rv{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
+.barlist .rv small{font-size:12px;font-weight:400;color:var(--faint)}
+.barlist .rv.bad{color:var(--state-failed-fg)}
+.barlist .bar{height:8px;border-radius:4px;background:var(--n100);margin:6px 0 4px;overflow:hidden}
+.barlist .bar i{display:block;height:100%;border-radius:4px;background:var(--acc)}
+.barlist .bar i.neutral{background:var(--series-weak)}
+.barlist .bar i.bad{background:var(--down)}
+.barlist .meta{display:block;font-size:12px;color:var(--faint);margin:0}
+/* summary/total row: no bar — it is on a different scale */
+.barlist .blrow.total{border-top:2px solid var(--border-strong);border-bottom:0}
+.barlist .blrow:has(+ .blrow.total){border-bottom:0}
+.barlist .blrow.rowlink{cursor:pointer}
+.barlist .blrow.rowlink:hover{background:var(--surface-soft)}
+.barlist.tiergrid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 24px}
+.barlist.tiergrid .blrow{border-bottom:0}
+.barlist.cols2{column-count:2;column-gap:36px}
+.barlist.cols2 .blrow{break-inside:avoid}
+@media (max-width:1023px){.barlist.cols2{column-count:1}.barlist.tiergrid{grid-template-columns:1fr 1fr}}
+@media (max-width:767px){.barlist.tiergrid{grid-template-columns:1fr}}
+
+/* ── callout (the one allowed narrative insight, quotes deal-size) ── */
+.callout{background:var(--acc-weak);border-radius:var(--r-card);padding:12px 14px;
+  font-size:13px;color:var(--ink-2);margin-top:12px}
+.callout .diam{color:color-mix(in srgb,var(--acc),#000 22%);margin-right:6px}
+
+/* ── stacked segment bar: 2px surface gaps, never borders ── */
+.stacked{display:flex;gap:2px;height:20px;border-radius:6px;overflow:hidden;background:var(--surface)}
+.stacked.tall{height:24px}
+.stacked>i{display:block;height:100%;font-style:normal}
+.seglabel{color:#fff;font-size:11.5px;font-weight:600;display:flex;align-items:center;height:100%;
+  padding-left:8px;white-space:nowrap;overflow:hidden}
+
+/* ── panel strip header (stacked single-axis panels) ── */
+.striphead{display:flex;align-items:baseline;gap:8px;margin:2px 0 0}
+.striphead .sl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.striphead .sn{font-size:11px;color:var(--faint)}
+
+/* ── KPI band responsive ladder (measured in the mockup review) ── */
+@media (max-width:1279px){
+  .kpis.hero{grid-template-columns:1fr}
+  .kpi.primary{height:auto;min-height:172px}
+  .kpis.hero .ktiles .kpi{height:auto;min-height:96px}
+  .kpi .lblrow{flex-wrap:wrap}
+  .kpi .lblrow .pills{flex-wrap:wrap;flex-shrink:1}
+}
+@media (max-width:767px){
+  .kpis.hero .ktiles{grid-template-columns:1fr}
+  .kpi{height:auto;min-height:72px}
+  .kpi .val{margin-top:0}
+  .kpi>.sub{margin-top:0}
+  .kpi.primary{height:auto;min-height:96px}
+  .kpi.primary .sub{display:block;white-space:normal}
+  .kpi.primary .lblrow{flex-wrap:wrap}
+  .kpi.primary .lblrow .pills{flex-wrap:wrap;flex-shrink:1;justify-content:flex-start;margin-left:0}
+}

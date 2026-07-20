@@ -1,5 +1,6 @@
 export { fmt, type ValueFormatter } from "./fmt";
 export { TrendChart, type TrendChartProps, type TrendSeries, type TrendAnnotation } from "./trend-chart";
+export { LineChart, type LineChartProps, type LineSeries, type LineRefline, type LineAnnotation } from "./line-chart";
 export { Bullet, type BulletProps, type BulletMark } from "./bullet";
 export { DevBars, type DevBarsProps, type DevBarRow } from "./dev-bars";
 export { DevStrip, type DevStripProps, type DevStripItem } from "./dev-strip";
