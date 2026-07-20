@@ -34,7 +34,7 @@ test("commission exports keep the seven-year Blob lifecycle policy", () => {
 test("scheduled Container Apps job cadence remains locked", () => {
   assert.match(
     metricsBicep,
-    /param ingestionCronExpression string = '0 \*\/6 \* \* \*'/,
+    /param ingestionCronExpression string = '\*\/20 \* \* \* \*'/,
   );
   assert.match(
     metricsBicep,
