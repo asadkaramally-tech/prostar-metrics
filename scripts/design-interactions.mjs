@@ -45,6 +45,9 @@ await check('technicians: no capacity model, no flags strip', async () => {
 });
 
 await p.goto(BASE + '/commissions', { waitUntil: 'domcontentloaded', timeout: 150000 });
+// The worksheet streams in; require real leaderboard rows before asserting on
+// page text (a cold cache otherwise false-fails the name checks mid-stream).
+await p.locator('.lrow').first().waitFor({ timeout: 60000 });
 await check('commissions: no eligibility wording', async () => {
   const t = await p.evaluate(() => document.body.innerText);
   if (/eligib/i.test(t)) throw new Error('eligibility wording present');
