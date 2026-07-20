@@ -12,9 +12,9 @@ export function moneyK(v: number): string {
   return s + Math.round(a).toLocaleString();
 }
 
-export function KpiBand({ ariaLabel, children, style }: { ariaLabel?: string; children?: ReactNode; style?: CSSProperties }) {
+export function KpiBand({ ariaLabel, children, style, className }: { ariaLabel?: string; children?: ReactNode; style?: CSSProperties; className?: string }) {
   return (
-    <section className="kpis hero" aria-label={ariaLabel} style={style}>
+    <section className={className ? `kpis hero ${className}` : "kpis hero"} aria-label={ariaLabel} style={style}>
       {children}
     </section>
   );
