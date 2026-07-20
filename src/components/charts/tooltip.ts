@@ -12,6 +12,10 @@ let globalHideWired = false;
 function tip(): HTMLDivElement {
   if (!tipEl) {
     tipEl = document.createElement("div");
+    // Identifiable hook for the acceptance harness (design-interactions.mjs
+    // looks for .charttip); no stylesheet rule attaches to it — styling stays
+    // in the inline kit css below.
+    tipEl.className = "charttip";
     tipEl.style.cssText =
       "position:fixed;z-index:60;background:#fff;border:1px solid #e9ebf0;border-radius:10px;" +
       "padding:9px 12px;font-size:12px;color:#2a3140;box-shadow:0 6px 24px -8px rgba(16,24,40,.24);" +
