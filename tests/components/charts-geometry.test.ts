@@ -94,15 +94,15 @@ test("histogram centres small bucket counts on a capped slot", () => {
   assert.equal(small.bw, Math.min(52, small.slot * 0.62));
 });
 
-test("heatmap ramp is single-hue indigo with red reserved below 15%", () => {
-  assert.deepEqual(heatCellStyle(9.8), ["#b8453a", "#fff"]);
-  assert.deepEqual(heatCellStyle(20), ["#d4d8f9", "#2a3140"]);
-  assert.deepEqual(heatCellStyle(30), ["#a3a9ef", "#2a3140"]);
-  assert.deepEqual(heatCellStyle(40), ["#5a63c8", "#fff"]);
-  assert.deepEqual(heatCellStyle(50), ["#4b52c0", "#fff"]);
-  // Hatch overlay contrast tracks the cell text colour.
-  assert.match(heatReprOverlay(50), /rgba\(255,255,255,\.26\)/);
-  assert.match(heatReprOverlay(20), /rgba\(16,20,34,\.10\)/);
+test("heatmap ramp is the approved validated ordinal ramp (color-mix over --acc, red band from --down)", () => {
+  assert.deepEqual(heatCellStyle(9.8), ["color-mix(in srgb,#d0463a,#fff 30%)", "#101422"]);
+  assert.deepEqual(heatCellStyle(20), ["color-mix(in srgb,#5b63d3,#fff 46%)", "#101422"]);
+  assert.deepEqual(heatCellStyle(30), ["color-mix(in srgb,#5b63d3,#fff 23%)", "#101422"]);
+  assert.deepEqual(heatCellStyle(40), ["#5b63d3", "#fff"]);
+  assert.deepEqual(heatCellStyle(50), ["color-mix(in srgb,#5b63d3,#000 22%)", "#fff"]);
+  // Hatch overlay: dark bands stripe #00000024, light bands #ffffff1f.
+  assert.match(heatReprOverlay(50), /#00000024/);
+  assert.match(heatReprOverlay(20), /#ffffff1f/);
 });
 
 test("monotone path is cubic and starts at the first point", () => {

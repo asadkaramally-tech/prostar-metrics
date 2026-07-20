@@ -225,15 +225,15 @@ test("Heatmap applies the contrast-safe ramp, hatches representative cells and m
     months: ["May", "Jun"],
     highlightLast: true,
     rows: [
-      { name: "$10K+", cells: [{ v: 9.8, repr: true }, { v: 50 }] },
+      { name: "$10K+", cells: [{ v: 50, repr: true }, { v: 9.8 }] },
       { name: "Under $750", cells: [{ v: null }, { v: 20, repr: true }] },
     ],
   }));
-  assert.match(html, /background-color:#b8453a;color:#fff/, "below-threshold cell is red with white text");
-  assert.match(html, /background-color:#4b52c0;color:#fff/, "45%+ cell takes the deepest indigo");
-  assert.match(html, /background-color:#d4d8f9;color:#2a3140/, "15–25 cell takes the lightest indigo with ink text");
-  assert.match(html, /repeating-linear-gradient\(45deg,transparent 0 5px,rgba\(255,255,255,\.26\) 5px 8px\)/, "white hatch on dark repr cell");
-  assert.match(html, /repeating-linear-gradient\(45deg,transparent 0 5px,rgba\(16,20,34,\.10\) 5px 8px\)/, "ink hatch on light repr cell");
+  assert.match(html, /background-color:color-mix\(in srgb,#d0463a,#fff 30%\);color:#101422/, "below-threshold cell takes the red band with ink text");
+  assert.match(html, /background-color:color-mix\(in srgb,#5b63d3,#000 22%\);color:#fff;background-image/, "45%+ cell takes the darkest band");
+  assert.match(html, /background-color:color-mix\(in srgb,#5b63d3,#fff 46%\);color:#101422/, "15–25 cell takes the lightest band with ink text");
+  assert.match(html, /repeating-linear-gradient\(45deg,transparent 0 5px,#00000024 5px 8px\)/, "dark hatch on dark repr cell");
+  assert.match(html, /repeating-linear-gradient\(45deg,transparent 0 5px,#ffffff1f 5px 8px\)/, "light hatch on light repr cell");
   assert.match(html, /class="hcell na"[^>]*>—</, "empty cells show — (never 0%)");
   assert.match(html, /class="hcell now"/, "last column highlights when highlightLast is set");
   assert.match(html, /--hm-cols:2/, "grid column count follows the month count");

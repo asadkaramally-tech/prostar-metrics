@@ -7,10 +7,11 @@ import { cachedPageLoad } from "@/lib/store/page-cache";
 
 /**
  * /quotes — month-scoped Quote Metrics per the approved
- * APPROVED-2026-07-15/mockups/quotes.html. Server component: reads the quote
- * read model and hands the typed payload to the client dashboard. Deep-link
- * params mirror the retained review gates (?states=1, ?history=1,
- * ?mode=volume).
+ * docs/approved-design/mockups/quotes.html. Server component: reads the
+ * quote read model and hands the typed payload to the client dashboard.
+ * Deep-link params mirror the retained review gates (?states=1,
+ * ?mode=volume). The Overview/History tabs are removed — the Monthly
+ * Breakdown is always present, so ?history=1 no longer exists.
  */
 export default async function QuotesPage({
   searchParams,
@@ -34,7 +35,6 @@ export default async function QuotesPage({
       <QuoteMetricsDashboard
         model={model}
         showStates={firstParam(params?.states) === "1"}
-        initialTab={firstParam(params?.history) === "1" ? "history" : "overview"}
         initialTrendVolume={firstParam(params?.mode) === "volume"}
       />
     </DashboardPage>
