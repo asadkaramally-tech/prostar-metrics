@@ -677,7 +677,7 @@ function EfficiencyCard({ rows, facts }: { rows: TechnicianScoreRow[]; facts: Te
         <Fnote>
           <span style={{ color: POS }}>●</span> right of the line = beat the estimate{"  "}
           <span style={{ color: NEG }}>●</span> left = over · {facts.effCoveredJobs} covered jobs (team)
-          {facts.teamEff !== null ? <> — the team’s {ratioX(facts.teamEff)} is verified, the per-tech split is not yet.</> : "."}
+          {facts.teamEff !== null ? <> — the team figure is verified, the per-tech split is not yet.</> : "."}
         </Fnote>
         {mode === "recurring" ? (
           <Fnote style={{ borderTop: "none", paddingTop: 0 }}>
@@ -774,6 +774,8 @@ function PunctualityCard({
   );
 }
 
+/** Mockup grammar: the footnote never restates the band's on-time value —
+ *  it carries the uncovered-visits floor and the heavier late band only. */
 export function punctualityFnote(punctuality: TechnicianPunctualityDistribution, facts: TechnicianTeamFacts): string {
   if (facts.otPct === null) return `No verified arrivals in ${facts.monthLong}.`;
   const floor = facts.otFloorPct !== null ? ` (${pctInt(facts.otFloorPct)} if every uncovered visit were late)` : "";
@@ -783,7 +785,7 @@ export function punctualityFnote(punctuality: TechnicianPunctualityDistribution,
       : punctuality.late16To30 > punctuality.lateOver30
         ? ` — the ${punctuality.late16To30}-visit 16–30 band outweighs the 30+ tail`
         : "";
-  return `On-time is ${pctInt(facts.otPct)} of verified visits${floor}${tail}.`;
+  return `On-time counts verified visits only${floor}${tail}.`;
 }
 
 /** Ranked per-technician on-time list — real data from technicians[].onTimeRate, lowest first. */

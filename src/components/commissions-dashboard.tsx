@@ -888,7 +888,7 @@ function BoardRow({
             `no ${monthLong} work`
           ) : row.jobCount > 0 ? (
             <>
-              {row.jobCount} jobs · {allocatedText(row.allocatedValue)} allocated
+              {row.jobCount} {row.jobCount === 1 ? "job" : "jobs"} · {allocatedText(row.allocatedValue)} allocated
               {row.belowMinimum ? (
                 <>
                   {" · "}

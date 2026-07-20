@@ -298,7 +298,7 @@ test("punctuality card offers the per-technician drill and the footnote states t
   };
   assert.equal(
     punctualityFnote(punctuality, facts),
-    "On-time is 89% of verified visits (79% if every uncovered visit were late) — the 26-visit 30+ tail outweighs the 16–30 band.",
+    "On-time counts verified visits only (79% if every uncovered visit were late) — the 26-visit 30+ tail outweighs the 16–30 band.",
   );
   const reversed = punctualityFnote({ ...punctuality, late16To30: 30, lateOver30: 4 }, facts);
   assert.match(reversed, /30-visit 16–30 band outweighs the 30\+ tail/);
@@ -346,7 +346,7 @@ test("labor efficiency renders payload-driven diverging bars", () => {
   assert.match(html, /Quote-linked/);
   assert.match(html, /Recurring/);
   assert.match(html, /2 covered jobs \(team\)/);
-  assert.match(html, /the team’s 1\.00× is verified, the per-tech split is not yet\./);
+  assert.match(html, /the team figure is verified, the per-tech split is not yet\./);
   // Only technicians with allocated jobs appear as efficiency bars: Alice 1.25×, Bob 0.75×.
   assert.match(html, /1\.25×/);
   assert.match(html, /0\.75×/);
