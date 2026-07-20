@@ -75,11 +75,13 @@ test("job metrics excludes invoicing because Pro Star invoices outside Simpro", 
   assert.doesNotMatch(jobsSource, /invoiceAnalysis|Invoiced Ex-Tax|Unbilled|Outstanding Aging|Invoice Exceptions/);
 });
 
-test("job metrics exposes average job value in the approved hero stat grid", () => {
-  // Average Job Value is a hero dgrid cell in the approved rebuild, no longer
-  // a standalone titled KPI card.
-  assert.match(jobsSource, /label="Avg Job Value"/);
-  assert.match(jobsSource, /fmt\.moneyFull\(selected\.averageJobValue\)/);
+test("job metrics carries average job value inside the approved revenue tile", () => {
+  // The approved band (docs/approved-design/mockups/jobs.html) has no
+  // standalone Avg Job Value cell; the Revenue tile's sub line carries
+  // "N completed jobs · avg $X" from the read-model payload.
+  assert.doesNotMatch(jobsSource, /label="Avg Job Value"/);
+  assert.match(jobsSource, /label="Revenue"/);
+  assert.match(jobsSource, /avg \$\{fmt\.moneyFull\(selected\.averageJobValue\)\}/);
 });
 
 test("navigation uses the compact desktop top bar with an accessible active state", () => {

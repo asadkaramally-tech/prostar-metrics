@@ -762,6 +762,13 @@ async function ensurePeriod(params: { periodStart: string; periodEnd: string; ac
   return row;
 }
 
+/**
+ * Worksheet roster: everyone who recorded work in the period (archived or
+ * not) PLUS every non-archived directory member without period timesheets —
+ * the latter render as $0.00 rows and never enter allocation math (the
+ * engine allocates from recorded hours only; include checkboxes remain the
+ * only exclusion mechanism).
+ */
 async function getRoster(periodStart: string, periodEnd: string): Promise<RosterRow[]> {
   const result = await queryPostgres<{
     id: string;
@@ -786,7 +793,8 @@ async function getRoster(periodStart: string, periodEnd: string): Promise<Roster
             coalesce(p.source_modified_at::text, p.last_seen_at::text, r.date_of_hire::text, $2::text) as updated_at
        from metrics.effective_technician_roster r
        join metrics.dim_people p on p.person_id = r.person_id
-      where exists (
+      where r.archived = false
+         or exists (
               select 1
                 from metrics.metrics_employee_timesheets t
                where t.employee_id = r.simpro_employee_id
