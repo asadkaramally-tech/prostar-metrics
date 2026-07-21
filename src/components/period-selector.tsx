@@ -14,6 +14,7 @@ type PeriodSelectorProps = {
 };
 
 export function PeriodSelector({ action, value, label = "Period", name = "month", hiddenFields = {} }: PeriodSelectorProps) {
+  const firstMonth = "2023-01";
   const liveMonth = losAngelesMonthKey(new Date());
   const selected = isMonthKey(value) ? (value as string) : liveMonth;
   const prev = shiftMonthKey(selected, -1);
@@ -25,7 +26,11 @@ export function PeriodSelector({ action, value, label = "Period", name = "month"
       {Object.entries(hiddenFields).map(([fieldName, fieldValue]) => fieldValue ? (
         <input key={fieldName} type="hidden" name={fieldName} value={fieldValue} />
       ) : null)}
-      <StepButton href={monthHref(action, name, prev, hiddenFields)} title={formatMonthKey(prev)} glyph="‹" />
+      <StepButton
+        href={selected <= firstMonth ? undefined : monthHref(action, name, prev, hiddenFields)}
+        title={selected <= firstMonth ? `${formatMonthKey(prev)} is outside available history` : formatMonthKey(prev)}
+        glyph="‹"
+      />
       <label className="lbl">
         <CalendarGlyph className="i" />
         <span className="sr-only">{label}</span>
@@ -34,7 +39,7 @@ export function PeriodSelector({ action, value, label = "Period", name = "month"
           type="month"
           name={name}
           defaultValue={selected}
-          min="2023-01"
+          min={firstMonth}
           max={liveMonth}
           aria-label={`${label} month and year`}
         />

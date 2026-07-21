@@ -117,6 +117,13 @@ test("month stepper disables the forward step on the live month and links the pr
   assert.match(html, /<button[^>]*class="stepbtn"[^>]*disabled/);
 });
 
+test("month stepper disables history before January 2023", () => {
+  const markup = renderToStaticMarkup(createElement(PeriodSelector, { action: "/technicians", value: "2023-01" }));
+  assert.match(markup, /December 2022 is outside available history/);
+  assert.doesNotMatch(markup, /technicians\?month=2022-12/);
+  assert.match(markup, /min="2023-01"/);
+});
+
 function CommissionChild({ model }: { model: { worksheet: { year: number; month: number; periodLabel: string }; summary: { year: number } } }) {
   const period = `${model.worksheet.year}-${String(model.worksheet.month).padStart(2, "0")}`;
   return createElement("main", { "data-period": period }, "content");
