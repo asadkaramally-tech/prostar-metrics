@@ -138,10 +138,13 @@ function MaterialsCoverageWarning({
   hasRetainedTotals: boolean;
 }) {
   const issues: string[] = [];
-  if (model.coverage.selectedMonth.status !== "complete") {
+  const selectedCoverageIncomplete = model.coverage.selectedMonth.status !== "complete";
+  const currentMonthFreshnessIssue = model.totals.elapsedDays < model.totals.daysInMonth
+    && model.freshness.state !== "current";
+  if (selectedCoverageIncomplete) {
     issues.push(`The ${monthLong} materials walk is ${model.coverage.selectedMonth.status}.`);
   }
-  if (model.freshness.state !== "current") {
+  if (currentMonthFreshnessIssue) {
     issues.push(`${model.freshness.label}. ${model.freshness.detail}`);
   }
   if (issues.length === 0) return null;
@@ -209,7 +212,8 @@ function MaterialsBand({ model }: { model: MaterialsDashboardModel }) {
   const lyDef = partial ? `vs ${lyName}, aligned to day ${totals.elapsedDays}` : `vs ${lyName}, full month`;
   const yoyDelta = priorYearValue != null ? ((totals.current - priorYearValue) / priorYearValue) * 100 : null;
   const comparisonWord = paceComparison(partial ? totals.paceProjection : totals.current, priorMonthValue);
-  const retained = model.coverage.selectedMonth.status !== "complete" || model.freshness.state !== "current";
+  const retained = model.coverage.selectedMonth.status !== "complete"
+    || (partial && model.freshness.state !== "current");
 
   return (
     <KpiBand className="bandpair" ariaLabel={`${monthLong} materials`}>

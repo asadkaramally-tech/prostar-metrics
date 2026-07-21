@@ -284,6 +284,21 @@ test("retained selected-month totals carry a visible incomplete or stale warning
   const staleHtml = render(stale);
   assert.match(staleHtml, /Data is stale\. Data-through is July 12\./);
   assert.match(staleHtml, /Materials sold · latest retained/);
+
+  const completeHistorical = buildModel();
+  completeHistorical.totals = {
+    ...completeHistorical.totals,
+    elapsedDays: completeHistorical.totals.daysInMonth,
+  };
+  completeHistorical.freshness = {
+    ...completeHistorical.freshness,
+    state: "partial",
+    label: "Partial source coverage",
+    detail: "The current hot window is still refreshing.",
+  };
+  const completeHistoricalHtml = render(completeHistorical);
+  assert.doesNotMatch(completeHistoricalHtml, /Coverage warning|latest retained/);
+  assert.match(completeHistoricalHtml, /Materials sold/);
 });
 
 test("pace helpers: even-with band, whole-K text, and CSV escapes the ranked list", () => {
