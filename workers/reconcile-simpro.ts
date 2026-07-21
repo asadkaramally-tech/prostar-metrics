@@ -42,6 +42,7 @@ export async function runReconciliationWorker(
     periodStart: args.periodStart,
     requestBudget: args.requestBudget,
     onlyIfNeeded: !args.force,
+    restartDirectTraversal: args.force,
   });
 
   return {
