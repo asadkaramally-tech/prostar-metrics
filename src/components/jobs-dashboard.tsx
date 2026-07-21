@@ -74,11 +74,8 @@ import type { JobDashboardReadModel } from "@/lib/store/job-dashboard-read-model
 const ACC = "#5b63d3"; /* var(--acc) */
 const SERIES2 = "#0e9aae"; /* var(--series-2) */
 
-/** Example net-margin target (approved decision C6): every mention is
- *  labelled "(example)" — the real target number is Asad's to set. */
-export const EXAMPLE_NET_MARGIN_TARGET_PCT = 50;
-
 const CLIENT_PAGE_SIZE = 10;
+const FIRST_AVAILABLE_MONTH = "2023-01";
 
 export type JobsDashboardProps = {
   model: JobDashboardReadModel;
@@ -260,8 +257,12 @@ function JobsBand({ model }: { model: JobDashboardReadModel }) {
   const lyName = seriesLabel(shiftMonthKey(model.selectedMonth, -12));
   const priorName = seriesLabel(shiftMonthKey(model.selectedMonth, -1));
   const priorShort = monthShortName(shiftMonthKey(model.selectedMonth, -1));
+  const priorYearAvailable = shiftMonthKey(model.selectedMonth, -12) >= FIRST_AVAILABLE_MONTH;
+  const priorMonthAvailable = shiftMonthKey(model.selectedMonth, -1) >= FIRST_AVAILABLE_MONTH;
   const comparison = Object.fromEntries(model.comparisons.map((row) => [row.key, row]));
   const netRow = comparison.netProfit;
+  const netPriorYear = priorYearAvailable ? netRow?.priorYear ?? null : null;
+  const netPriorMonth = priorMonthAvailable ? netRow?.priorMonth ?? null : null;
   const netSupported = coverage.netProfitSupported > 0;
   const revSupported = coverage.sellValueSupported > 0;
   const grossSupported = coverage.grossProfitSupported > 0;
@@ -285,17 +286,14 @@ function JobsBand({ model }: { model: JobDashboardReadModel }) {
           labelDef={netDef}
           pills={
             <>
-              {deltaPill(netRow?.priorYearDelta, lyName, lyDef)}
-              {deltaPill(netRow?.priorMonthDelta, priorShort, priorDef)}
+              {deltaPill(priorYearAvailable ? netRow?.priorYearDelta : null, lyName, lyDef)}
+              {deltaPill(priorMonthAvailable ? netRow?.priorMonthDelta : null, priorShort, priorDef)}
             </>
           }
           value={netSupported ? fmt.moneyFull(selected.netProfitActual) : "N/A"}
           sub={
             netMargin != null ? (
-              <>
-                {netMargin.toFixed(1)}% net margin · {Math.abs(EXAMPLE_NET_MARGIN_TARGET_PCT - netMargin).toFixed(1)} pts{" "}
-                {netMargin < EXAMPLE_NET_MARGIN_TARGET_PCT ? "below" : "above"} {EXAMPLE_NET_MARGIN_TARGET_PCT}% target (example)
-              </>
+              <>{netMargin.toFixed(1)}% net margin</>
             ) : (
               "net margin unavailable"
             )
@@ -304,12 +302,12 @@ function JobsBand({ model }: { model: JobDashboardReadModel }) {
             netSupported
               ? {
                   value: selected.netProfitActual,
-                  m1: { label: `${lyName} · ${provisional ? `d${day}` : "full"}`, value: netRow?.priorYear ?? null, ghost: "no run" },
-                  m2: { label: `${priorName} · full`, value: netRow?.priorMonth ?? null, ghost: "no run" },
+                  m1: { label: `${lyName} · ${provisional ? `d${day}` : "full"}`, value: netPriorYear, ghost: priorYearAvailable ? "no run" : "unavailable" },
+                  m2: { label: `${priorName} · full`, value: netPriorMonth, ghost: priorMonthAvailable ? "no run" : "unavailable" },
                   fmt: moneyK,
                   ariaLabel: `Net profit ${provisional ? "month to date" : monthLong} ${moneyK(selected.netProfitActual)}${
-                    netRow?.priorYear != null ? `; ticks mark ${lyName} ${moneyK(netRow.priorYear)}` : ""
-                  }${netRow?.priorMonth != null ? ` and full ${priorName} ${moneyK(netRow.priorMonth)}` : ""}`,
+                    netPriorYear != null ? `; ticks mark ${lyName} ${moneyK(netPriorYear)}` : ""
+                  }${netPriorMonth != null ? ` and full ${priorName} ${moneyK(netPriorMonth)}` : ""}`,
                 }
               : null
           }
@@ -318,7 +316,7 @@ function JobsBand({ model }: { model: JobDashboardReadModel }) {
           <KpiTile
             label="Gross profit"
             labelDef={`Σ Simpro GrossProfit Actual across the ${monthLong} completed cohort. Margin = gross profit ÷ revenue.`}
-            pills={deltaPill(comparison.grossProfit?.priorYearDelta, lyName, lyDef)}
+            pills={deltaPill(priorYearAvailable ? comparison.grossProfit?.priorYearDelta : null, lyName, lyDef)}
             value={grossSupported ? fmt.moneyFull(selected.grossProfitActual) : "N/A"}
             sub={selected.grossMarginActual != null ? `${selected.grossMarginActual.toFixed(1)}% margin` : "gross margin unavailable"}
           />
@@ -341,7 +339,7 @@ function JobsBand({ model }: { model: JobDashboardReadModel }) {
           <KpiTile
             label="Revenue"
             labelDef={`Σ Simpro job Total (ex-tax) across the ${monthLong} completed cohort — CompletedDate in ${monthLong}, stage Complete or Archived.`}
-            pills={deltaPill(comparison.sellValue?.priorYearDelta, lyName, lyDef)}
+            pills={deltaPill(priorYearAvailable ? comparison.sellValue?.priorYearDelta : null, lyName, lyDef)}
             value={revSupported ? fmt.moneyFull(selected.totalSellValue) : "N/A"}
             sub={
               <>

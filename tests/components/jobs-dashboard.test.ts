@@ -230,18 +230,39 @@ function render(model: JobDashboardReadModel, showStates = false): string {
 
 /* ── Row 1: KPI band ───────────────────────────────────── */
 
-test("primary card leads with net profit, labeled pills, target sub and one bullet bar", () => {
+test("primary card leads with net profit, labeled pills, honest margin and one bullet bar", () => {
   const html = render(buildModel());
   assert.match(html, /class="kpi primary" href="#trend"/);
   // Headline: Σ NetProfit Actual = 35000+2000-1000+500-2000-800+100.
   assert.match(html, /<span class="val">\$33,800<\/span>/);
-  assert.match(html, /46\.8% net margin · 3\.2 pts below 50% target \(example\)/);
+  assert.match(html, /46\.8% net margin/);
+  assert.doesNotMatch(html, /target \(example\)/);
   // Labeled pills — every comparison named.
   assert.match(html, /↑ 576\.0% vs Jun ’25/);
   assert.match(html, /↑ 322\.5% vs May/);
   // Bullet: ticks keyed to prior year and prior month with honest windows.
   assert.match(html, /Jun ’25 · full <b>\$5\.0K<\/b>/);
   assert.match(html, /May ’26 · full <b>\$8\.0K<\/b>/);
+});
+
+test("first served month does not fabricate pre-history comparisons", () => {
+  const html = render(buildModel({
+    selectedMonth: "2023-01",
+    jobs: [{
+      jobId: 1,
+      jobNo: "J1",
+      name: "First served month",
+      completedDate: "2023-01-15",
+      stageName: "Complete",
+      sellValue: 1000,
+      grossProfitActual: 600,
+      netProfitActual: 400,
+      netMarginActual: 40,
+    }],
+  }));
+  assert.match(html, /Jan ’22 · full <b>unavailable<\/b>/);
+  assert.match(html, /Dec ’22 · full <b>unavailable<\/b>/);
+  assert.doesNotMatch(html, /vs Jan ’22|vs Dec/);
 });
 
 test("tiles chain revenue − expenses = gross and gross − overhead = net, from the payload", () => {
