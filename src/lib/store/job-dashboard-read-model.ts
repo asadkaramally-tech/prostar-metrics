@@ -337,11 +337,33 @@ function paginateDrilldown(
   const offset = (page - 1) * pageSize;
   return {
     ...model,
+    // Prior-period detail has already been reduced into `comparisons`,
+    // `trends`, and the trailing aggregates. Keeping hundreds of historical
+    // job rows here made the initial Jobs response ~1.6 MB for no UI benefit.
+    priorMonth: compactComparisonMonth(model.priorMonth),
+    priorYearSameDay: compactComparisonMonth(model.priorYearSameDay),
+    priorYearFull: compactComparisonMonth(model.priorYearFull),
     selected: {
       ...model.selected,
       records: totalRecords === undefined ? model.selected.records.slice(offset, offset + pageSize) : model.selected.records,
     },
     drilldownPagination: { page, pageSize, total, totalPages },
+  };
+}
+
+function compactComparisonMonth(month: JobMetricsDashboardReadModel["priorMonth"]): JobMetricsDashboardReadModel["priorMonth"] {
+  return {
+    ...month,
+    categoryRows: [],
+    costCenterRows: [],
+    jobSourceRows: [],
+    customerRows: [],
+    siteRows: [],
+    netMarginDistribution: [],
+    lossRecords: [],
+    quoteLinkedLabor: { ...month.quoteLinkedLabor, perJob: [] },
+    directServiceFollowUps: { ...month.directServiceFollowUps, links: [] },
+    records: [],
   };
 }
 
