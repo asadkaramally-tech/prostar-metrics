@@ -76,8 +76,10 @@ After the job exists once, this ordering issue never recurs.
    allow only the old 76.170.194.168), which is why local DB work stalled. If
    deploying from Azure-hosted compute, the existing `allow-azure-services`
    rule already covers it.
-4. **pg_dump on PATH** (`brew install libpq` on macOS, then prepend
-   `/opt/homebrew/opt/libpq/bin` to PATH; on Linux install postgresql-client).
+4. **PostgreSQL 17 pg_dump and pg_restore on PATH** (`brew install postgresql@17`
+   on macOS, then prepend `/opt/homebrew/opt/postgresql@17/bin` to PATH; on
+   Linux install the PostgreSQL 17 client). The compatibility gate intentionally
+   rejects other major versions.
 
 ## The deploy command
 

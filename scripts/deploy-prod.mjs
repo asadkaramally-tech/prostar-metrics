@@ -60,6 +60,8 @@ const migrationEnvironmentNames = new Set([
 ]);
 const postgresClientBinCandidates = Object.freeze([
   "/Applications/Postgres.app/Contents/Versions/17/bin",
+  "/opt/homebrew/opt/postgresql@17/bin",
+  "/usr/local/opt/postgresql@17/bin",
   "/opt/homebrew/opt/libpq/bin",
   "/usr/local/opt/libpq/bin",
 ]);

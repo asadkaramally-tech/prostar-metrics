@@ -167,6 +167,13 @@ test("prior-image compatibility gate supports bounded production timeout overrid
   assert.match(source, /MIGRATION_COMPATIBILITY_QUERY_TIMEOUT_MS/);
 });
 
+test("production deploy discovers the pinned PostgreSQL 17 Homebrew client before unversioned libpq", () => {
+  const versioned = source.indexOf("/opt/homebrew/opt/postgresql@17/bin");
+  const unversioned = source.indexOf("/opt/homebrew/opt/libpq/bin");
+  assert.ok(versioned >= 0);
+  assert.ok(unversioned > versioned);
+});
+
 test("temporary migration firewall reconciles ambiguous creation and proves final absence", async () => {
   const events = [];
   let present = false;
