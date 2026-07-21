@@ -248,7 +248,7 @@ function listTemporaryMigrationFirewallRules() {
   const output = az([
     "postgres", "flexible-server", "firewall-rule", "list",
     "--resource-group", RESOURCE_GROUP,
-    "--name", POSTGRES_SERVER,
+    "--server-name", POSTGRES_SERVER,
     "--output", "json",
   ], { capture: true });
   const rules = JSON.parse(output);
@@ -272,8 +272,8 @@ async function removeTemporaryMigrationFirewallRule() {
   az([
     "postgres", "flexible-server", "firewall-rule", "delete",
     "--resource-group", RESOURCE_GROUP,
-    "--name", POSTGRES_SERVER,
-    "--rule-name", TEMP_FIREWALL_RULE,
+    "--server-name", POSTGRES_SERVER,
+    "--name", TEMP_FIREWALL_RULE,
     "--yes",
     "--output", "none",
   ]);
@@ -1612,9 +1612,9 @@ async function executeProductionRelease(keyVaultContract, postgresTarget, buildS
       "create",
       "--resource-group",
       RESOURCE_GROUP,
-      "--name",
+      "--server-name",
       POSTGRES_SERVER,
-      "--rule-name",
+      "--name",
       TEMP_FIREWALL_RULE,
       "--start-ip-address",
       publicIp,

@@ -440,8 +440,8 @@ async function main() {
           runAz([
             "postgres", "flexible-server", "firewall-rule", "create",
             "--resource-group", RESOURCE_GROUP,
-            "--name", args.temporaryServerName,
-            "--rule-name", TEMP_FIREWALL_RULE,
+            "--server-name", args.temporaryServerName,
+            "--name", TEMP_FIREWALL_RULE,
             "--start-ip-address", args.callerIp,
             "--end-ip-address", args.callerIp,
           ], { output: "none" });
@@ -456,15 +456,15 @@ async function main() {
           const existingRule = runAzOrResourceNotFound([
             "postgres", "flexible-server", "firewall-rule", "show",
             "--resource-group", RESOURCE_GROUP,
-            "--name", args.temporaryServerName,
-            "--rule-name", TEMP_FIREWALL_RULE,
+            "--server-name", args.temporaryServerName,
+            "--name", TEMP_FIREWALL_RULE,
           ]);
           if (existingRule.found) {
             runAz([
               "postgres", "flexible-server", "firewall-rule", "delete",
               "--resource-group", RESOURCE_GROUP,
-              "--name", args.temporaryServerName,
-              "--rule-name", TEMP_FIREWALL_RULE,
+              "--server-name", args.temporaryServerName,
+              "--name", TEMP_FIREWALL_RULE,
               "--yes",
             ], { output: "none" });
           }

@@ -68,6 +68,13 @@ test("production ARM create uses its operation name for release identity without
   assert.match(source, /"--name",\s*params\.deploymentName/);
 });
 
+test("production firewall commands use current Azure CLI server and rule flags", () => {
+  assert.match(source, /"firewall-rule", "list"[\s\S]{0,120}"--server-name", POSTGRES_SERVER/);
+  assert.match(source, /"firewall-rule", "delete"[\s\S]{0,160}"--server-name", POSTGRES_SERVER[\s\S]{0,80}"--name", TEMP_FIREWALL_RULE/);
+  assert.match(source, /"firewall-rule",\s*"create"[\s\S]{0,220}"--server-name",\s*POSTGRES_SERVER[\s\S]{0,80}"--name",\s*TEMP_FIREWALL_RULE/);
+  assert.doesNotMatch(source, /"--rule-name"/);
+});
+
 test("production target convergence retries the exact app and 24-job state before accepting it", async () => {
   let calls = 0;
   const expected = { targets: [{ name: "ready" }] };

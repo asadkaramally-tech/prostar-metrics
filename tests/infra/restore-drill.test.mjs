@@ -143,9 +143,11 @@ test("restore writes the temporary target only and source network/config remains
   assert.match(restoreBlock, /"--source-server", source\.id/);
   assert.match(restoreBlock, /"--name", args\.temporaryServerName/);
   assert.doesNotMatch(restoreBlock, /--vnet|--subnet|--private-dns-zone/);
-  assert.match(addFirewallBlock, /"--name", args\.temporaryServerName/);
+  assert.match(addFirewallBlock, /"--server-name", args\.temporaryServerName/);
+  assert.match(addFirewallBlock, /"--name", TEMP_FIREWALL_RULE/);
   assert.doesNotMatch(addFirewallBlock, /SOURCE_SERVER_NAME|source\.id/);
-  assert.match(removeFirewallBlock, /"--name", args\.temporaryServerName/);
+  assert.match(removeFirewallBlock, /"--server-name", args\.temporaryServerName/);
+  assert.match(removeFirewallBlock, /"--name", TEMP_FIREWALL_RULE/);
   assert.doesNotMatch(removeFirewallBlock, /SOURCE_SERVER_NAME|source\.id/);
   assert.match(source, /await waitForCliDeletion\(args\.temporaryServerName\)/);
   assert.match(source, /await assertArmResourceAbsent\(temporaryServerUrl, cleanupArmToken\)/);
