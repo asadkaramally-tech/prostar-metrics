@@ -16,7 +16,7 @@
     "test:a11y": "npm run test:a11y:post-deploy-evidence",
     "test:a11y:post-deploy-evidence": "node scripts/check-release-evidence.mjs --post-deploy-suite=a11y",
     "test:backfill": "node --import tsx --test tests/backfill/*.test.ts",
-    "test:infra": "PROSTAR_EVIDENCE_GATE_CATEGORY=infra node --test --test-reporter=./scripts/evidence-node-test-reporter.mjs tests/infra/*.test.mjs",
+    "test:infra": "PROSTAR_EVIDENCE_GATE_CATEGORY=infra node --test --test-concurrency=1 --test-reporter=./scripts/evidence-node-test-reporter.mjs tests/infra/*.test.mjs",
     "test:evidence-gates": "node --test tests/evidence/release-gate-production-commands.test.mjs",
     "guard:no-mirror": "node scripts/no-mirror-guard.mjs",
     "phase0:check": "npm run plan:check && npm run reference:check && npm run guard:no-mirror && npm run test && npm run test:scripts && npm run test:infra",
