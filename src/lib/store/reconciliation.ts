@@ -431,10 +431,9 @@ async function reconcileQuotes(
     const dashboardSummary = dashboardQuoteSummary(dashboard);
     const metricsComparison = compareSummaries(source, metricsQuotes);
     const snapshotComparison = compareSummaries(source, quoteSnapshots);
-    // The source-coverage cohort is DateApproved ∪ DateIssued. The dashboard
-    // remains a DateApproved activity model, so compare it to that matching
-    // app-owned subset instead of treating DateIssued-only records as a
-    // reporting mismatch.
+    // The source-coverage cohort is DateApproved ∪ DateIssued. DateApproved is
+    // the quote-created date in Simpro; the sent-quotes dashboard is keyed by
+    // DateIssued, so compare it to that matching app-owned subset.
     const dashboardComparison = compareDashboard(quoteActivity, dashboardSummary);
     const status: "matched" | "mismatch" =
       metricsComparison.matched && snapshotComparison.matched && dashboardComparison.matched
@@ -449,7 +448,7 @@ async function reconcileQuotes(
       snapshotValue: metricsQuotes.totalValue,
       upstreamSampleValue: source.totalValue,
       detail: {
-        sourceBasis: "Simpro quotes in the deduplicated DateApproved/DateIssued daily union; detail Total ExTax preferred. Dashboard activity remains DateApproved-only.",
+        sourceBasis: "Simpro quotes in the deduplicated DateApproved/DateIssued daily union; detail Total ExTax preferred. Dashboard sent activity is DateIssued-only.",
         source,
         appOwned: {
           metricsQuotes,
@@ -920,7 +919,7 @@ async function getMetricsQuoteActivitySummary(period: Period, query: PostgresQue
   const result = await query<{ quote_id: string; total: string }>(
     `select quote_id::text, total::text
        from metrics.metrics_quotes
-      where date_approved between $1::date and $2::date
+      where date_issued between $1::date and $2::date
         and source_deleted_at is null
       order by quote_id`,
     [period.start, period.end],

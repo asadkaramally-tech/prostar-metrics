@@ -252,7 +252,7 @@ test("quote reconciliation traverses the DateApproved/DateIssued union and fetch
   }
 });
 
-test("DateIssued-only quotes satisfy source coverage without inflating the DateApproved dashboard cohort", async () => {
+test("DateIssued-only quotes satisfy source coverage and the sent-quotes dashboard cohort", async () => {
   const fixture = await databaseFixture();
   try {
     await fixture.db.exec(`
@@ -260,7 +260,7 @@ test("DateIssued-only quotes satisfy source coverage without inflating the DateA
       insert into metrics.quote_snapshots (quote_id, total_value, date_issued) values (7, 70, '2023-02-01');
       insert into metrics.dashboard_read_models (
         metric_family, period_grain, period_start, values_json, source_hash, rebuilt_at
-      ) values ('quotes', 'month', '2023-02-01', '{"quoteCount":0,"quoteValue":0}', 'issued-only', now());
+      ) values ('quotes', 'month', '2023-02-01', '{"quoteCount":1,"quoteValue":70}', 'issued-only', now());
     `);
     await seedQuoteNestedAuthority(fixture.db, 7);
 
@@ -367,8 +367,8 @@ test("exact missing IDs queue targeted repair before the same generation publish
   };
   try {
     await fixture.db.exec(`
-      insert into metrics.metrics_quotes (quote_id, total, date_approved) values (1, 10, '2023-02-01');
-      insert into metrics.quote_snapshots (quote_id, total_value, date_approved) values (1, 10, '2023-02-01');
+      insert into metrics.metrics_quotes (quote_id, total, date_issued, date_approved) values (1, 10, '2023-02-01', '2023-02-01');
+      insert into metrics.quote_snapshots (quote_id, total_value, date_issued, date_approved) values (1, 10, '2023-02-01', '2023-02-01');
       insert into metrics.dashboard_read_models (
         metric_family, period_grain, period_start, values_json, source_hash, rebuilt_at
       ) values ('quotes', 'month', '2023-02-01', '{"quoteCount":1,"quoteValue":10}', 'first', now());
@@ -388,8 +388,8 @@ test("exact missing IDs queue targeted repair before the same generation publish
     const generation = mismatch[0]?.generation;
 
     await fixture.db.exec(`
-      insert into metrics.metrics_quotes (quote_id, total, date_approved) values (2, 20, '2023-02-01');
-      insert into metrics.quote_snapshots (quote_id, total_value, date_approved) values (2, 20, '2023-02-01');
+      insert into metrics.metrics_quotes (quote_id, total, date_issued, date_approved) values (2, 20, '2023-02-01', '2023-02-01');
+      insert into metrics.quote_snapshots (quote_id, total_value, date_issued, date_approved) values (2, 20, '2023-02-01', '2023-02-01');
       update metrics.dashboard_read_models
          set values_json = '{"quoteCount":2,"quoteValue":30}', source_hash = 'repaired', rebuilt_at = now()
       where metric_family = 'quotes' and period_start = '2023-02-01';
@@ -454,8 +454,8 @@ test("a stale manifest generation aborts publication before any authoritative ch
   });
   try {
     await fixture.db.exec(`
-      insert into metrics.metrics_quotes (quote_id, total, date_approved) values (1, 10, '2023-02-01');
-      insert into metrics.quote_snapshots (quote_id, total_value, date_approved) values (1, 10, '2023-02-01');
+      insert into metrics.metrics_quotes (quote_id, total, date_issued, date_approved) values (1, 10, '2023-02-01', '2023-02-01');
+      insert into metrics.quote_snapshots (quote_id, total_value, date_issued, date_approved) values (1, 10, '2023-02-01', '2023-02-01');
       insert into metrics.dashboard_read_models (
         metric_family, period_grain, period_start, values_json, source_hash, rebuilt_at
       ) values ('quotes', 'month', '2023-02-01', '{"quoteCount":1,"quoteValue":10}', 'current', now());
@@ -523,8 +523,8 @@ test("quote comparison reads and publication share one transaction", async () =>
     });
   try {
     await fixture.db.exec(`
-      insert into metrics.metrics_quotes (quote_id, total, date_approved) values (1, 10, '2023-02-01');
-      insert into metrics.quote_snapshots (quote_id, total_value, date_approved) values (1, 10, '2023-02-01');
+      insert into metrics.metrics_quotes (quote_id, total, date_issued, date_approved) values (1, 10, '2023-02-01', '2023-02-01');
+      insert into metrics.quote_snapshots (quote_id, total_value, date_issued, date_approved) values (1, 10, '2023-02-01', '2023-02-01');
       insert into metrics.dashboard_read_models (
         metric_family, period_grain, period_start, values_json, source_hash, rebuilt_at
       ) values ('quotes', 'month', '2023-02-01', '{"quoteCount":1,"quoteValue":10}', 'current', now());
