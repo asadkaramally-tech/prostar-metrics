@@ -472,6 +472,15 @@ var commonEnv = concat(sharedEnv, [
   }
 ])
 
+// Rollup workers need a second connection so their lease heartbeats are not
+// starved while a long monthly rebuild occupies the primary connection.
+var rollupEnv = concat(sharedEnv, [
+  {
+    name: 'POSTGRES_POOL_MAX'
+    value: '2'
+  }
+])
+
 var webEnv = concat(sharedEnv, [
   {
     name: 'POSTGRES_POOL_MAX'
@@ -892,7 +901,7 @@ resource scheduledSourceIngestionJobs 'Microsoft.App/jobs@2023-05-01' = [for job
             'npm'
           ]
           args: job.args
-          env: commonEnv
+          env: (job.name == 'job-psm-rollup-drain' || job.name == 'job-psm-commissions-nightly') ? rollupEnv : commonEnv
           resources: {
             cpu: json(jobCpu)
             memory: jobMemory
@@ -1051,7 +1060,7 @@ resource rollupRebuildJob 'Microsoft.App/jobs@2023-05-01' = {
             'run'
             'rollups:worker'
           ]
-          env: commonEnv
+          env: rollupEnv
           resources: {
             cpu: json(jobCpu)
             memory: jobMemory

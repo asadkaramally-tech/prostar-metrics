@@ -57,7 +57,12 @@ test("web and worker database pools use explicit bounded limits", () => {
   assert.match(
     metricsBicep,
     /var commonEnv = concat\(sharedEnv, \[\s*{\s*name: 'POSTGRES_POOL_MAX'\s*value: '1'\s*}\s*]\)/,
-    "worker containers must be capped at one PostgreSQL connection",
+    "ordinary worker containers must be capped at one PostgreSQL connection",
+  );
+  assert.match(
+    metricsBicep,
+    /var rollupEnv = concat\(sharedEnv, \[\s*{\s*name: 'POSTGRES_POOL_MAX'\s*value: '2'\s*}\s*]\)/,
+    "rollup workers need a dedicated second connection for lease heartbeats",
   );
   assert.match(
     metricsBicep,
