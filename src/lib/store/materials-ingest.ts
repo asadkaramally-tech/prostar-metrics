@@ -22,6 +22,26 @@ export type SourceChangeCursor = {
 };
 
 /**
+ * A closed month needs one authoritative walk after the next month starts.
+ * The scheduled incremental worker uses this as an idempotency check: failed
+ * or missing closes retry, while a successful close is not repeated.
+ */
+export async function needsAuthoritativeMaterialsMonthWalk(
+  periodStart: string,
+  nextPeriodStart: string,
+  query: MaterialsIngestQuery = queryPostgres,
+): Promise<boolean> {
+  const result = await query<{ status: "complete" | "failed"; closed_after_boundary: boolean }>(
+    `select status, walked_at >= $2::date as closed_after_boundary
+       from metrics.materials_month_walks
+      where period_start = $1::date`,
+    [periodStart, nextPeriodStart],
+  );
+  const row = result.rows[0];
+  return !row || row.status !== "complete" || !row.closed_after_boundary;
+}
+
+/**
  * Jobs from the durable job-log mirror that can affect an already-mirrored,
  * older materials job.  We deliberately require an existing materials row:
  * a job-log event alone cannot prove that an older job was completed and in

@@ -36,7 +36,7 @@ const model: TodayDashboardReadModel = {
     avgJobValue: 261425 / 101,
     quotesSent: 14,
     quotesSentValue: 91636,
-    quotesSentBasis: "DateApproved (the Simpro send event) assigns quotes-sent activity to the month.",
+    quotesSentBasis: "DateIssued assigns quotes-sent activity to the month.",
     poolSoFar: 1307.125,
     poolSoFarCents: 130713,
     poolPercent: 0.5,

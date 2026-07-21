@@ -18,7 +18,7 @@ export const MTD_CAPACITY_RULE =
   "Flat capacity: Monday-Friday workdays elapsed in the month multiplied by 8 productive hours and the effective roster size. Observed holidays are not deducted.";
 
 export const QUOTES_SENT_BASIS =
-  "DateApproved (the Simpro send event) assigns quotes-sent activity to the month.";
+  "DateIssued assigns quotes-sent activity to the month.";
 
 export type TodayJobInput = {
   jobId: string | number;
@@ -34,7 +34,7 @@ export type TodayJobInput = {
 
 export type TodayQuoteInput = {
   quoteId: string | number;
-  dateApproved?: string | null;
+  dateIssued?: string | null;
   totalValue: number | null;
   sourceDeletedAt?: string | null;
 };
@@ -152,9 +152,9 @@ export function buildTodayReadModel(params: {
   }
 
   const quotes = params.quotesSent.filter((quote) => !quote.sourceDeletedAt
-    && Boolean(quote.dateApproved)
-    && quote.dateApproved!.slice(0, 7) === month
-    && dayOfMonth(quote.dateApproved!) <= elapsedDays);
+    && Boolean(quote.dateIssued)
+    && quote.dateIssued!.slice(0, 7) === month
+    && dayOfMonth(quote.dateIssued!) <= elapsedDays);
   const teamRecordedHours = sum(params.timesheets
     .filter((row) => !row.sourceDeletedAt
       && Boolean(row.workDate)

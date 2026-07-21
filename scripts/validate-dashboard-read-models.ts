@@ -39,7 +39,7 @@ export type QuoteSourceAggregate = {
   acceptance_rate_by_value: number;
   average_accepted_deal: number;
   override_count: number;
-  excluded_without_date_approved: number;
+  excluded_without_date_issued: number;
   tiers: Record<QuoteTier, QuoteTierAggregate>;
   acceptance_paths: Record<QuoteAcceptancePath, number>;
   acceptance_path_values: Record<QuoteAcceptancePath, number>;
@@ -66,6 +66,7 @@ export type QuoteSourceClassification = {
 
 export type QuoteSourceRow = {
   quote_id: string;
+  date_issued: string | null;
   date_approved: string | null;
   total: string | number;
   status_name: string | null;
@@ -511,6 +512,7 @@ async function readCurrentMobileEvidence(client: pg.Client, periodStart: string)
 export async function readQuoteSourceRows(client: pg.Client) {
   type QuoteRelationshipSource = {
     quote_id: string;
+    date_issued: string | null;
     date_approved: string | null;
     total: string;
     status_name: string | null;
@@ -532,7 +534,7 @@ export async function readQuoteSourceRows(client: pg.Client) {
     inverse_payload: unknown;
   };
   const quoteResult = await client.query<QuoteRelationshipSource>(
-    `select q.quote_id::text, q.date_approved::text, q.total::text, q.status_name,
+    `select q.quote_id::text, q.date_issued::text, q.date_approved::text, q.total::text, q.status_name,
             authoritative.id::text as direct_source_snapshot_id,
             authoritative.payload as direct_payload,
             q.linked_job_id::text as canonical_linked_job_id,
@@ -558,8 +560,8 @@ export async function readQuoteSourceRows(client: pg.Client) {
           order by (o.outcome = 'excluded') desc, o.revision desc, o.created_at desc, o.id desc limit 1
        ) active_override on true
       where q.source_deleted_at is null
-        and (q.date_approved >= date '2023-01-01' or q.date_approved is null)
-      order by q.date_approved, q.quote_id`,
+        and q.date_issued >= date '2023-01-01'
+      order by q.date_issued, q.quote_id`,
   );
   const jobResult = await client.query<JobRelationshipSource>(
     `select job.job_id::text, job.converted_from_type, job.converted_from_id::text,
@@ -631,6 +633,7 @@ export async function readQuoteSourceRows(client: pg.Client) {
     const inverseJobIds = sortedUnique(expectedInverse.get(quote.quote_id) ?? []);
     return {
       quote_id: quote.quote_id,
+      date_issued: quote.date_issued,
       date_approved: quote.date_approved,
       total: quote.total,
       status_name: quote.status_name,
@@ -654,12 +657,12 @@ export async function readQuoteSourceRows(client: pg.Client) {
 }
 
 export function aggregateQuoteSources(rows: QuoteSourceRow[], periods?: string[]) {
-  const periodStarts = periods ?? [...new Set(rows.flatMap((row) => row.date_approved ? [`${row.date_approved.slice(0, 7)}-01`] : []))].sort();
-  const missingApprovedDate = rows.filter((row) => !row.date_approved).length;
+  const periodStarts = periods ?? [...new Set(rows.flatMap((row) => row.date_issued ? [`${row.date_issued.slice(0, 7)}-01`] : []))].sort();
+  const missingIssuedDate = rows.filter((row) => !row.date_issued).length;
   const byPeriod = new Map(periodStarts.map((periodStart) => [periodStart, emptyQuoteSource(periodStart)]));
   for (const row of rows) {
-    if (!row.date_approved) continue;
-    const periodStart = `${row.date_approved.slice(0, 7)}-01`;
+    if (!row.date_issued) continue;
+    const periodStart = `${row.date_issued.slice(0, 7)}-01`;
     const aggregate = byPeriod.get(periodStart);
     if (!aggregate) continue;
     const totalValue = numeric(row.total);
@@ -698,7 +701,7 @@ export function aggregateQuoteSources(rows: QuoteSourceRow[], periods?: string[]
     }
   }
   for (const aggregate of byPeriod.values()) {
-    aggregate.excluded_without_date_approved = missingApprovedDate;
+    aggregate.excluded_without_date_issued = missingIssuedDate;
     aggregate.acceptance_rate_by_count = aggregate.quote_count > 0 ? aggregate.accepted_count / aggregate.quote_count * 100 : 0;
     aggregate.acceptance_rate_by_value = numeric(aggregate.quote_value) > 0 ? numeric(aggregate.accepted_value) / numeric(aggregate.quote_value) * 100 : 0;
     aggregate.average_accepted_deal = aggregate.accepted_count > 0 ? numeric(aggregate.accepted_value) / aggregate.accepted_count : 0;
@@ -1135,7 +1138,7 @@ export function validateQuotes(row: ReadModelRow, expected: QuoteSourceAggregate
   compare(row, "acceptanceRateByValue", source.acceptance_rate_by_value, mismatches);
   compare(row, "averageAcceptedDeal", source.average_accepted_deal, mismatches);
   compare(row, "overrideCount", source.override_count, mismatches);
-  compare(row, "excludedWithoutDateApproved", source.excluded_without_date_approved, mismatches);
+  compare(row, "excludedWithoutDateIssued", source.excluded_without_date_issued, mismatches);
   for (const path of ["accepted_online_and_converted", "accepted_online_only", "converted_only", "not_accepted", "excluded"] as const) {
     compare(row, `acceptancePaths.${path}`, source.acceptance_paths[path], mismatches);
   }
@@ -1973,7 +1976,7 @@ function emptyQuoteSource(periodStart: string): QuoteSourceAggregate {
     period_start: periodStart, source_records: 0, quote_count: 0, quote_value: 0,
     accepted_count: 0, accepted_value: 0, not_accepted_count: 0, not_accepted_value: 0,
     excluded_count: 0, acceptance_rate_by_count: 0, acceptance_rate_by_value: 0,
-    average_accepted_deal: 0, override_count: 0, excluded_without_date_approved: 0,
+    average_accepted_deal: 0, override_count: 0, excluded_without_date_issued: 0,
     tiers: Object.fromEntries(QUOTE_TIERS.map((name) => [name, tier()])) as Record<QuoteTier, QuoteTierAggregate>,
     acceptance_paths: { accepted_online_and_converted: 0, accepted_online_only: 0, converted_only: 0, not_accepted: 0, excluded: 0 },
     acceptance_path_values: { accepted_online_and_converted: 0, accepted_online_only: 0, converted_only: 0, not_accepted: 0, excluded: 0 },

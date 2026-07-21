@@ -29,6 +29,10 @@ import {
 import type { RollupScope } from "@/lib/store/rollups";
 import { getIssuedQuoteInputs, getJobMetricInputs, getJobReconciliations } from "@/lib/store/job-dashboard-read-model";
 import { getTechnicianPerformanceInputs } from "@/lib/store/technician-read-model-inputs";
+import {
+  assertCurrentTechnicianReadModel,
+  assertServeableTechnicianReadModel,
+} from "@/lib/store/technician-read-model-contract";
 
 export type QuoteDashboardReadModelPayload = QuoteMonthlyReadModel & {
   dashboard: QuoteMetricsReadModel;
@@ -278,6 +282,9 @@ async function publishReadModelForJob(
   payload: ReadModelPayload,
   query: RollupRebuildQuery,
 ): Promise<void> {
+  if (job.metric_family === "technicians") {
+    assertCurrentTechnicianReadModel(payload, `${job.metric_family}/${job.period_start}`);
+  }
   const sourceHash = readModelSourceHash(payload);
   const published = await query<{ metric_family: string }>(
     `insert into metrics.dashboard_read_models (
@@ -501,7 +508,11 @@ export async function getLatestReadModelPayload(
     [scope, periodStart ?? null, upperBound, compactTechnicianDetails],
   );
 
-  return result.rows[0] ?? null;
+  const row = result.rows[0] ?? null;
+  if (row && scope === "technicians") {
+    assertServeableTechnicianReadModel(row.values_json, `${scope}/${row.period_start}`);
+  }
+  return row;
 }
 
 function currentMonthStart() {
@@ -639,7 +650,7 @@ export async function getQuoteSnapshots(
         order by o.created_at desc, o.id desc limit 1
      ) excluded_override on true
      where q.source_deleted_at is null
-       and (q.date_approved between $1::date and $2::date or q.date_approved is null)`,
+       and q.date_issued between $1::date and $2::date`,
     [periodStart, periodEnd],
   );
 

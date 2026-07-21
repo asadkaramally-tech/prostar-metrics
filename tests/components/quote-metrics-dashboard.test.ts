@@ -96,7 +96,7 @@ const queueRows: QuoteFollowUpQueue["rows"] = [
 ];
 
 const queue: QuoteFollowUpQueue = {
-  scope: "2026-06 cohort: every non-excluded DateApproved quote without acceptance evidence, oldest first.",
+  scope: "2026-06 cohort: every non-excluded DateIssued quote without acceptance evidence, oldest first.",
   asOf: "2026-07-15",
   totalCount: 146,
   totalValue: 1963611,
@@ -210,8 +210,8 @@ test("2x2 tiles carry acceptance rate, sent, value sent and avg deal — all pil
   assert.match(html, /↑ 33\.7% vs Jun ’25/);
   // Band footnote defines the comparison windows (full month here).
   assert.match(html, /All vs-comparisons are full-month\./);
-  // DateApproved methodology survives as a tile tooltip.
-  assert.match(html, /DateApproved sets the month only — it is not acceptance evidence\./);
+  // DateIssued methodology survives as a tile tooltip.
+  assert.match(html, /DateIssued sets the month only — it is not acceptance evidence\./);
 });
 
 test("partial months day-align the band note and the prior-year tick label", () => {
@@ -453,7 +453,7 @@ test("footline is the approved single sentence", () => {
   const html = render();
   assert.match(
     html,
-    /Source: Simpro quotes · month assigned by DateApproved · acceptance requires verified online acceptance or an exact converted job/,
+    /Source: Simpro quotes · month assigned by DateIssued · acceptance requires verified online acceptance or an exact converted job/,
   );
 });
 

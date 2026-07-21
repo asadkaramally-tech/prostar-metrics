@@ -21,7 +21,7 @@ export function buildMaterialsCsv(items: MaterialsItemRow[], priorShort: string)
         row.partNo ?? "",
         row.category,
         row.qty,
-        row.priorMonthQty,
+        row.priorMonthQty ?? "",
         qtyChangeText(row.qty, row.priorMonthQty),
         row.unitSell ?? "",
         row.extended,
@@ -39,7 +39,8 @@ export function materialsCsvFilename(monthKey: string): string {
   return `materials-${monthKey}.csv`;
 }
 
-function qtyChangeText(qty: number, priorQty: number): string {
+function qtyChangeText(qty: number, priorQty: number | null): string {
+  if (priorQty === null) return "";
   if (priorQty === 0 && qty > 0) return "new";
   const diff = Math.round((qty - priorQty) * 1000) / 1000;
   if (diff === 0) return "0";

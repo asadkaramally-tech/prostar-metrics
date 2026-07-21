@@ -221,6 +221,28 @@ test("missing prior walks ghost their ticks instead of inventing zeros", () => {
   assert.match(html, /Jun ’26 · full/);
 });
 
+test("missing prior-month coverage renders unavailable quantities and deltas, never zero or new", () => {
+  const model = buildModel({
+    priorMonthLines: [],
+    coverage: {
+      selectedMonth: coverage("2026-07-01"),
+      priorMonth: coverage("2026-06-01", "missing"),
+      priorYearMonth: coverage("2025-07-01"),
+    },
+  });
+  const html = render(model);
+
+  assert.equal(model.items[0]?.priorMonthQty, null);
+  assert.deepEqual(qtyDelta(model.items[0]!.qty, model.items[0]!.priorMonthQty), { kind: "unavailable", text: "—" });
+  assert.doesNotMatch(html, />new</);
+  assert.match(html, /Jun qty<\/th>/);
+  assert.match(html, /Jun comparison unavailable/);
+  assert.match(html, /—/);
+
+  const csv = buildMaterialsCsv(model.items, "Jun");
+  assert.match(csv, /Cupronickel Heat Exchanger,,Special order \/ non-stock,8,,,6670,53360,1,901/);
+});
+
 test("empty months render a truthful coverage state, not a zero dashboard", () => {
   const missing = buildModel({
     selectedLines: [],

@@ -37,8 +37,8 @@ The existing 05:30 UTC current-month reconciliation and ten-minute rollup drain 
 
 - Job: `job-psm-materials`.
 - Trigger: `40 1,7,13,19 * * *` UTC (four walks a day).
-- Required hook: the `main` entrypoint of `workers/ingest-materials.ts` with `--mode incremental --hot-window-days 7 --request-limit 8000`.
-- Required behavior: discover only jobs completed in the most recent seven Pacific business dates, then refresh older jobs only when the complete, gap-free `job_logs` watermark names an already-mirrored job through `metrics.source_change_events`. It replaces each selected job's mirrored lines atomically and refreshes the persistent `metrics.catalog_groups` cache, then rebuilds affected `materials` read models. It does **not** seal any month or delete jobs absent from the seven-day discovery window. `/materials` continues to serve `dashboard_read_models` without request-time Simpro traffic.
+- Required hook: the `main` entrypoint of `workers/ingest-materials.ts` with `--mode incremental --hot-window-days 7 --request-limit 8000 --auto-close-prior-month`.
+- Required behavior: discover only jobs completed in the most recent seven Pacific business dates, then refresh older jobs only when the complete, gap-free `job_logs` watermark names an already-mirrored job through `metrics.source_change_events`. It replaces each selected job's mirrored lines atomically and refreshes the persistent `metrics.catalog_groups` cache, then rebuilds affected `materials` read models. Once per month, the same scheduled job authoritatively walks the just-closed prior month; a database boundary check makes successful closes idempotent and retries missing or failed closes on the next scheduled run. Incremental passes never delete jobs absent from the seven-day discovery window. `/materials` continues to serve `dashboard_read_models` without request-time Simpro traffic.
 
 ### Materials full-month reconciliation
 

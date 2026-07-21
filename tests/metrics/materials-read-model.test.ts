@@ -192,7 +192,22 @@ test("incomplete or missing walks surface loud warnings", () => {
   }));
   assert.equal(model.warnings.length, 2);
   assert.match(model.warnings[0], /2026-07 materials walk is failed/);
-  assert.match(model.warnings[1], /No prior-year materials walk/);
+  assert.match(model.warnings[1], /prior-year materials walk is missing/);
+  assert.match(model.warnings[1], /comparison is unavailable/);
+});
+
+test("a missing prior-month walk stays unavailable instead of becoming a real zero", () => {
+  const model = buildMaterialsReadModel(buildParams({
+    selectedLines: [line({ catalogId: 42, qty: 3 })],
+    coverage: {
+      selectedMonth: coverage("2026-07-01"),
+      priorMonth: coverage("2026-06-01", { status: "missing", walkedAt: null, jobCount: 0, lineCount: 0 }),
+      priorYearMonth: coverage("2025-07-01"),
+    },
+  }));
+
+  assert.equal(model.items[0]?.priorMonthQty, null);
+  assert.match(model.warnings.join("\n"), /prior-month materials walk is missing; item quantities and changes are unavailable/);
 });
 
 test("period helpers normalize and step months across year boundaries", () => {

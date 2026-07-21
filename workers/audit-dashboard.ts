@@ -75,14 +75,14 @@ async function getJobIds(args: Args) {
 
 async function getQuotesByDay(args: Args) {
   const result = await queryPostgres<{ day: string; count: number; total: string }>(
-    `select date_approved::text as day,
+    `select date_issued::text as day,
             count(*)::int as count,
             round(sum(total)::numeric, 2)::text as total
        from metrics.metrics_quotes
-      where date_approved between $1::date and $2::date
+      where date_issued between $1::date and $2::date
         and source_deleted_at is null
-      group by date_approved
-      order by date_approved`,
+      group by date_issued
+      order by date_issued`,
     [args.periodStart, args.periodEnd],
   );
   return result.rows;
@@ -92,7 +92,7 @@ async function getQuoteIds(args: Args) {
   const result = await queryPostgres<{ quote_id: string }>(
     `select quote_id::text
        from metrics.metrics_quotes
-      where date_approved between $1::date and $2::date
+      where date_issued between $1::date and $2::date
         and source_deleted_at is null
       order by quote_id`,
     [args.periodStart, args.periodEnd],

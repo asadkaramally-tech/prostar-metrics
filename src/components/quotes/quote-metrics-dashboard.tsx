@@ -86,7 +86,7 @@ export function QuoteMetricsDashboard({ model, showStates, initialTrendVolume = 
         </StateMini>
       </StatesStrip>
       <div className="footline">
-        Source: Simpro quotes · month assigned by DateApproved · acceptance requires verified online acceptance or an exact converted job
+        Source: Simpro quotes · month assigned by DateIssued · acceptance requires verified online acceptance or an exact converted job
       </div>
     </DefTooltipProvider>
   );
@@ -218,7 +218,7 @@ function QuotesBand({ model, cur }: { model: QuoteMetricsReadModel; cur: QuoteMo
         <KpiTiles>
           <KpiTile
             label="Acceptance rate"
-            labelDef={`Accepted ÷ (accepted + not accepted) among non-excluded quotes whose DateApproved falls in ${long}.`}
+            labelDef={`Accepted ÷ (accepted + not accepted) among non-excluded quotes whose DateIssued falls in ${long}.`}
             pills={
               <>
                 {rateDelta !== null && ly
@@ -231,7 +231,7 @@ function QuotesBand({ model, cur }: { model: QuoteMetricsReadModel; cur: QuoteMo
           />
           <KpiTile
             label="Quotes sent"
-            labelDef={`Count of non-excluded quotes with DateApproved in ${long}. DateApproved sets the month only — it is not acceptance evidence.`}
+            labelDef={`Count of non-excluded quotes with DateIssued in ${long}. DateIssued sets the month only — it is not acceptance evidence.`}
             pills={pctPill(cur.quoteCount, ly?.quoteCount ?? null, lyName, lyDef)}
             value={fmt.n(cur.quoteCount)}
           />
@@ -521,7 +521,7 @@ export function QuoteDrawerDetail({ row }: { row: QuoteFollowUpQueueRow }) {
         <KVCell label="Value" value={fmt.moneyFull(row.value)} />
         <KVCell
           label="Sent"
-          def="Simpro DateApproved — the internal approve-and-issue date; it also assigns the quote’s reporting month."
+          def="Simpro DateIssued — the quote issue date that assigns the reporting month."
           value={shortDateYear(row.sentDate)}
           valueStyle={{ fontSize: 14 }}
         />

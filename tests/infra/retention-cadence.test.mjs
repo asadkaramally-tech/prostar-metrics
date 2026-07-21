@@ -74,6 +74,10 @@ test("extended reconciliation and commission cadences are active worker jobs", (
   assert.equal([...metricsBicep.matchAll(/'--runtime-minutes', '20'/g)].length, 2);
   assert.equal([...metricsBicep.matchAll(/'--request-budget', '1000'/g)].length, 2);
   assert.match(metricsBicep, /'--nightly-commissions', '--local-hour', '3', '--limit', '1'/);
+  assert.match(
+    metricsBicep,
+    /name: 'job-psm-materials'[\s\S]*?'--mode', 'incremental'[\s\S]*?'--auto-close-prior-month'/,
+  );
 });
 
 test("current Jobs, Quotes, and nested candidates use bounded hot-window drains", () => {

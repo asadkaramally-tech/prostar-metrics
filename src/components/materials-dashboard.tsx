@@ -279,11 +279,12 @@ function CategoryCard({ model }: { model: MaterialsDashboardModel }) {
 
 /* ── Row 2: All Materials Sold table ───────────────────── */
 
-export type QtyDelta = { kind: "new" | "zero" | "up" | "down"; text: string };
+export type QtyDelta = { kind: "unavailable" | "new" | "zero" | "up" | "down"; text: string };
 
 /** Δ column grammar (approved): "new" for items with no prior-month sales,
  *  red for declines, signed counts otherwise. */
-export function qtyDelta(qty: number, priorQty: number): QtyDelta {
+export function qtyDelta(qty: number, priorQty: number | null): QtyDelta {
+  if (priorQty === null) return { kind: "unavailable", text: "—" };
   if (priorQty === 0 && qty > 0) return { kind: "new", text: "new" };
   const diff = Math.round((qty - priorQty) * 1000) / 1000;
   if (diff === 0) return { kind: "zero", text: "0" };
@@ -291,7 +292,8 @@ export function qtyDelta(qty: number, priorQty: number): QtyDelta {
   return { kind: "down", text: `−${qtyText(Math.abs(diff))}` };
 }
 
-export function qtyText(v: number): string {
+export function qtyText(v: number | null): string {
+  if (v === null) return "—";
   return String(Math.round(v * 100) / 100);
 }
 
@@ -299,6 +301,7 @@ function MaterialsTableCard({ model, onOpen }: { model: MaterialsDashboardModel;
   const monthKey = model.periodStart.slice(0, 7);
   const monthLong = monthLongName(monthKey);
   const priorShort = monthShortName(shiftMonthKey(monthKey, -1));
+  const priorMonthComplete = model.coverage.priorMonth.status === "complete";
   const pagination = model.itemPagination ?? {
     page: 1,
     pageSize: model.items.length || 1,
@@ -313,7 +316,9 @@ function MaterialsTableCard({ model, onOpen }: { model: MaterialsDashboardModel;
       <div className="hd" style={{ flexWrap: "wrap" }}>
         <div>
           <div className="ti">All Materials Sold — {monthLong}</div>
-          <div className="st">Ordered by total sold value · Δ = qty change vs {priorShort}</div>
+          <div className="st">
+            Ordered by total sold value · {priorMonthComplete ? `Δ = qty change vs ${priorShort}` : `${priorShort} comparison unavailable`}
+          </div>
         </div>
         <a className="ctl" style={{ height: 34, fontSize: 13.5 }} href={`/api/materials/csv?month=${monthKey}`}>
           <svg className="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>

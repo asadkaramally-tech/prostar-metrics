@@ -83,32 +83,33 @@ test("explicit Excluded override takes precedence over acceptance evidence", () 
   assert.equal(result.path, "excluded");
 });
 
-test("monthly model uses DateApproved and the exact non-excluded denominator", () => {
+test("monthly model uses DateIssued and the exact non-excluded denominator", () => {
   const model = buildQuoteMonthlyReadModel({
     periodStart: "2026-06-01",
     periodEnd: "2026-06-30",
     quotes: [
-      { quoteId: 1, totalValue: 100, dateApproved: "2026-06-01", statusName: "Quote Accepted Online" },
-      { quoteId: 2, totalValue: 200, dateApproved: "2026-06-02", linkedJobId: 80 },
-      { quoteId: 3, totalValue: 300, dateApproved: "2026-06-03" },
-      { quoteId: 4, totalValue: 400, dateApproved: "2026-06-04", statusName: "Quote Accepted Online", outcomeOverride: "excluded" },
+      { quoteId: 1, totalValue: 100, dateIssued: "2026-06-01", dateApproved: "2026-07-01", statusName: "Quote Accepted Online" },
+      { quoteId: 2, totalValue: 200, dateIssued: "2026-06-02", linkedJobId: 80 },
+      { quoteId: 3, totalValue: 300, dateIssued: "2026-06-03", dateApproved: "2026-05-03" },
+      { quoteId: 4, totalValue: 400, dateIssued: "2026-06-04", statusName: "Quote Accepted Online", outcomeOverride: "excluded" },
       { quoteId: 5, totalValue: 500, dateIssued: "2026-06-05", statusName: "Quote Accepted Online" },
-      { quoteId: 6, totalValue: 600, dateApproved: "2026-05-31", linkedJobId: 81 },
+      { quoteId: 6, totalValue: 600, dateIssued: "2026-05-31", linkedJobId: 81 },
+      { quoteId: 7, totalValue: 700, dateApproved: "2026-06-07", linkedJobId: 82 },
     ],
   });
 
-  assert.equal(model.dateBasis, "DateApproved");
-  assert.equal(model.quoteCount, 3);
-  assert.equal(model.acceptedCount, 2);
+  assert.equal(model.dateBasis, "DateIssued");
+  assert.equal(model.quoteCount, 4);
+  assert.equal(model.acceptedCount, 3);
   assert.equal(model.notAcceptedCount, 1);
-  assert.equal(model.acceptanceDenominatorCount, 3);
-  assert.equal(model.quoteValue, 600);
-  assert.equal(model.acceptedValue, 300);
+  assert.equal(model.acceptanceDenominatorCount, 4);
+  assert.equal(model.quoteValue, 1100);
+  assert.equal(model.acceptedValue, 800);
   assert.equal(model.notAcceptedValue, 300);
-  assert.equal(model.acceptanceRateByCount, 2 / 3 * 100);
-  assert.equal(model.acceptanceRateByValue, 50);
+  assert.equal(model.acceptanceRateByCount, 75);
+  assert.equal(model.acceptanceRateByValue, 800 / 1100 * 100);
   assert.equal(model.excludedCount, 1);
-  assert.equal(model.excludedWithoutDateApproved, 1);
+  assert.equal(model.excludedWithoutDateIssued, 1);
   assert.equal(model.acceptancePaths.not_accepted, 1);
 });
 

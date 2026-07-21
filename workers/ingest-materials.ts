@@ -17,6 +17,7 @@ import {
   finishMaterialsMonthWalk,
   getCatalogGroupCache,
   listChangedOlderMaterialJobs,
+  needsAuthoritativeMaterialsMonthWalk,
   removeJobMaterialLines,
   recordMaterialsMonthWalkFailure,
   replaceJobMaterialLines,
@@ -59,6 +60,7 @@ export type Args = {
   requestLimit: number;
   rebuild: boolean;
   groupMaxAgeDays: number;
+  autoClosePriorMonth: boolean;
 };
 
 type Environment = Readonly<Record<string, string | undefined>>;
@@ -72,7 +74,7 @@ async function main() {
   if (args.dryRun) {
     const months = args.mode === "full-month" ? resolveMonths(args) : [];
     const hotWindow = args.mode === "incremental" ? inclusivePacificDateWindow(args.hotWindowDays) : null;
-    console.log(JSON.stringify({ mode: "dry-run", refreshMode: args.mode, months, hotWindow, requestLimit: args.requestLimit }, null, 2));
+    console.log(JSON.stringify({ mode: "dry-run", refreshMode: args.mode, months, hotWindow, requestLimit: args.requestLimit, autoClosePriorMonth: args.autoClosePriorMonth }, null, 2));
     return;
   }
 
@@ -117,6 +119,39 @@ async function main() {
       const message = error instanceof Error ? error.message : String(error);
       failures.push({ periodStart: "incremental", error: message });
       console.error(JSON.stringify({ workerId, mode: args.mode, error: message }));
+    }
+
+    if (args.autoClosePriorMonth) {
+      const currentPeriodStart = normalizeMaterialsPeriodStart(undefined);
+      const priorPeriodStart = addMonthsToPeriodStart(currentPeriodStart, -1);
+      if (await needsAuthoritativeMaterialsMonthWalk(priorPeriodStart, currentPeriodStart)) {
+        const before = budget.used;
+        try {
+          const result = await walkMaterialsMonth({
+            client,
+            endpoints,
+            periodStart: priorPeriodStart,
+            budget,
+            groupMaxAgeDays: args.groupMaxAgeDays,
+          });
+          walked.push({ ...result, requestsUsed: budget.used - before });
+          affectedPeriods = [...new Set([...affectedPeriods, priorPeriodStart])].sort();
+          console.log(JSON.stringify({ workerId, mode: "automatic-month-close", ...result, requestsUsed: budget.used - before }, null, 2));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          failures.push({ periodStart: priorPeriodStart, error: message });
+          console.error(JSON.stringify({ workerId, mode: "automatic-month-close", periodStart: priorPeriodStart, error: message }));
+          try {
+            await recordMaterialsMonthWalkFailure({ periodStart: priorPeriodStart, error });
+          } catch (recordError) {
+            console.error(JSON.stringify({
+              workerId,
+              periodStart: priorPeriodStart,
+              recordError: recordError instanceof Error ? recordError.message : String(recordError),
+            }));
+          }
+        }
+      }
     }
   }
 
@@ -426,6 +461,7 @@ export function parseArgs(argv: string[], env: Environment = process.env): Args 
     requestLimit: optionalInteger(env.MATERIALS_REQUEST_LIMIT) ?? 4000,
     rebuild: env.MATERIALS_SKIP_REBUILD !== "true",
     groupMaxAgeDays: optionalInteger(env.MATERIALS_GROUP_MAX_AGE_DAYS) ?? 30,
+    autoClosePriorMonth: env.MATERIALS_AUTO_CLOSE_PRIOR_MONTH === "true",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -458,6 +494,8 @@ export function parseArgs(argv: string[], env: Environment = process.env): Args 
     } else if (arg === "--group-max-age-days") {
       args.groupMaxAgeDays = integerArgumentValue(argv, index, arg);
       index += 1;
+    } else if (arg === "--auto-close-prior-month") {
+      args.autoClosePriorMonth = true;
     } else {
       throw new Error(`Unknown argument ${arg}.`);
     }

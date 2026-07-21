@@ -464,23 +464,27 @@ function ingestionParams(args: Args) {
   };
 }
 
-function ingestionParamSets(args: Args) {
-  if (
-    (args.entity === "jobs" || args.entity === "quotes") &&
-    args.startDate &&
-    args.endDate &&
-    args.startDate !== args.endDate
-  ) {
-    return dateRange(args.startDate, args.endDate).map((day) =>
-      args.entity === "jobs" ? completedJobDiscoveryParams(day) : { DateApproved: day },
-    );
+export function ingestionParamSets(args: Args) {
+  if ((args.entity === "jobs" || args.entity === "quotes") && args.startDate && args.endDate) {
+    const days = dateRange(args.startDate, args.endDate);
+    return args.entity === "jobs"
+      ? days.map(completedJobDiscoveryParams)
+      : days.flatMap((day) => [
+          { DateApproved: day },
+          { DateIssued: day },
+        ]);
   }
 
   return [ingestionParams(args)];
 }
 
-function ingestionIdempotencyKey(entity: IngestionEntity, params: Record<string, unknown>, suffix?: string) {
-  const dateKey = params.entityId ?? params.CompletedDate ?? params.DateApproved ?? params.StartDate ?? params.startDate;
+export function ingestionIdempotencyKey(entity: IngestionEntity, params: Record<string, unknown>, suffix?: string) {
+  const dateFilter = params.DateApproved !== undefined
+    ? `date-approved:${String(params.DateApproved)}`
+    : params.DateIssued !== undefined
+      ? `date-issued:${String(params.DateIssued)}`
+      : undefined;
+  const dateKey = params.entityId ?? params.CompletedDate ?? dateFilter ?? params.StartDate ?? params.startDate;
   const suffixKey = suffix ? `:${suffix}` : "";
   if (dateKey) {
     return `${entity}:${String(dateKey)}${suffixKey}`;

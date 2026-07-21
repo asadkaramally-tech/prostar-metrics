@@ -13,9 +13,16 @@ test("scheduled default uses bounded incremental mode and a seven-day hot window
   assert.equal(args.hotWindowDays, 7);
   assert.equal(args.monthsBack, 1);
   assert.equal(args.rebuild, true);
+  assert.equal(args.autoClosePriorMonth, false);
   // The helper remains the explicit full-month plan; default main no longer
   // calls it during a scheduled incremental pass.
   assert.deepEqual(resolveMonths(args, JULY_18), ["2026-06-01", "2026-07-01"]);
+});
+
+test("scheduled infrastructure can enable an idempotent prior-month close", () => {
+  const args = parseArgs(["--auto-close-prior-month"], emptyEnv);
+  assert.equal(args.mode, "incremental");
+  assert.equal(args.autoClosePriorMonth, true);
 });
 
 test("single-month and backfill range modes resolve inclusive month lists", () => {

@@ -345,7 +345,10 @@ export type TechnicianMonthlyTrend = {
   };
 };
 
+export const TECHNICIAN_READ_MODEL_SCHEMA_VERSION = 1 as const;
+
 export type TechnicianPerformanceReadModel = {
+  schemaVersion: typeof TECHNICIAN_READ_MODEL_SCHEMA_VERSION;
   netProfitBasis: "simpro_job_net_profit_actual";
   periodStart: string;
   periodEnd: string;
@@ -1199,6 +1202,7 @@ export function buildTechnicianPerformanceReadModel(params: {
     .sort((left, right) => right.allocatedSellValue - left.allocatedSellValue || left.displayName.localeCompare(right.displayName));
 
   return {
+    schemaVersion: TECHNICIAN_READ_MODEL_SCHEMA_VERSION,
     netProfitBasis: "simpro_job_net_profit_actual",
     periodStart: params.periodStart,
     periodEnd: params.periodEnd,

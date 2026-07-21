@@ -175,7 +175,7 @@ export async function persistQuoteOverrideAction(
              or inverse.source_quote_id = quote.quote_id
           order by job.job_id
        ), target as materialized (
-         select q.quote_id, q.category, q.outcome, q.date_approved, q.total,
+         select q.quote_id, q.category, q.outcome, q.date_issued, q.date_approved, q.total,
                 case
                   when ${acceptedOnline}
                     or exists (select 1 from locked_evidence_jobs) then 'won'
@@ -263,6 +263,7 @@ export async function persistQuoteOverrideAction(
                 case when i.action = 'exclude' then 'excluded' else t.source_outcome end as projected_outcome,
                 case when i.action = 'exclude' then 'manual_excluded' else t.source_reason end as projected_reason,
                 t.outcome as canonical_before_outcome,
+                t.date_issued,
                 t.date_approved,
                 t.total
            from inserted i
@@ -311,9 +312,9 @@ export async function persistQuoteOverrideAction(
        ), affected_periods as materialized (
          select distinct period_start
            from (
-             select date_trunc('month', p.date_approved)::date as period_start
+             select date_trunc('month', p.date_issued)::date as period_start
                from projected p
-              where p.date_approved is not null
+              where p.date_issued is not null
              union all
              select date_trunc('month', $8::date)::date
               where $8::date is not null

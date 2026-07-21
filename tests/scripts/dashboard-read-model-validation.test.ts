@@ -59,7 +59,7 @@ function quoteFixture() {
     quoteRow("3", 3_000, { inverse_conversion_job_id: "93" }),
     quoteRow("4", 12_000),
     quoteRow("5", 600, { override_outcome: "excluded" }),
-    quoteRow("6", 700, { date_approved: null }),
+    quoteRow("6", 700, { date_issued: null }),
   ];
   const source = aggregateQuoteSources(rows).get("2026-06-01");
   assert.ok(source);
@@ -77,7 +77,7 @@ function quoteFixture() {
     acceptanceRateByValue: source.acceptance_rate_by_value,
     averageAcceptedDeal: source.average_accepted_deal,
     overrideCount: source.override_count,
-    excludedWithoutDateApproved: source.excluded_without_date_approved,
+    excludedWithoutDateIssued: source.excluded_without_date_issued,
     tiers: structuredClone(source.tiers),
     acceptancePaths: { ...source.acceptance_paths },
     dashboard: {
@@ -101,6 +101,7 @@ function quoteFixture() {
 function quoteRow(quoteId: string, total: number, overrides: Partial<QuoteSourceRow> = {}): QuoteSourceRow {
   return {
     quote_id: quoteId,
+    date_issued: "2026-06-15",
     date_approved: "2026-06-15",
     total,
     status_name: null,
@@ -236,7 +237,7 @@ test("strict quote source reader ignores incomplete/deleted newer provenance and
     await db.exec(`
       create schema metrics;
       create table metrics.metrics_quotes (
-        quote_id bigint primary key, date_approved date, total numeric, status_name text,
+        quote_id bigint primary key, date_issued date, date_approved date, total numeric, status_name text,
         linked_job_id bigint, source_deleted_at timestamptz
       );
       create table metrics.quote_snapshots (quote_id bigint primary key, linked_job_id bigint);
@@ -254,8 +255,8 @@ test("strict quote source reader ignores incomplete/deleted newer provenance and
         active boolean, revision integer, created_at timestamptz
       );
       insert into metrics.metrics_quotes values
-        (31, date '2026-06-01', 1000, 'Pending', 500, null),
-        (32, date '2026-06-02', 1000, 'Pending', null, null);
+        (31, date '2026-06-01', date '2026-06-01', 1000, 'Pending', 500, null),
+        (32, date '2026-06-02', date '2026-06-02', 1000, 'Pending', null, null);
       insert into metrics.quote_snapshots values (31, 500), (32, null);
       insert into metrics.metrics_jobs values
         (500, 'Direct service', null, 'Direct service', null, null),

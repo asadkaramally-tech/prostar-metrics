@@ -162,9 +162,9 @@ function buildPayloadKpis(scope: RollupScope, payload: ReadModelPayload) {
   if (scope === "quotes" && "quoteCount" in payload) {
     return [
       { label: "Quotes", value: formatMetric("quote_count", payload.quoteCount), detail: payload.dateBasis },
-      { label: "Quote value", value: formatMetric("total_value", payload.quoteValue), detail: `${payload.excludedWithoutDateApproved} without DateApproved` },
+      { label: "Quote value", value: formatMetric("total_value", payload.quoteValue), detail: `${payload.excludedWithoutDateIssued} without DateIssued` },
       { label: "Won quotes", value: formatMetric("won_count", payload.wonCount), detail: `${payload.overrideCount} overrides applied` },
-      { label: "Win rate by count", value: formatMetric("win_rate_count", payload.winRateByCount), detail: "DateApproved basis" },
+      { label: "Win rate by count", value: formatMetric("win_rate_count", payload.winRateByCount), detail: "DateIssued basis" },
     ];
   }
 

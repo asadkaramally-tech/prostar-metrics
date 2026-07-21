@@ -42,7 +42,7 @@ type TodayJobRow = {
 
 type TodayQuoteRow = {
   quote_id: string;
-  date_approved: string;
+  date_issued: string;
   total_value: string | null;
 };
 
@@ -155,16 +155,16 @@ async function getTodayJobs(
 
 async function getTodayQuotes(range: { start: string; end: string }): Promise<TodayQuoteInput[]> {
   const result = await queryPostgres<TodayQuoteRow>(
-    `select q.quote_id::text, q.date_approved::text, q.total::text as total_value
+    `select q.quote_id::text, q.date_issued::text, q.total::text as total_value
        from metrics.metrics_quotes q
       where q.source_deleted_at is null
-        and q.date_approved between $1::date and $2::date
-      order by q.date_approved, q.quote_id`,
+        and q.date_issued between $1::date and $2::date
+      order by q.date_issued, q.quote_id`,
     [range.start, range.end],
   );
   return result.rows.map((row) => ({
     quoteId: row.quote_id,
-    dateApproved: row.date_approved,
+    dateIssued: row.date_issued,
     totalValue: nullableNumber(row.total_value),
   }));
 }

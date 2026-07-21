@@ -594,7 +594,7 @@ var scheduledSourceJobs = [
   {
     name: 'job-psm-materials'
     cron: '40 1,7,13,19 * * *'
-    args: ['run', 'materials:worker', '--', '--mode', 'incremental', '--hot-window-days', '7', '--request-limit', '8000']
+    args: ['run', 'materials:worker', '--', '--mode', 'incremental', '--hot-window-days', '7', '--request-limit', '8000', '--auto-close-prior-month']
   }
 ]
 

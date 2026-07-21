@@ -40,7 +40,8 @@ export type MaterialsItemRow = {
   partNo: string | null;
   category: string;
   qty: number;
-  priorMonthQty: number;
+  /** Null when the prior month has not been authoritatively walked. */
+  priorMonthQty: number | null;
   unitSell: number | null;
   extended: number;
   jobCount: number;
@@ -133,8 +134,15 @@ export function buildMaterialsReadModel(params: BuildMaterialsReadModelParams): 
   if (params.coverage.selectedMonth.status !== "complete") {
     warnings.push(`The ${periodStart.slice(0, 7)} materials walk is ${params.coverage.selectedMonth.status}; totals reflect the last complete data.`);
   }
-  if (params.coverage.priorYearMonth.status === "missing") {
-    warnings.push("No prior-year materials walk exists for this month; the year-over-year comparison reads as zero.");
+  if (params.coverage.priorMonth.status !== "complete") {
+    warnings.push(
+      `The prior-month materials walk is ${params.coverage.priorMonth.status}; item quantities and changes are unavailable.`,
+    );
+  }
+  if (params.coverage.priorYearMonth.status !== "complete") {
+    warnings.push(
+      `The prior-year materials walk is ${params.coverage.priorYearMonth.status}; the year-over-year comparison is unavailable.`,
+    );
   }
 
   return {
@@ -149,7 +157,7 @@ export function buildMaterialsReadModel(params: BuildMaterialsReadModelParams): 
       daysInMonth,
     },
     categories: buildCategories(selected),
-    items: buildItems(selected, priorMonth),
+    items: buildItems(selected, priorMonth, params.coverage.priorMonth.status === "complete"),
     freshness: params.freshness,
     coverage: {
       selectedMonth: params.coverage.selectedMonth,
@@ -202,7 +210,11 @@ function buildCategories(lines: MaterialLineInput[]): MaterialsCategorySlice[] {
     .sort((left, right) => right.value - left.value || left.name.localeCompare(right.name));
 }
 
-function buildItems(lines: MaterialLineInput[], priorMonthLines: MaterialLineInput[]): MaterialsItemRow[] {
+function buildItems(
+  lines: MaterialLineInput[],
+  priorMonthLines: MaterialLineInput[],
+  priorMonthComplete: boolean,
+): MaterialsItemRow[] {
   const priorQtyByKey = new Map<string, number>();
   for (const line of priorMonthLines) {
     const key = materialItemKey(line);
@@ -219,7 +231,7 @@ function buildItems(lines: MaterialLineInput[], priorMonthLines: MaterialLineInp
       partNo: cleanText(line.partNo),
       category: materialLineCategory(line),
       qty: 0,
-      priorMonthQty: roundQty(priorQtyByKey.get(key) ?? 0),
+      priorMonthQty: priorMonthComplete ? roundQty(priorQtyByKey.get(key) ?? 0) : null,
       extended: 0,
       jobIds: new Set<number>(),
     };

@@ -64,7 +64,7 @@ export type QuoteMonthlyReadModel = {
   acceptanceRateByCount: number;
   acceptanceRateByValue: number;
   averageAcceptedDeal: number;
-  dateBasis: "DateApproved";
+  dateBasis: "DateIssued";
   tiers: Record<QuoteAcceptanceClassification["dealTier"], {
     quoteCount: number;
     quoteValue: number;
@@ -75,7 +75,7 @@ export type QuoteMonthlyReadModel = {
   }>;
   acceptancePaths: Record<QuoteAcceptancePath, number>;
   overrideCount: number;
-  excludedWithoutDateApproved: number;
+  excludedWithoutDateIssued: number;
   /** @deprecated Internal compatibility accessor; omitted from serialized payloads. */
   wonCount: number;
   /** @deprecated Internal compatibility accessor; omitted from serialized payloads. */
@@ -192,15 +192,15 @@ export function buildQuoteMonthlyReadModel(params: {
   let notAcceptedValue = 0;
   let excludedCount = 0;
   let overrideCount = 0;
-  let excludedWithoutDateApproved = 0;
+  let excludedWithoutDateIssued = 0;
 
   for (const quote of params.quotes) {
     if (quote.sourceDeletedAt) continue;
-    if (!quote.dateApproved) {
-      excludedWithoutDateApproved += 1;
+    if (!quote.dateIssued) {
+      excludedWithoutDateIssued += 1;
       continue;
     }
-    if (!isDateInRange(quote.dateApproved, params.periodStart, params.periodEnd)) continue;
+    if (!isDateInRange(quote.dateIssued, params.periodStart, params.periodEnd)) continue;
 
     const result = classifyQuote(quote);
     const value = finiteNumber(quote.totalValue);
@@ -244,11 +244,11 @@ export function buildQuoteMonthlyReadModel(params: {
     acceptanceRateByCount: quoteCount > 0 ? acceptedCount / quoteCount * 100 : 0,
     acceptanceRateByValue: quoteValue > 0 ? acceptedValue / quoteValue * 100 : 0,
     averageAcceptedDeal: acceptedCount > 0 ? acceptedValue / acceptedCount : 0,
-    dateBasis: "DateApproved",
+    dateBasis: "DateIssued",
     tiers,
     acceptancePaths,
     overrideCount,
-    excludedWithoutDateApproved,
+    excludedWithoutDateIssued,
   } as QuoteMonthlyReadModel;
   Object.defineProperties(model, {
     wonCount: { enumerable: false, get: () => model.acceptedCount },

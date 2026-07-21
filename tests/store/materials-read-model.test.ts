@@ -6,6 +6,7 @@ import type { PostgresQuery } from "../../src/lib/store/postgres";
 import {
   finishMaterialsMonthWalk,
   listChangedOlderMaterialJobs,
+  needsAuthoritativeMaterialsMonthWalk,
   removeJobMaterialLines,
   recordMaterialsMonthWalkFailure,
   replaceJobMaterialLines,
@@ -185,6 +186,34 @@ test("sealing a month walk removes lines the walk did not observe", async () => 
       `select status, job_count from metrics.materials_month_walks where period_start = '2026-07-01'`,
     );
     assert.equal(walk.rows[0]?.status, "complete");
+  } finally {
+    await db.close();
+  }
+});
+
+test("automatic prior-month close retries missing or stale walks and skips a completed close", async () => {
+  const db = await migratedDatabase();
+  const query = pgliteQuery(db);
+  try {
+    assert.equal(await needsAuthoritativeMaterialsMonthWalk("2026-06-01", "2026-07-01", query), true);
+    await query(
+      `insert into metrics.materials_month_walks (
+         period_start, status, walked_at, job_count, line_count, requests_used
+       ) values ('2026-06-01', 'complete', '2026-06-30T20:00:00Z', 1, 1, 1)`,
+    );
+    assert.equal(await needsAuthoritativeMaterialsMonthWalk("2026-06-01", "2026-07-01", query), true);
+    await query(
+      `update metrics.materials_month_walks
+          set walked_at = '2026-07-01T13:00:00Z'
+        where period_start = '2026-06-01'`,
+    );
+    assert.equal(await needsAuthoritativeMaterialsMonthWalk("2026-06-01", "2026-07-01", query), false);
+    await query(
+      `update metrics.materials_month_walks
+          set status = 'failed'
+        where period_start = '2026-06-01'`,
+    );
+    assert.equal(await needsAuthoritativeMaterialsMonthWalk("2026-06-01", "2026-07-01", query), true);
   } finally {
     await db.close();
   }

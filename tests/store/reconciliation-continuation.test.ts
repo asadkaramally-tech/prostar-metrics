@@ -53,7 +53,7 @@ test("budget stop resumes at the committed day/page cursor without duplicate IDs
     assert.deepEqual(resumed.source?.ids, ["1"]);
     assert.equal(resumed.source?.totalValue, 10);
     assert.equal(detailCalls, 1);
-    assert.equal(resumed.source?.totalRequestsUsed, 29);
+    assert.equal(resumed.source?.totalRequestsUsed, 57);
   } finally {
     await fixture.db.close();
   }
@@ -84,7 +84,7 @@ test("same-day multipage traversal checkpoints each page and resumes exact total
     assert.deepEqual(result.source?.ids, ["1", "2"]);
     assert.equal(result.source?.count, 2);
     assert.equal(result.source?.totalValue, 40);
-    assert.equal(result.source?.pageCount, 29);
+    assert.equal(result.source?.pageCount, 58);
   } finally {
     await fixture.db.close();
   }
@@ -122,7 +122,7 @@ test("failed detail retry is idempotent and cumulative request accounting includ
     assert.equal(retried.complete, true);
     assert.equal(retried.source?.count, 1);
     assert.equal(retried.source?.totalValue, 12);
-    assert.equal(retried.source?.totalRequestsUsed, 30);
+    assert.equal(retried.source?.totalRequestsUsed, 58);
     assert.equal(detailAttempts, 2);
   } finally {
     await fixture.db.close();
@@ -174,8 +174,8 @@ test("hard kill after a list response preserves the reservation and lease recove
     assert.equal(recovered.complete, true);
     assert.deepEqual(recovered.source?.ids, ["1"]);
     assert.equal(recovered.source?.totalValue, 18);
-    assert.equal(recovered.source?.totalRequestsUsed, 30);
-    assert.equal(firstDayListCalls, 2);
+    assert.equal(recovered.source?.totalRequestsUsed, 58);
+    assert.equal(firstDayListCalls, 3);
   } finally {
     await fixture.db.close();
   }
@@ -207,7 +207,80 @@ test("every Simpro list and detail call observes its durable reservation before 
       store: fixture.store,
     });
     assert.equal(result.complete, true);
-    assert.deepEqual(observed, Array.from({ length: 29 }, (_, index) => index + 1));
+    assert.deepEqual(observed, Array.from({ length: 57 }, (_, index) => index + 1));
+  } finally {
+    await fixture.db.close();
+  }
+});
+
+test("quote reconciliation traverses the DateApproved/DateIssued union and fetches overlap once", async () => {
+  const fixture = await databaseFixture();
+  const listed: Array<{ dateField: string; day: string; page: number }> = [];
+  let detailCalls = 0;
+  try {
+    const result = await collectDirectSourceMonth({
+      scope: "quotes",
+      period,
+      endpoints: fakeQuoteEndpoints({
+        pages: {
+          "DateApproved:2023-02-01:1": { ids: [1, 2], nextPage: null },
+          "DateIssued:2023-02-01:1": { ids: [2, 3], nextPage: null },
+        },
+        details: {
+          "1": { ID: 1, Total: { ExTax: 10 } },
+          "2": { ID: 2, Total: { ExTax: 20 } },
+          "3": { ID: 3, Total: { ExTax: 30 } },
+        },
+        onList: (day, page, dateField) => { listed.push({ day, page, dateField }); },
+        onDetail: () => { detailCalls += 1; },
+      }),
+      budget: { limit: 100, used: 0 },
+      leaseOwner: "date-union-worker",
+      store: fixture.store,
+    });
+
+    assert.equal(result.complete, true);
+    assert.deepEqual(result.source?.ids, ["1", "2", "3"]);
+    assert.equal(result.source?.totalValue, 60);
+    assert.equal(detailCalls, 3);
+    assert.deepEqual(listed.slice(0, 2), [
+      { dateField: "DateApproved", day: "2023-02-01", page: 1 },
+      { dateField: "DateIssued", day: "2023-02-01", page: 1 },
+    ]);
+  } finally {
+    await fixture.db.close();
+  }
+});
+
+test("DateIssued-only quotes satisfy source coverage without inflating the DateApproved dashboard cohort", async () => {
+  const fixture = await databaseFixture();
+  try {
+    await fixture.db.exec(`
+      insert into metrics.metrics_quotes (quote_id, total, date_issued) values (7, 70, '2023-02-01');
+      insert into metrics.quote_snapshots (quote_id, total_value, date_issued) values (7, 70, '2023-02-01');
+      insert into metrics.dashboard_read_models (
+        metric_family, period_grain, period_start, values_json, source_hash, rebuilt_at
+      ) values ('quotes', 'month', '2023-02-01', '{"quoteCount":0,"quoteValue":0}', 'issued-only', now());
+    `);
+    await seedQuoteNestedAuthority(fixture.db, 7);
+
+    const result = await runSimproReconciliation({
+      scope: "quotes",
+      periodStart: period.start,
+      requestBudget: 100,
+      leaseOwner: "issued-only-worker",
+      endpoints: fakeQuoteEndpoints({
+        pages: { "DateIssued:2023-02-01:1": { ids: [7], nextPage: null } },
+        details: { "7": { ID: 7, Total: { ExTax: 70 } } },
+      }),
+      dependencies: {
+        query: fixture.query,
+        transaction: fixture.transaction,
+        continuationStore: fixture.store,
+      },
+    });
+
+    assert.equal(result[0]?.status, "matched");
   } finally {
     await fixture.db.close();
   }
@@ -601,7 +674,7 @@ async function databaseFixture() {
       status text not null, finalized_at timestamptz, primary key (project_type, project_id)
     );
     create table metrics.metrics_quotes (
-      quote_id bigint primary key, total numeric not null, date_approved date,
+      quote_id bigint primary key, total numeric not null, date_approved date, date_issued date,
       source_deleted_at timestamptz, source_snapshot_id bigint, source_hash text
     );
     create table metrics.metrics_quote_cost_centers (
@@ -625,7 +698,7 @@ async function databaseFixture() {
       source_hash text, source_deleted_at timestamptz, traversal_generation bigint
     );
     create table metrics.quote_snapshots (
-      quote_id bigint primary key, total_value numeric, date_approved date
+      quote_id bigint primary key, total_value numeric, date_approved date, date_issued date
     );
     create table metrics.dashboard_read_models (
       id bigserial primary key, metric_family text not null, period_grain text not null,
@@ -644,6 +717,11 @@ async function databaseFixture() {
   );
   await db.exec(migration);
   await db.exec(migration);
+  const quoteUnionMigration = await readFile(
+    path.join(process.cwd(), "infra/db/migrations/047_quote_date_union_reconciliation_cursor.sql"),
+    "utf8",
+  );
+  await db.exec(quoteUnionMigration);
   const query: PostgresQuery = async <T>(sql: string, values?: unknown[]) => {
     const result = await db.query<T>(sql, values);
     return { rows: result.rows, rowCount: result.affectedRows ?? null };
@@ -732,16 +810,19 @@ async function seedQuoteNestedAuthority(db: PGlite, quoteId: number, generation 
 function fakeQuoteEndpoints(params: {
   pages: Record<string, { ids: number[]; nextPage: number | null }>;
   details: Record<string, Record<string, unknown>>;
-  onList?: (day: string, page: number) => void | Promise<void>;
+  onList?: (day: string, page: number, dateField: "DateApproved" | "DateIssued") => void | Promise<void>;
   onDetail?: () => void | Promise<void>;
 }) {
   return {
     async listQuotes(options: { page?: number; budget?: RequestBudget; query?: Record<string, unknown> }) {
       consume(options.budget);
-      const day = String(options.query?.DateApproved);
+      const dateField = options.query?.DateIssued === undefined ? "DateApproved" : "DateIssued";
+      const day = String(options.query?.[dateField]);
       const page = options.page ?? 1;
-      await params.onList?.(day, page);
-      const configured = params.pages[`${day}:${page}`] ?? { ids: [], nextPage: null };
+      await params.onList?.(day, page, dateField);
+      const configured = params.pages[`${dateField}:${day}:${page}`]
+        ?? params.pages[`${day}:${page}`]
+        ?? { ids: [], nextPage: null };
       return {
         rows: configured.ids.map((ID) => ({ ID })),
         page,

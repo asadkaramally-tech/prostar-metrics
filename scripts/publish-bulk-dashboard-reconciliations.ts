@@ -402,7 +402,7 @@ async function readCanonicalQuotes(client: ReconciliationQueryClient) {
   const result = await client.query<{
     id: string; period_start: string | null; total: string | null; outcome: string | null; fetched_at: string | null;
   }>(`
-    select quote_id::text id, to_char(date_approved, 'YYYY-MM-01') period_start,
+    select quote_id::text id, to_char(date_issued, 'YYYY-MM-01') period_start,
            total::text total, outcome, fetched_at::text
       from metrics.metrics_quotes
      where source_deleted_at is null
@@ -420,7 +420,7 @@ async function readCanonicalQuotes(client: ReconciliationQueryClient) {
 
 async function readQuoteSnapshots(client: ReconciliationQueryClient) {
   const result = await client.query<{ id: string; period_start: string | null; total: string | null }>(`
-    select quote_id::text id, to_char(date_approved, 'YYYY-MM-01') period_start,
+    select quote_id::text id, to_char(date_issued, 'YYYY-MM-01') period_start,
            total_value::text total
      from metrics.quote_snapshots
      order by quote_id
@@ -666,7 +666,7 @@ function unit(params: {
       sourceBasis: params.scope === "jobs"
         ? "Simpro CompletedDate with Stage Complete or Archived only; job Status is not used."
         : params.scope === "quotes"
-          ? "Simpro DateApproved activity with persisted app-owned outcome classification and overrides."
+          ? "Simpro DateIssued activity with persisted app-owned outcome classification and overrides."
           : "Derived from completed jobs and app-owned Simpro timesheets, schedules, and verified mobile status semantics.",
       projectManifestSha256: params.projectManifestSha256,
       operationalManifestSha256: params.operationalManifestSha256,

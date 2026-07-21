@@ -53,7 +53,7 @@ const now = new Date("2026-07-14T19:00:00Z");
 
 const model = buildTodayReadModel({
   jobs,
-  quotesSent: fixture.quotesSent.map((row) => ({ quoteId: row.id, dateApproved: row.approved, totalValue: row.value })),
+  quotesSent: fixture.quotesSent.map((row) => ({ quoteId: row.id, dateIssued: row.approved, totalValue: row.value })),
   timesheets: fixture.timesheets,
   roster: { size: fixture.rosterSize, source: "effective_technician_roster" },
   now,
@@ -75,7 +75,7 @@ test("MTD KPIs reproduce the verified July figures", () => {
   assert.equal(Math.round((model.mtd.avgJobValue ?? 0) * 100) / 100, Math.round(model.mtd.revenue / 101 * 100) / 100);
   assert.equal(model.mtd.quotesSent, 14);
   assert.equal(Math.round(model.mtd.quotesSentValue), 91636);
-  assert.match(model.mtd.quotesSentBasis, /DateApproved/);
+  assert.match(model.mtd.quotesSentBasis, /DateIssued/);
   assert.equal(model.mtd.poolPercent, DEFAULT_POOL_PERCENT);
   assert.equal(model.mtd.poolSoFar, 1307.13);
   assert.equal(model.mtd.poolSoFarCents, 130713);
@@ -152,9 +152,9 @@ test("cohort rules and windows stay honest under edge inputs", () => {
       { jobId: 4, completedDate: "2026-07-04", stageName: "Archived", sellValue: 50, netProfitActual: -10, sourceDeletedAt: "2026-07-05T00:00:00Z" },
     ],
     quotesSent: [
-      { quoteId: 10, dateApproved: "2026-07-03", totalValue: 500 },
-      { quoteId: 11, dateApproved: "2026-07-20", totalValue: 700 },
-      { quoteId: 12, dateApproved: "2026-06-30", totalValue: 900 },
+      { quoteId: 10, dateIssued: "2026-07-03", totalValue: 500 },
+      { quoteId: 11, dateIssued: "2026-07-20", totalValue: 700 },
+      { quoteId: 12, dateIssued: "2026-06-30", totalValue: 900 },
     ],
     timesheets: [
       { workDate: "2026-07-02", hours: 8 },
