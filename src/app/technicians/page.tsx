@@ -20,7 +20,7 @@ export default async function TechniciansPage({
   const params = await searchParams;
   const periodStart = monthParamToPeriodStart(params?.month) ?? businessCurrentMonth();
   const model = await cachedPageLoad(`technicians:${periodStart}`, 120_000, () =>
-    getDashboardReadModel("technicians", { periodStart }),
+    getDashboardReadModel("technicians", { periodStart, compactTechnicianDetails: true }),
   );
   const selectedMonth = monthFromPayload(model.payload)
     ?? periodStartToMonthKey(periodStart)

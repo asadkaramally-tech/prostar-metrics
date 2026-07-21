@@ -3,8 +3,11 @@ import test from "node:test";
 import type { FreshnessStatus } from "../../src/lib/metrics/freshness";
 import {
   buildQuoteMetricsReadModel,
+  buildQuoteMetricsReadModelFromPersistedRecords,
+  buildPersistedQuoteDashboardRecords,
   getQuoteFollowUpQueue,
   getPersistedQuoteDashboard,
+  getPersistedQuoteDashboardRecords,
   loadQuoteDashboardRows,
   type QuoteCanonicalRow,
 } from "../../src/lib/store/quote-dashboard-read-model";
@@ -61,6 +64,70 @@ test("default quote dashboard reads the persisted serving model before canonical
   assert.match(capturedSql, /metric_family = 'quotes'/);
   assert.match(capturedSql, /period_start = \$1::date/);
   assert.deepEqual(capturedValues, ["2026-06-01"]);
+});
+
+test("filtered quote dashboard preserves pagination semantics from persisted monthly quote records", () => {
+  const rows = [
+    ...Array.from({ length: 60 }, (_, index) => quoteRow({
+      id: index + 1,
+      dateApproved: `2026-06-${String(index % 28 + 1).padStart(2, "0")}`,
+      dateIssued: "2026-06-01",
+      total: index + 1,
+      linkedMatch: true,
+      linkedJobId: 10_000 + index,
+      category: "HVAC",
+    })),
+    quoteRow({ id: 100, dateApproved: "2026-07-03", dateIssued: "2026-06-28", total: 9_999, category: "Water Heating" }),
+  ];
+  const options = {
+    selectedMonth: "2026-06",
+    now: new Date("2026-07-10T20:00:00Z"),
+    category: "HVAC",
+    tier: "Under $750",
+    outcome: "accepted",
+    acceptancePath: "converted_only",
+    sort: "value-desc",
+    page: 2,
+  };
+  const canonical = buildQuoteMetricsReadModel(freshness, rows, undefined, options);
+  const persisted = buildQuoteMetricsReadModelFromPersistedRecords(
+    freshness,
+    [
+      ...buildPersistedQuoteDashboardRecords(rows, "2026-06-01"),
+      ...buildPersistedQuoteDashboardRecords(rows, "2026-07-01"),
+    ],
+    undefined,
+    options,
+  );
+
+  assert.deepEqual(persisted.classificationRows, canonical.classificationRows);
+  assert.deepEqual(persisted.pagination, canonical.pagination);
+  assert.deepEqual(persisted.currentMonth, canonical.currentMonth);
+  assert.deepEqual(persisted.sentMonthly, canonical.sentMonthly);
+});
+
+test("persisted quote records require every requested monthly serving model", async () => {
+  let capturedSql = "";
+  let capturedValues: unknown[] | undefined;
+  const records = await getPersistedQuoteDashboardRecords("2023-02", async <T>(sql: string, values?: unknown[]) => {
+    capturedSql = sql;
+    capturedValues = values;
+    return {
+      rows: [
+        { period_start: "2023-01-01", quote_records: [] },
+        { period_start: "2023-02-01", quote_records: [] },
+      ] as T[],
+    };
+  });
+  assert.deepEqual(records, []);
+  assert.match(capturedSql, /values_json -> 'quoteRecords' as quote_records/);
+  assert.match(capturedSql, /period_start = any\(\$1::date\[\]\)/);
+  assert.deepEqual(capturedValues, [["2023-01-01", "2023-02-01"]]);
+
+  const missingMonth = await getPersistedQuoteDashboardRecords("2023-02", async <T>() => ({
+    rows: [{ period_start: "2023-02-01", quote_records: [] }] as T[],
+  }));
+  assert.equal(missingMonth, null);
 });
 
 test("selected month classifies all evidence paths with exact denominators", () => {

@@ -18,8 +18,11 @@ import {
   buildMaterialsReadModelPayload,
   getPersistedMaterialsReadModel,
   loadMaterialLineInputs,
+  materialsPageParam,
+  toMaterialsPageReadModel,
   type MaterialsRowsQuery,
 } from "../../src/lib/store/materials-read-model";
+import type { MaterialsReadModel } from "../../src/lib/metrics/materials";
 
 const migrationDirectory = new URL("../../infra/db/migrations/", import.meta.url);
 
@@ -265,4 +268,46 @@ test("persisted materials read model round-trips through dashboard_read_models",
   } finally {
     await db.close();
   }
+});
+
+test("materials page transport is bounded and omits job rosters", () => {
+  const item = (index: number) => ({
+    key: `catalog:${index}`,
+    name: `Material ${index}`,
+    partNo: null,
+    category: "Fixture",
+    qty: index,
+    priorMonthQty: 0,
+    unitSell: 10,
+    extended: index * 10,
+    jobCount: 2,
+    jobIds: [index * 10, index * 10 + 1],
+  });
+  const model: MaterialsReadModel = {
+    periodStart: "2026-07-01",
+    generatedAt: "2026-07-20T00:00:00.000Z",
+    totals: { current: 60, priorMonth: 0, priorYearSameDay: 0, paceProjection: 60, elapsedDays: 31, daysInMonth: 31 },
+    categories: [],
+    items: [item(1), item(2), item(3)],
+    freshness: { pageKey: "materials", state: "current", label: "Current", detail: "", dataThrough: null, lastSuccessfulRunAt: null, lastFailedRunAt: null },
+    coverage: {
+      selectedMonth: { periodStart: "2026-07-01", status: "complete", walkedAt: null, jobCount: 2, lineCount: 3 },
+      priorMonth: { periodStart: "2026-06-01", status: "complete", walkedAt: null, jobCount: 0, lineCount: 0 },
+      priorYearMonth: { periodStart: "2025-07-01", status: "complete", walkedAt: null, jobCount: 0, lineCount: 0 },
+      includedLineCount: 3,
+      excludedServiceContractLineCount: 0,
+    },
+    warnings: [],
+  };
+
+  const page = toMaterialsPageReadModel(model, 2, 2);
+  assert.deepEqual(page.itemPagination, { page: 2, pageSize: 2, total: 3, totalPages: 2 });
+  assert.deepEqual(page.items.map((row) => row.key), ["catalog:3"]);
+  assert.equal("jobIds" in page.items[0]!, false);
+  assert.equal(model.items[2]?.jobIds.join(","), "30,31");
+
+  for (const value of [undefined, "", "0", "-1", "1.5", "bad", "9007199254740992"]) {
+    assert.equal(materialsPageParam(value), 1);
+  }
+  assert.equal(materialsPageParam("3"), 3);
 });

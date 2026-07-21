@@ -22,6 +22,7 @@ import { buildCommissionReadModel, type CommissionPeriodConfig } from "../../src
 import { commissionHashJson, type CommissionHashManifestEntry } from "../../src/lib/store/commission-integrity";
 import {
   getCommissionDashboardReadModel,
+  withoutCommissionAllocationDetails,
   type CommissionDashboardReadModel,
   type CommissionReadyWorksheetModel,
 } from "../../src/lib/store/commissions-read-model";
@@ -173,6 +174,18 @@ test("everyone with recorded hours is a worksheet row with an hours-share — th
   assert.ok(villalta);
   assert.equal(villalta.effectiveValue, 0);
   assert.equal(inputs.length, 6);
+});
+
+test("page payload omits all technician allocations without changing worksheet totals", async () => {
+  const { model, worksheet } = await readyModel(SAVED_CONFIG);
+  const slim = withoutCommissionAllocationDetails(model);
+  assert.equal(slim.worksheet.servingStatus, "ready");
+  if (slim.worksheet.servingStatus !== "ready") return;
+  assert.equal(slim.worksheet.commissionPool, worksheet.commissionPool);
+  assert.equal(slim.worksheet.totalWorkValue, worksheet.totalWorkValue);
+  assert.deepEqual(slim.worksheet.technicians.map((technician) => technician.jobAllocations),
+    slim.worksheet.technicians.map(() => []));
+  assert.equal(slim.worksheet.allocationBasis, worksheet.allocationBasis);
 });
 
 test("saved-state controls carry any persisted checkbox exclusions and detect session changes", async () => {

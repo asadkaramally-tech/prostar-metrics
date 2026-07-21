@@ -19,6 +19,6 @@ export async function GET(request: Request) {
   const summaryYear = parseInt(url.searchParams.get("summaryYear") ?? String(year), 10);
 
   return NextResponse.json(await cachedPageLoad(`api:commissions:${year}-${month}:${summaryYear}`, 120_000, () =>
-    getCommissionDashboardReadModel({ year, month, summaryYear }),
+    getCommissionDashboardReadModel({ year, month, summaryYear, includeAllocationDetails: false }),
   ));
 }

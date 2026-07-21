@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -170,8 +169,9 @@ function JobsContent({ model }: { model: JobDashboardReadModel }) {
   const openDrill = useCallback((kind: "site" | "category", label: string) => {
     setDrawer(null);
     setDrill((prev) => ({ kind, label, epoch: (prev?.epoch ?? 0) + 1 }));
+    void cohort.load().catch(() => undefined);
     tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+  }, [cohort]);
 
   return (
     <>
@@ -986,6 +986,10 @@ export function recurringLaborFacts(rows: JobDrilldownRow[]): RecurringLaborFact
 
 function LaborCard({ model, cohort }: { model: JobDashboardReadModel; cohort: FullCohort }) {
   const [mode, setMode] = useState<"quote" | "recurring">("quote");
+  const changeMode = (value: "quote" | "recurring") => {
+    setMode(value);
+    if (value === "recurring") void cohort.load().catch(() => undefined);
+  };
   return (
     <Card
       title="Estimated vs Actual Labor"
@@ -999,7 +1003,7 @@ function LaborCard({ model, cohort }: { model: JobDashboardReadModel; cohort: Fu
             { val: "recurring", label: "Recurring" },
           ]}
           value={mode}
-          onChange={(val) => setMode(val as "quote" | "recurring")}
+          onChange={(val) => changeMode(val as "quote" | "recurring")}
         />
       }
     >
@@ -1007,7 +1011,7 @@ function LaborCard({ model, cohort }: { model: JobDashboardReadModel; cohort: Fu
         {mode === "quote" ? (
           <QuoteLinkedLabor model={model} />
         ) : (
-          <RecurringLabor rows={cohort.rows} complete={cohort.complete} />
+          <RecurringLabor rows={cohort.rows} complete={cohort.complete} loading={cohort.loading} />
         )}
       </CardBody>
     </Card>
@@ -1170,7 +1174,10 @@ function QuoteLinkedLabor({ model }: { model: JobDashboardReadModel }) {
   );
 }
 
-function RecurringLabor({ rows, complete }: { rows: JobDrilldownRow[]; complete: boolean }) {
+function RecurringLabor({ rows, complete, loading }: { rows: JobDrilldownRow[]; complete: boolean; loading: boolean }) {
+  if (!complete) {
+    return <StateEmpty>{loading ? "Loading recurring labor for the full month…" : "Recurring labor is available when opened."}</StateEmpty>;
+  }
   const facts = recurringLaborFacts(rows);
   const exclusions = facts.exclusions.slice(0, 3);
   return (
@@ -1515,42 +1522,63 @@ export function pageList(totalPages: number, page: number): Array<number | "gap"
   return out;
 }
 
-export type FullCohort = { rows: JobDrilldownRow[]; complete: boolean; error: string | null };
+export type FullCohort = {
+  rows: JobDrilldownRow[];
+  complete: boolean;
+  loading: boolean;
+  error: string | null;
+  load: () => Promise<JobDrilldownRow[]>;
+};
 
 /** Full-cohort loader shared by the drilldown table and recurring labor.
- * It makes one narrow request instead of re-fetching the dashboard per page. */
+ * It stays idle on initial render and makes one narrow request only when an
+ * interaction needs records beyond the supplied dashboard page. */
 function useFullCohort(model: JobDashboardReadModel): FullCohort {
   const initialComplete = model.selected.records.length >= model.drilldownPagination.total;
-  const [state, setState] = useState<{ month: string; rows: JobDrilldownRow[] | null; error: string | null }>(() => ({
+  const [state, setState] = useState<{
+    month: string; rows: JobDrilldownRow[] | null; error: string | null; loading: boolean;
+  }>(() => ({
     month: model.selectedMonth,
     rows: initialComplete ? model.selected.records : null,
     error: null,
+    loading: false,
   }));
-  useEffect(() => {
-    if (model.selected.records.length >= model.drilldownPagination.total) {
-      return;
-    }
-    let cancelled = false;
-    fetchAllCompletedJobs(model)
+  const requestRef = useRef<{ month: string; promise: Promise<JobDrilldownRow[]> } | null>(null);
+  const currentState = state.month === model.selectedMonth
+    ? state
+    : { rows: null, error: null, loading: false };
+  const load = useCallback(() => {
+    if (initialComplete) return Promise.resolve(model.selected.records);
+    if (currentState.rows) return Promise.resolve(currentState.rows);
+    if (requestRef.current?.month === model.selectedMonth) return requestRef.current.promise;
+
+    setState({ month: model.selectedMonth, rows: null, error: null, loading: true });
+    const promise = fetchAllCompletedJobs(model)
       .then((rows) => {
-        if (!cancelled) setState({ month: model.selectedMonth, rows, error: null });
+        setState({ month: model.selectedMonth, rows, error: null, loading: false });
+        return rows;
       })
       .catch((error: unknown) => {
-        if (!cancelled) setState({
+        setState({
           month: model.selectedMonth,
           rows: null,
           error: error instanceof Error ? error.message : "Load failed.",
+          loading: false,
         });
+        throw error;
+      })
+      .finally(() => {
+        if (requestRef.current?.promise === promise) requestRef.current = null;
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [model, model.drilldownPagination.total, model.selected.records]);
-  const currentState = state.month === model.selectedMonth ? state : { rows: null, error: null };
+    requestRef.current = { month: model.selectedMonth, promise };
+    return promise;
+  }, [currentState.rows, initialComplete, model]);
   return {
     rows: currentState.rows ?? model.selected.records,
     complete: currentState.rows !== null || initialComplete,
+    loading: currentState.loading,
     error: currentState.error,
+    load,
   };
 }
 
@@ -1580,6 +1608,7 @@ function CompletedJobsCard({
   const filters: CompletedJobsFilters = { category, source, technician, site };
   const filteredAll = sortBySellValue(filterCompletedJobs(cohort.rows, filters));
   const anyFilter = category !== "all" || source !== "all" || technician !== "all" || site !== null;
+  const waitingForFullCohort = !cohort.complete && (anyFilter || page > 1);
   const total = anyFilter || cohort.complete ? filteredAll.length : model.drilldownPagination.total;
   const totalPages = Math.max(1, Math.ceil(total / CLIENT_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -1588,15 +1617,19 @@ function CompletedJobsCard({
   const setFilter = (setter: (value: string) => void) => (value: string) => {
     setter(value);
     setPage(1);
+    void cohort.load().catch(() => undefined);
   };
 
-  const downloadCsv = () => {
+  const downloadCsv = async () => {
     setCsvError(null);
-    if (!cohort.complete) {
-      setCsvError(cohort.error ?? "The complete job list is still loading. No file was downloaded.");
+    let rows = cohort.rows;
+    try {
+      rows = await cohort.load();
+    } catch {
+      setCsvError(cohort.error ?? "The complete job list could not be loaded. No file was downloaded.");
       return;
     }
-    const csv = buildCompletedJobsCsv(filteredAll);
+    const csv = buildCompletedJobsCsv(sortBySellValue(filterCompletedJobs(rows, filters)));
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -1690,7 +1723,11 @@ function CompletedJobsCard({
             </tr>
           </thead>
           <tbody>
-            {visible.length === 0 ? (
+            {waitingForFullCohort ? (
+              <tr>
+                <td colSpan={6}><StateEmpty>Loading the full month…</StateEmpty></td>
+              </tr>
+            ) : visible.length === 0 ? (
               <tr>
                 <td colSpan={6}>
                   <StateEmpty>
@@ -1731,7 +1768,7 @@ function CompletedJobsCard({
           {total === 0
             ? "Showing 0 jobs"
             : `Showing ${start + 1}–${start + visible.length} of ${total}${anyFilter ? " filtered" : ""} by sell value`}
-          {!cohort.complete && !cohort.error ? " · loading the full month…" : ""}
+          {cohort.loading ? " · loading the full month…" : ""}
           {cohort.error ? ` · ${cohort.error}` : ""}
           {csvError ? ` · ${csvError}` : ""}
         </span>
@@ -1749,8 +1786,14 @@ function CompletedJobsCard({
                 key={entry}
                 type="button"
                 className={entry === safePage ? "on" : undefined}
-                disabled={!cohort.complete && entry * CLIENT_PAGE_SIZE > cohort.rows.length}
-                onClick={() => setPage(entry)}
+                disabled={cohort.loading}
+                onClick={() => {
+                  if (!cohort.complete && entry > 1) {
+                    void cohort.load().then(() => setPage(entry)).catch(() => undefined);
+                    return;
+                  }
+                  setPage(entry);
+                }}
               >
                 {entry}
               </button>
@@ -1758,8 +1801,15 @@ function CompletedJobsCard({
           )}
           <button
             type="button"
-            disabled={safePage === totalPages}
-            onClick={() => setPage(safePage + 1)}
+            disabled={safePage === totalPages || cohort.loading}
+            onClick={() => {
+              const next = safePage + 1;
+              if (!cohort.complete) {
+                void cohort.load().then(() => setPage(next)).catch(() => undefined);
+                return;
+              }
+              setPage(next);
+            }}
             aria-label="Next page"
           >
             ›

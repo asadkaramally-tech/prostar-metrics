@@ -15,7 +15,9 @@ import { BACKFILL_START_MONTH, businessCurrentMonth } from "@/lib/backfill/plan"
 import { queryPostgres, withPostgresTransaction, type PostgresQuery } from "@/lib/store/postgres";
 import {
   buildQuoteMetricsReadModel,
+  buildPersistedQuoteDashboardRecords,
   loadQuoteDashboardRows,
+  type PersistedQuoteDashboardRecord,
   type QuoteMetricsReadModel,
 } from "@/lib/store/quote-dashboard-read-model";
 import {
@@ -28,7 +30,10 @@ import type { RollupScope } from "@/lib/store/rollups";
 import { getIssuedQuoteInputs, getJobMetricInputs, getJobReconciliations } from "@/lib/store/job-dashboard-read-model";
 import { getTechnicianPerformanceInputs } from "@/lib/store/technician-read-model-inputs";
 
-export type QuoteDashboardReadModelPayload = QuoteMonthlyReadModel & { dashboard: QuoteMetricsReadModel };
+export type QuoteDashboardReadModelPayload = QuoteMonthlyReadModel & {
+  dashboard: QuoteMetricsReadModel;
+  quoteRecords: PersistedQuoteDashboardRecord[];
+};
 export type JobDashboardReadModelPayload = ReturnType<typeof buildJobMonthlyReadModel> & {
   dashboard: JobMetricsDashboardReadModel;
 };
@@ -440,7 +445,11 @@ async function assertRollupLease(
   if (result.rows.length !== 1) throw new Error(`Lost rollup lease for job ${job.id}.`);
 }
 
-export async function getLatestReadModelPayload(scope: RollupScope, periodStart?: string): Promise<{
+export async function getLatestReadModelPayload(
+  scope: RollupScope,
+  periodStart?: string,
+  compactTechnicianDetails = false,
+): Promise<{
   period_start: string;
   values_json: ReadModelPayload;
   source_coverage_json: Record<string, unknown>;
@@ -453,7 +462,13 @@ export async function getLatestReadModelPayload(scope: RollupScope, periodStart?
     source_coverage_json: Record<string, unknown>;
     rebuilt_at: string;
   }>(
-    `select period_start::text, values_json, source_coverage_json, rebuilt_at::text
+    `select period_start::text,
+            case
+              when $4::boolean and metric_family = 'technicians' then
+                values_json || '{"history":[],"visits":[],"crewLaborEfficiency":[]}'::jsonb
+              else values_json
+            end as values_json,
+            source_coverage_json, rebuilt_at::text
      from metrics.dashboard_read_models
      where metric_family = $1
        and period_grain = 'month'
@@ -483,7 +498,7 @@ export async function getLatestReadModelPayload(scope: RollupScope, periodStart?
        end,
        period_start desc
      limit 1`,
-    [scope, periodStart ?? null, upperBound],
+    [scope, periodStart ?? null, upperBound, compactTechnicianDetails],
   );
 
   return result.rows[0] ?? null;
@@ -547,6 +562,7 @@ async function buildQuoteDashboardPayload(periodStart: string, periodEnd: string
   return {
     ...monthly,
     dashboard,
+    quoteRecords: buildPersistedQuoteDashboardRecords(snapshots, periodStart),
   };
 }
 

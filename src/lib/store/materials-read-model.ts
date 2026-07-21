@@ -5,6 +5,7 @@ import {
   normalizeMaterialsPeriodStart,
   type MaterialLineInput,
   type MaterialsMonthCoverage,
+  type MaterialsItemRow,
   type MaterialsReadModel,
 } from "@/lib/metrics/materials";
 import { getPageFreshness } from "@/lib/store/freshness";
@@ -12,6 +13,23 @@ import { queryPostgres } from "@/lib/store/postgres";
 
 export const MATERIALS_METRIC_FAMILY = "materials";
 export const MATERIALS_FRESHNESS_PAGE_KEY = "materials";
+export const MATERIALS_PAGE_SIZE = 20;
+
+/** A materials table row deliberately omits its potentially long job roster. */
+export type MaterialsItemSummary = Omit<MaterialsItemRow, "jobIds">;
+
+export type MaterialsItemPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+/** The bounded payload passed to the client Materials dashboard. */
+export type MaterialsPageReadModel = Omit<MaterialsReadModel, "items"> & {
+  items: MaterialsItemSummary[];
+  itemPagination: MaterialsItemPagination;
+};
 
 export type MaterialsRowsQuery = <T = Record<string, unknown>>(
   text: string,
@@ -85,6 +103,46 @@ export async function getMaterialsReadModel(
       now,
     );
   }
+}
+
+/**
+ * Returns the one ranked page needed to render /materials. The complete
+ * material model remains server-side for exports and item drilldowns.
+ */
+export async function getMaterialsPageReadModel(
+  periodStart?: string,
+  page?: number,
+): Promise<MaterialsPageReadModel> {
+  return toMaterialsPageReadModel(await getMaterialsReadModel(periodStart), page);
+}
+
+export function toMaterialsPageReadModel(
+  model: MaterialsReadModel,
+  page?: number,
+  pageSize = MATERIALS_PAGE_SIZE,
+): MaterialsPageReadModel {
+  const total = model.items.length;
+  const safePageSize = Number.isInteger(pageSize) && pageSize > 0 ? pageSize : MATERIALS_PAGE_SIZE;
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const requestedPage = Number.isInteger(page) && page! > 0 ? page! : 1;
+  const safePage = Math.min(requestedPage, totalPages);
+  const start = (safePage - 1) * safePageSize;
+  const items = model.items.slice(start, start + safePageSize).map(({ jobIds, ...item }) => {
+    void jobIds;
+    return item;
+  });
+
+  return {
+    ...model,
+    items,
+    itemPagination: { page: safePage, pageSize: safePageSize, total, totalPages },
+  };
+}
+
+export function materialsPageParam(value: string | null | undefined): number {
+  if (!value || !/^\d+$/.test(value)) return 1;
+  const page = Number(value);
+  return Number.isSafeInteger(page) && page > 0 ? page : 1;
 }
 
 export async function getPersistedMaterialsReadModel(

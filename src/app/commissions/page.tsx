@@ -18,7 +18,7 @@ export default async function CommissionsPage({
   const today = new Date();
   const { year, month, summaryYear } = parsePeriodParams(params, today);
   const model = await cachedPageLoad(`commissions:${year}-${month}:${summaryYear ?? ""}`, 120_000, () =>
-    getCommissionDashboardReadModel({ year, month, summaryYear }),
+    getCommissionDashboardReadModel({ year, month, summaryYear, includeAllocationDetails: false }),
   );
 
   return (

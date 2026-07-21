@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dpill, KpiBand, moneyK, PrimaryStatCard, SegBar, type SegBarSegment } from "@/components/band";
 import { fmt } from "@/components/charts";
 import {
@@ -20,7 +20,8 @@ import {
   KVCell,
   StateEmpty,
 } from "@/components/reset";
-import { SPECIAL_ORDER_CATEGORY, type MaterialsItemRow, type MaterialsReadModel } from "@/lib/metrics/materials";
+import { SPECIAL_ORDER_CATEGORY, type MaterialsReadModel } from "@/lib/metrics/materials";
+import type { MaterialsItemPagination, MaterialsItemSummary } from "@/lib/store/materials-read-model";
 
 /* /materials — implements the owner-approved mockup
    docs/approved-design/mockups/materials.html exactly, with every figure
@@ -30,8 +31,6 @@ import { SPECIAL_ORDER_CATEGORY, type MaterialsItemRow, type MaterialsReadModel 
    Category segmented bar) → All Materials Sold table ordered by total sold
    value with CSV, pagination and a row drill drawer. The only micro-copy on
    the page is the table subtitle's Δ column key. */
-
-const CLIENT_PAGE_SIZE = 20;
 
 /* Category fills follow the mockup's rank order; Special order / non-stock
    always takes the warn tint wherever it ranks, the "N more" remainder is
@@ -47,14 +46,51 @@ const RANK_FILLS = [
 ];
 const LIGHT_FILLS = new Set([SPECIAL_FILL, REMAINDER_FILL, RANK_FILLS[3], RANK_FILLS[4]]);
 
-export type MaterialsDashboardProps = { model: MaterialsReadModel };
+type MaterialsDashboardModel = Omit<MaterialsReadModel, "items"> & {
+  items: MaterialsItemSummary[];
+  itemPagination?: MaterialsItemPagination;
+};
+
+export type MaterialsDashboardProps = { model: MaterialsDashboardModel };
+
+export { buildMaterialsCsv } from "@/lib/materials/csv";
 
 export function MaterialsDashboard({ model }: MaterialsDashboardProps) {
-  const [drawerItem, setDrawerItem] = useState<MaterialsItemRow | null>(null);
+  const [drawerItem, setDrawerItem] = useState<MaterialsItemSummary | null>(null);
+  const [drawerJobIds, setDrawerJobIds] = useState<number[] | null>(null);
+  const [drawerLoadError, setDrawerLoadError] = useState<string | null>(null);
   const monthKey = model.periodStart.slice(0, 7);
   const monthLong = monthLongName(monthKey);
 
-  if (model.items.length === 0) {
+  useEffect(() => {
+    if (!drawerItem) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({ month: monthKey, key: drawerItem.key });
+    void fetch(`/api/materials/item-jobs?${params.toString()}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Job IDs could not be loaded.");
+        return response.json() as Promise<{ jobIds?: unknown }>;
+      })
+      .then((payload) => {
+        if (!Array.isArray(payload.jobIds) || !payload.jobIds.every((jobId) => typeof jobId === "number")) {
+          throw new Error("Job IDs could not be loaded.");
+        }
+        setDrawerJobIds(payload.jobIds);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setDrawerLoadError(error instanceof Error ? error.message : "Job IDs could not be loaded.");
+      });
+    return () => controller.abort();
+  }, [drawerItem, monthKey]);
+
+  const openDrawer = (item: MaterialsItemSummary) => {
+    setDrawerJobIds(null);
+    setDrawerLoadError(null);
+    setDrawerItem(item);
+  };
+
+  if ((model.itemPagination?.total ?? model.items.length) === 0) {
     return (
       <Card>
         <CardBody>
@@ -67,7 +103,7 @@ export function MaterialsDashboard({ model }: MaterialsDashboardProps) {
   return (
     <DefTooltipProvider>
       <MaterialsBand model={model} />
-      <MaterialsTableCard model={model} onOpen={(row) => setDrawerItem(row)} />
+      <MaterialsTableCard model={model} onOpen={openDrawer} />
       <Drawer
         open={drawerItem !== null}
         onClose={() => setDrawerItem(null)}
@@ -75,13 +111,20 @@ export function MaterialsDashboard({ model }: MaterialsDashboardProps) {
         title={drawerItem?.name}
         sub={drawerItem ? `${drawerItem.category} · ${monthLong} ${monthKey.slice(0, 4)}` : null}
       >
-        {drawerItem ? <MaterialDrawerBody row={drawerItem} monthKey={monthKey} /> : null}
+        {drawerItem ? (
+          <MaterialDrawerBody
+            row={drawerItem}
+            monthKey={monthKey}
+            jobIds={drawerJobIds}
+            loadError={drawerLoadError}
+          />
+        ) : null}
       </Drawer>
     </DefTooltipProvider>
   );
 }
 
-function emptyMonthMessage(model: MaterialsReadModel, monthLong: string): string {
+function emptyMonthMessage(model: MaterialsDashboardModel, monthLong: string): string {
   const status = model.coverage.selectedMonth.status;
   if (status === "missing") return `No completed materials walk exists for ${monthLong} yet.`;
   if (status === "failed") return `The latest ${monthLong} materials walk failed; no materials are available.`;
@@ -106,7 +149,7 @@ export function paceText(v: number): string {
   return `≈$${Math.round(a)}`;
 }
 
-function MaterialsBand({ model }: { model: MaterialsReadModel }) {
+function MaterialsBand({ model }: { model: MaterialsDashboardModel }) {
   const totals = model.totals;
   const monthKey = model.periodStart.slice(0, 7);
   const monthLong = monthLongName(monthKey);
@@ -171,7 +214,7 @@ export type CategorySegment = {
 
 /** Top-6 categories + an aggregated "N more categories" remainder, with the
  *  mockup's rank-ordered fills (Special order always warn-tinted). */
-export function categorySegments(model: MaterialsReadModel): CategorySegment[] {
+export function categorySegments(model: MaterialsDashboardModel): CategorySegment[] {
   const total = model.categories.reduce((sum, slice) => sum + slice.value, 0);
   if (total <= 0) return [];
   const top = model.categories.slice(0, 6);
@@ -202,7 +245,7 @@ export function categorySegments(model: MaterialsReadModel): CategorySegment[] {
   return out;
 }
 
-function CategoryCard({ model }: { model: MaterialsReadModel }) {
+function CategoryCard({ model }: { model: MaterialsDashboardModel }) {
   const monthLong = monthLongName(model.periodStart.slice(0, 7));
   const segments = categorySegments(model);
   const barSegments: SegBarSegment[] = segments.map((seg, i) => ({
@@ -252,69 +295,18 @@ export function qtyText(v: number): string {
   return String(Math.round(v * 100) / 100);
 }
 
-/** Plain client-side CSV of the full ranked item list. */
-export function buildMaterialsCsv(items: MaterialsItemRow[], priorShort: string): string {
-  const header = [
-    "Item",
-    "Part No",
-    "Category",
-    "Qty",
-    `${priorShort} Qty`,
-    "Qty Change",
-    "Unit Sell",
-    "Extended (Ex-Tax)",
-    "Jobs",
-    "Job IDs",
-  ];
-  const lines = [header.map(csvEscape).join(",")];
-  for (const row of items) {
-    lines.push(
-      [
-        row.name,
-        row.partNo ?? "",
-        row.category,
-        row.qty,
-        row.priorMonthQty,
-        qtyDelta(row.qty, row.priorMonthQty).text.replace("−", "-"),
-        row.unitSell ?? "",
-        row.extended,
-        row.jobCount,
-        row.jobIds.join("; "),
-      ]
-        .map((value) => csvEscape(String(value)))
-        .join(","),
-    );
-  }
-  return lines.join("\r\n") + "\r\n";
-}
-
-function csvEscape(value: string): string {
-  return /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
-}
-
-function MaterialsTableCard({ model, onOpen }: { model: MaterialsReadModel; onOpen: (row: MaterialsItemRow) => void }) {
+function MaterialsTableCard({ model, onOpen }: { model: MaterialsDashboardModel; onOpen: (row: MaterialsItemSummary) => void }) {
   const monthKey = model.periodStart.slice(0, 7);
   const monthLong = monthLongName(monthKey);
   const priorShort = monthShortName(shiftMonthKey(monthKey, -1));
-  const [page, setPage] = useState(1);
-  const total = model.items.length;
-  const totalPages = Math.max(1, Math.ceil(total / CLIENT_PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const start = (safePage - 1) * CLIENT_PAGE_SIZE;
-  const visible = model.items.slice(start, start + CLIENT_PAGE_SIZE);
-
-  const downloadCsv = () => {
-    const csv = buildMaterialsCsv(model.items, priorShort);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `materials-${monthKey}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  const pagination = model.itemPagination ?? {
+    page: 1,
+    pageSize: model.items.length || 1,
+    total: model.items.length,
+    totalPages: 1,
   };
+  const pageHref = (page: number) => `/materials?${new URLSearchParams({ month: monthKey, page: String(page) })}`;
+  const start = (pagination.page - 1) * pagination.pageSize;
 
   return (
     <div className="card">
@@ -323,13 +315,13 @@ function MaterialsTableCard({ model, onOpen }: { model: MaterialsReadModel; onOp
           <div className="ti">All Materials Sold — {monthLong}</div>
           <div className="st">Ordered by total sold value · Δ = qty change vs {priorShort}</div>
         </div>
-        <button type="button" className="ctl" style={{ height: 34, fontSize: 13.5 }} onClick={downloadCsv}>
+        <a className="ctl" style={{ height: 34, fontSize: 13.5 }} href={`/api/materials/csv?month=${monthKey}`}>
           <svg className="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
             <path d="M12 3v12M7 10l5 5 5-5" />
             <path d="M4 19h16" />
           </svg>
           Download CSV
-        </button>
+        </a>
       </div>
       <div className="tblwrap">
         <table>
@@ -346,7 +338,7 @@ function MaterialsTableCard({ model, onOpen }: { model: MaterialsReadModel; onOp
             </tr>
           </thead>
           <tbody>
-            {visible.map((row) => {
+            {model.items.map((row) => {
               const delta = qtyDelta(row.qty, row.priorMonthQty);
               return (
                 <tr key={row.key} className="rowlink" onClick={() => onOpen(row)}>
@@ -379,38 +371,42 @@ function MaterialsTableCard({ model, onOpen }: { model: MaterialsReadModel; onOp
       </div>
       <div className="foot">
         <span>
-          {total === 0
+          {pagination.total === 0
             ? "Showing 0 materials"
-            : `Showing ${start + 1}–${start + visible.length} of ${total} by total sold value`}
+            : `Showing ${start + 1}–${start + model.items.length} of ${pagination.total} by total sold value`}
         </span>
         <span className="pager">
-          <button type="button" disabled={safePage === 1} onClick={() => setPage(safePage - 1)} aria-label="Previous page">
+          <a
+            href={pagination.page === 1 ? undefined : pageHref(pagination.page - 1)}
+            aria-label="Previous page"
+            aria-disabled={pagination.page === 1 || undefined}
+            tabIndex={pagination.page === 1 ? -1 : undefined}
+          >
             ‹
-          </button>
-          {pageList(totalPages, safePage).map((entry, index) =>
+          </a>
+          {pageList(pagination.totalPages, pagination.page).map((entry, index) =>
             entry === "gap" ? (
               <span key={`gap${index}`} className="gap">
                 …
               </span>
             ) : (
-              <button
+              <a
                 key={entry}
-                type="button"
-                className={entry === safePage ? "on" : undefined}
-                onClick={() => setPage(entry)}
+                className={entry === pagination.page ? "on" : undefined}
+                href={pageHref(entry)}
               >
                 {entry}
-              </button>
+              </a>
             ),
           )}
-          <button
-            type="button"
-            disabled={safePage === totalPages}
-            onClick={() => setPage(safePage + 1)}
+          <a
+            href={pagination.page === pagination.totalPages ? undefined : pageHref(pagination.page + 1)}
             aria-label="Next page"
+            aria-disabled={pagination.page === pagination.totalPages || undefined}
+            tabIndex={pagination.page === pagination.totalPages ? -1 : undefined}
           >
             ›
-          </button>
+          </a>
         </span>
       </div>
     </div>
@@ -419,7 +415,17 @@ function MaterialsTableCard({ model, onOpen }: { model: MaterialsReadModel; onOp
 
 /* ── Drawer: the item's job list ───────────────────────── */
 
-function MaterialDrawerBody({ row, monthKey }: { row: MaterialsItemRow; monthKey: string }) {
+function MaterialDrawerBody({
+  row,
+  monthKey,
+  jobIds,
+  loadError,
+}: {
+  row: MaterialsItemSummary;
+  monthKey: string;
+  jobIds: number[] | null;
+  loadError: string | null;
+}) {
   const priorShort = monthShortName(shiftMonthKey(monthKey, -1));
   return (
     <>
@@ -435,12 +441,14 @@ function MaterialDrawerBody({ row, monthKey }: { row: MaterialsItemRow; monthKey
         On {row.jobCount} completed {row.jobCount === 1 ? "job" : "jobs"}
       </DSec>
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {row.jobIds.map((jobId) => (
+        {jobIds?.map((jobId) => (
           <li key={jobId} style={{ padding: "8px 0", borderBottom: "1px solid var(--hair)" }}>
             <span className="id1">Job {jobId}</span>
           </li>
         ))}
       </ul>
+      {jobIds === null && !loadError ? <StateEmpty>Loading completed job IDs…</StateEmpty> : null}
+      {loadError ? <StateEmpty>{loadError}</StateEmpty> : null}
     </>
   );
 }

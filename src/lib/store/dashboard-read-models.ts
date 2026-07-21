@@ -48,13 +48,16 @@ const metricLabels: Record<RollupScope, Record<string, string>> = {
   },
 };
 
-export async function getDashboardReadModel(scope: RollupScope, options: { periodStart?: string } = {}): Promise<DashboardReadModel> {
+export async function getDashboardReadModel(
+  scope: RollupScope,
+  options: { periodStart?: string; compactTechnicianDetails?: boolean } = {},
+): Promise<DashboardReadModel> {
   const freshnessPromise = getPageFreshness(scope, options.periodStart);
 
   try {
     const [freshness, latestPayload, rollups] = await Promise.all([
       freshnessPromise,
-      getLatestReadModelPayload(scope, options.periodStart),
+      getLatestReadModelPayload(scope, options.periodStart, options.compactTechnicianDetails),
       getRollups(scope, options.periodStart ? 100 : 24, options.periodStart),
     ]);
     const payload = latestPayload?.values_json ?? null;

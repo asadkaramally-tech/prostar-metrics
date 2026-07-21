@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -522,6 +524,16 @@ test("fetchAllCompletedJobs uses one narrow full-roster request", async () => {
     ),
     /complete job list could not be loaded/,
   );
+});
+
+test("full roster remains idle until a table, CSV, drill, or recurring-labor interaction needs it", () => {
+  const source = readFileSync(path.join(process.cwd(), "src/components/jobs-dashboard.tsx"), "utf8");
+  const hook = source.match(/function useFullCohort[\s\S]*?\n}\n\nfunction CompletedJobsCard/)?.[0] ?? "";
+  assert.doesNotMatch(hook, /useEffect\(/, "mounting the dashboard must not start the roster request");
+  assert.match(source, /if \(value === "recurring"\) void cohort\.load\(\)/);
+  assert.match(source, /void cohort\.load\(\)\.catch\(\(\) => undefined\);/, "filters and drill-through request the roster on demand");
+  assert.match(source, /rows = await cohort\.load\(\)/, "CSV waits for a complete roster before export");
+  assert.match(source, /entry > 1/, "later table pages request the roster on demand");
 });
 
 test("pager layout keeps every numbered button a live page", () => {

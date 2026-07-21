@@ -285,6 +285,22 @@ export type QuoteMetricsReadModel = {
 type OverrideSummaryRow = { active_count: string; latest_at: string | null };
 type NormalizedQuote = ReturnType<typeof normalizeCanonicalRow>;
 type PersistedQuoteDashboardRow = { dashboard: QuoteMetricsReadModel | null };
+type PersistedQuoteRecordsRow = { period_start: string; quote_records: unknown };
+
+/**
+ * Compact, app-classified quote facts stored alongside each monthly dashboard
+ * payload. They are sufficient for all supported API filters and avoid
+ * rebuilding the 2023-current canonical quote corpus on page/filter changes.
+ */
+export type PersistedQuoteDashboardRecord = Pick<QuoteClassificationRow,
+  "quoteId" | "quoteNo" | "name" | "dateApproved" | "value" | "status" |
+  "category" | "categoryBasis" | "tier" | "outcome" | "acceptancePath" |
+  "evidence" | "linkedJobId" | "inverseConversionMatch" | "override"
+> & {
+  dateIssued: string | null;
+  customer: string;
+  siteName: string;
+};
 
 const monthFormatter = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 
@@ -437,22 +453,32 @@ export async function getQuoteFollowUpQueue(
 }
 
 export async function getQuoteMetricsReadModel(options: QuoteMetricsReadModelOptions = {}): Promise<QuoteMetricsReadModel> {
-  const selectedMonth = normalizeMonthKey(options.selectedMonth) ?? monthKey(losAngelesDate(options.now ?? new Date()));
+  const now = options.now ?? new Date();
+  const currentCalendarMonth = monthKey(losAngelesDate(now));
+  const selectedMonth = normalizeMonthKey(options.selectedMonth) ?? currentCalendarMonth;
   const freshnessPromise = getPageFreshness(
     "quotes",
     `${selectedMonth}-01`,
   );
-  if (!hasInteractiveDashboardFilters(options)) {
-    try {
+  try {
+    if (!hasInteractiveDashboardFilters(options)) {
       const [freshness, persisted] = await Promise.all([
         freshnessPromise,
         getPersistedQuoteDashboard(selectedMonth),
       ]);
       if (persisted) return { ...persisted, freshness };
-    } catch {
-      // Fall back to canonical reconstruction when the serving model is absent
-      // or temporarily unreadable.
+    } else {
+      const [freshness, records, overrideSummary] = await Promise.all([
+        freshnessPromise,
+        getPersistedQuoteDashboardRecords(selectedMonth, currentCalendarMonth),
+        getQuoteOverrideSummary(),
+      ]);
+      if (records) return buildQuoteMetricsReadModelFromPersistedRecords(freshness, records, overrideSummary, options);
     }
+  } catch {
+    // A complete persisted corpus is required for exact filtered results. Fall
+    // back to canonical reconstruction whenever a monthly model is missing or
+    // unreadable rather than silently filtering a partial history.
   }
 
   try {
@@ -492,6 +518,50 @@ export async function getPersistedQuoteDashboard(
   );
   const dashboard = result.rows[0]?.dashboard ?? null;
   return isUsablePersistedQuoteDashboard(dashboard, selectedMonth) ? dashboard : null;
+}
+
+export async function getPersistedQuoteDashboardRecords(
+  selectedMonth: string,
+  throughMonthOrQuery: string | QuoteDashboardRowsQuery = selectedMonth,
+  query: QuoteDashboardRowsQuery = queryPostgres,
+): Promise<PersistedQuoteDashboardRecord[] | null> {
+  const throughMonth = typeof throughMonthOrQuery === "function" ? selectedMonth : throughMonthOrQuery;
+  const effectiveQuery = typeof throughMonthOrQuery === "function" ? throughMonthOrQuery : query;
+  const through = throughMonth > selectedMonth ? throughMonth : selectedMonth;
+  const months: string[] = [];
+  for (let month = "2023-01"; month <= through; month = addMonthsKey(month, 1)) months.push(month);
+  const result = await effectiveQuery<PersistedQuoteRecordsRow>(
+    `select period_start::text, values_json -> 'quoteRecords' as quote_records
+       from metrics.dashboard_read_models
+      where metric_family = 'quotes'
+        and period_grain = 'month'
+        and period_start = any($1::date[])
+        and superseded_at is null
+        and jsonb_typeof(values_json -> 'quoteRecords') = 'array'
+      order by period_start`,
+    [months.map((month) => `${month}-01`)],
+  );
+  if (result.rows.length !== months.length) return null;
+  const byMonth = new Map(result.rows.map((row) => [row.period_start.slice(0, 7), row.quote_records]));
+  if (months.some((month) => !byMonth.has(month))) return null;
+  const records: PersistedQuoteDashboardRecord[] = [];
+  for (const month of months) {
+    const value = byMonth.get(month);
+    if (!Array.isArray(value) || !value.every(isPersistedQuoteDashboardRecord)) return null;
+    records.push(...value);
+  }
+  return records;
+}
+
+async function getQuoteOverrideSummary(
+  query: QuoteDashboardRowsQuery = queryPostgres,
+): Promise<OverrideSummaryRow> {
+  const result = await query<OverrideSummaryRow>(
+    `select count(*)::text as active_count, max(created_at)::text as latest_at
+       from metrics.quote_classification_overrides
+      where active = true`,
+  );
+  return result.rows[0] ?? { active_count: "0", latest_at: null };
 }
 
 function hasInteractiveDashboardFilters(options: QuoteMetricsReadModelOptions): boolean {
@@ -535,6 +605,63 @@ export function buildQuoteMetricsReadModel(
   overrideSummary: OverrideSummaryRow = { active_count: "0", latest_at: null },
   options: QuoteMetricsReadModelOptions = {},
 ): QuoteMetricsReadModel {
+  return buildQuoteMetricsReadModelFromNormalized(
+    freshness,
+    rows.map(normalizeCanonicalRow),
+    overrideSummary,
+    options,
+  );
+}
+
+export function buildQuoteMetricsReadModelFromPersistedRecords(
+  freshness: FreshnessStatus,
+  records: PersistedQuoteDashboardRecord[],
+  overrideSummary: OverrideSummaryRow = { active_count: "0", latest_at: null },
+  options: QuoteMetricsReadModelOptions = {},
+): QuoteMetricsReadModel {
+  return buildQuoteMetricsReadModelFromNormalized(
+    freshness,
+    uniquePersistedQuoteRecords(records).map(normalizePersistedQuoteDashboardRecord),
+    overrideSummary,
+    options,
+  );
+}
+
+export function buildPersistedQuoteDashboardRecords(
+  rows: QuoteCanonicalRow[],
+  periodStart: string,
+): PersistedQuoteDashboardRecord[] {
+  const month = periodStart.slice(0, 7);
+  return rows.map(normalizeCanonicalRow)
+    .filter((quote) => quote.monthKey === month || quote.issuedMonthKey === month)
+    .map((quote) => ({
+      quoteId: quote.quoteId,
+      quoteNo: quote.quoteNo,
+      name: quote.name,
+      dateApproved: quote.dateApproved ?? "",
+      dateIssued: quote.dateIssued,
+      value: quote.totalValue,
+      status: quote.status,
+      customer: quote.customer,
+      siteName: quote.siteName,
+      category: quote.category,
+      categoryBasis: quote.categoryBasis,
+      tier: quote.tier,
+      outcome: quote.outcome,
+      acceptancePath: quote.acceptancePath,
+      evidence: quote.evidence,
+      linkedJobId: quote.linkedJobId,
+      inverseConversionMatch: quote.inverseConversionMatch,
+      override: quote.override,
+    }));
+}
+
+function buildQuoteMetricsReadModelFromNormalized(
+  freshness: FreshnessStatus,
+  normalized: NormalizedQuote[],
+  overrideSummary: OverrideSummaryRow,
+  options: QuoteMetricsReadModelOptions,
+): QuoteMetricsReadModel {
   const now = options.now ?? new Date();
   const localToday = losAngelesDate(now);
   const currentCalendarMonth = monthKey(localToday);
@@ -542,10 +669,9 @@ export function buildQuoteMetricsReadModel(
   const daysInMonth = getDaysInMonth(parseMonthKey(selectedMonth));
   const isCurrentMonthPartial = selectedMonth === currentCalendarMonth;
   const elapsedDays = isCurrentMonthPartial ? localToday.getUTCDate() : daysInMonth;
-  const normalized = rows.map(normalizeCanonicalRow);
   const requestedFilters = normalizeDashboardFilters(options);
   const filtered = normalized.filter((quote) => matchesDashboardFilters(quote, requestedFilters));
-  const warnings = rows.length === 0 ? ["No quote rows are available for the dashboard."] : [];
+  const warnings = normalized.length === 0 ? ["No quote rows are available for the dashboard."] : [];
   const unclassifiedCount = normalized.filter((quote) => quote.category === "Unclassified").length;
   const contractGaps = unclassifiedCount > 0
     ? [`${unclassifiedCount} quote records are Unclassified; that group remains visible in category acceptance.`]
@@ -581,7 +707,7 @@ export function buildQuoteMetricsReadModel(
     selectedMonth,
     warnings,
     contractGaps,
-    quotesLoaded: rows.length,
+    quotesLoaded: normalized.length,
     currentMonth,
     priorMonth,
     priorYearSameDay,
@@ -693,6 +819,82 @@ function normalizeCanonicalRow(row: QuoteCanonicalRow) {
       createdAt: row.override_created_at ?? row.updated_at,
     } : null,
   };
+}
+
+function uniquePersistedQuoteRecords(records: PersistedQuoteDashboardRecord[]) {
+  // Monthly persistence can contain a quote in both its issued and approved
+  // month. Records are loaded oldest-to-newest, so the later approved-month
+  // classification wins without double-counting it in filter totals.
+  const byQuoteId = new Map<number, PersistedQuoteDashboardRecord>();
+  for (const record of records) byQuoteId.set(record.quoteId, record);
+  return [...byQuoteId.values()];
+}
+
+function normalizePersistedQuoteDashboardRecord(record: PersistedQuoteDashboardRecord): NormalizedQuote {
+  const approved = parseDate(record.dateApproved);
+  const issued = parseDate(record.dateIssued);
+  return {
+    quoteId: record.quoteId,
+    quoteNo: record.quoteNo,
+    name: record.name,
+    status: record.status,
+    customer: record.customer,
+    siteName: record.siteName,
+    linkedJobId: record.linkedJobId,
+    inverseConversionMatch: record.inverseConversionMatch,
+    approved: approved ?? new Date("1900-01-01T00:00:00Z"),
+    hasApprovedDate: approved !== null,
+    dateApproved: approved ? record.dateApproved : null,
+    dateIssued: record.dateIssued,
+    issuedMonthKey: issued ? monthKey(issued) : null,
+    issuedDay: issued ? issued.getUTCDate() : null,
+    monthKey: approved ? monthKey(approved) : null,
+    totalValue: record.value,
+    tier: record.tier,
+    category: normalizeCategory(record.category),
+    categoryBasis: record.categoryBasis,
+    outcome: record.outcome,
+    acceptancePath: record.acceptancePath,
+    evidence: record.evidence,
+    override: record.override,
+  };
+}
+
+function isPersistedQuoteDashboardRecord(value: unknown): value is PersistedQuoteDashboardRecord {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const row = value as Record<string, unknown>;
+  return Number.isSafeInteger(row.quoteId) && Number(row.quoteId) > 0
+    && typeof row.quoteNo === "string"
+    && typeof row.name === "string"
+    && typeof row.dateApproved === "string"
+    && (row.dateIssued === null || typeof row.dateIssued === "string")
+    && typeof row.value === "number" && Number.isFinite(row.value)
+    && typeof row.status === "string"
+    && typeof row.customer === "string"
+    && typeof row.siteName === "string"
+    && typeof row.category === "string"
+    && typeof row.categoryBasis === "string"
+    && quoteDealTiers.includes(row.tier as QuoteDealTier)
+    && quoteAcceptanceOutcomes.includes(row.outcome as QuoteAcceptanceOutcome)
+    && quoteAcceptancePaths.includes(row.acceptancePath as QuoteAcceptancePath)
+    && typeof row.evidence === "string"
+    && (row.linkedJobId === null || Number.isSafeInteger(row.linkedJobId))
+    && typeof row.inverseConversionMatch === "boolean"
+    && isPersistedQuoteOverride(row.override);
+}
+
+function isPersistedQuoteOverride(value: unknown): boolean {
+  if (value === null) return true;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const override = value as Record<string, unknown>;
+  return Number.isSafeInteger(override.id)
+    && (override.requestedEffect === "excluded" || override.requestedEffect === "legacy_accept" || override.requestedEffect === "legacy_not_accept")
+    && typeof override.effective === "boolean"
+    && typeof override.reason === "string"
+    && (override.evidenceUrl === null || typeof override.evidenceUrl === "string")
+    && typeof override.actorEmail === "string"
+    && Number.isSafeInteger(override.revision)
+    && typeof override.createdAt === "string";
 }
 
 function buildMonthlyMetric(month: string, quotes: NormalizedQuote[], provisional: boolean, maxDay?: number): QuoteMonthlyMetric {

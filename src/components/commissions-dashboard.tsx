@@ -452,6 +452,9 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
   const [tab, setTab] = useState<"monthly" | "summary">("monthly");
   const [mode, setMode] = useState<CommissionSummaryMode>("monthly");
   const [openTech, setOpenTech] = useState<string | null>(null);
+  const [allocationDetails, setAllocationDetails] = useState<Record<string, CommissionJobAllocation[]>>({});
+  const [allocationLoading, setAllocationLoading] = useState<string | null>(null);
+  const [allocationError, setAllocationError] = useState<string | null>(null);
   const interacted = useRef(false);
 
   const computed = useMemo(
@@ -469,6 +472,19 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
   const toggleOpen = (employeeId: string) => {
     interacted.current = true;
     setOpenTech((current) => (current === employeeId ? null : employeeId));
+    if (allocationDetails[employeeId] || worksheet.servingStatus !== "ready" || !computed?.rows.find((row) => row.employeeId === employeeId)?.jobCount) return;
+    setAllocationLoading(employeeId);
+    setAllocationError(null);
+    const search = new URLSearchParams({ month: worksheet.periodLabel, employeeId });
+    void fetch(`/api/commissions/allocations?${search.toString()}`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Allocation detail could not be loaded.");
+        const payload = await response.json() as { allocations?: CommissionJobAllocation[] };
+        if (!Array.isArray(payload.allocations)) throw new Error("Allocation detail could not be loaded.");
+        setAllocationDetails((current) => ({ ...current, [employeeId]: payload.allocations! }));
+      })
+      .catch((error: unknown) => setAllocationError(error instanceof Error ? error.message : "Allocation detail could not be loaded."))
+      .finally(() => setAllocationLoading((current) => current === employeeId ? null : current));
   };
 
   /** Uncheck/recheck a person: the pool is unchanged, but it redistributes
@@ -505,6 +521,9 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
             openTech={openTech}
             onToggleOpen={toggleOpen}
             onToggleExclude={toggleExclude}
+            allocationDetails={allocationDetails}
+            allocationLoading={allocationLoading}
+            allocationError={allocationError}
           />
         ) : (
           <WorksheetStateCard worksheet={worksheet} />
@@ -648,6 +667,9 @@ function WorksheetTab({
   openTech,
   onToggleOpen,
   onToggleExclude,
+  allocationDetails,
+  allocationLoading,
+  allocationError,
 }: {
   worksheet: CommissionReadyWorksheetModel;
   computed: { pool: number; rows: CommissionComputedRow[] };
@@ -656,10 +678,13 @@ function WorksheetTab({
   openTech: string | null;
   onToggleOpen: (employeeId: string) => void;
   onToggleExclude: (employeeId: string) => void;
+  allocationDetails: Record<string, CommissionJobAllocation[]>;
+  allocationLoading: string | null;
+  allocationError: string | null;
 }) {
   const eff = controls.efficiencyEnabled;
   const monthLong = monthLongName(worksheet.periodLabel);
-  const basis = allocationBasis(computed.rows);
+  const basis = allocationBasis(computed.rows, worksheet.allocationBasis);
   const legendItems = [
     { label: "Base share", color: SEG_BASE },
     { label: "Rank boost", color: SEG_BOOST },
@@ -776,6 +801,9 @@ function WorksheetTab({
                 open={openTech === row.employeeId}
                 onToggle={() => onToggleOpen(row.employeeId)}
                 onToggleExclude={() => onToggleExclude(row.employeeId)}
+                allocations={allocationDetails[row.employeeId]}
+                allocationLoading={allocationLoading === row.employeeId}
+                allocationError={allocationError}
               />
             ))}
           </div>
@@ -793,6 +821,9 @@ function WorksheetTab({
               open={openTech === row.employeeId}
               onToggle={() => onToggleOpen(row.employeeId)}
               onToggleExclude={() => onToggleExclude(row.employeeId)}
+              allocations={allocationDetails[row.employeeId]}
+              allocationLoading={allocationLoading === row.employeeId}
+              allocationError={allocationError}
             />
           ))}
         </div>
@@ -832,6 +863,9 @@ function BoardRow({
   open,
   onToggle,
   onToggleExclude,
+  allocations,
+  allocationLoading,
+  allocationError,
 }: {
   row: CommissionComputedRow;
   rank: number;
@@ -844,6 +878,9 @@ function BoardRow({
   open: boolean;
   onToggle: () => void;
   onToggleExclude: () => void;
+  allocations?: CommissionJobAllocation[];
+  allocationLoading: boolean;
+  allocationError: string | null;
 }) {
   const eff = controls.efficiencyEnabled;
   const preEff = eff ? row.post : row.final;
@@ -931,7 +968,8 @@ function BoardRow({
         amount={row.final > 0 ? fmt.cents(row.final) : "$0.00"}
       />
       {open ? (
-        <RowDetail row={row} pool={pool} controls={controls} basis={basis} monthLong={monthLong} worksheet={worksheet} />
+        <RowDetail row={row} pool={pool} controls={controls} basis={basis} monthLong={monthLong} worksheet={worksheet}
+          allocations={allocations} loading={allocationLoading} error={allocationError} />
       ) : null}
     </div>
   );
@@ -944,6 +982,9 @@ function RowDetail({
   basis,
   monthLong,
   worksheet,
+  allocations,
+  loading,
+  error,
 }: {
   row: CommissionComputedRow;
   pool: number;
@@ -951,12 +992,18 @@ function RowDetail({
   basis: AllocationBasis;
   monthLong: string;
   worksheet: CommissionReadyWorksheetModel;
+  allocations?: CommissionJobAllocation[];
+  loading: boolean;
+  error: string | null;
 }) {
-  const allocations = [...row.jobAllocations].sort((a, b) => b.allocatedValue - a.allocatedValue);
+  const loadedAllocations = allocations ?? row.jobAllocations;
+  const sortedAllocations = [...loadedAllocations].sort((a, b) => b.allocatedValue - a.allocatedValue);
   const trace = row.effectiveValue > 0 ? (
     <Trace row={row} pool={pool} controls={controls} basis={basis} monthLong={monthLong} worksheet={worksheet} />
   ) : null;
-  if (allocations.length === 0) {
+  if (loading) return <LDetail style={{ fontSize: 13, paddingBottom: 14 }}><span style={{ color: "var(--subtle)" }}>Loading job allocations…</span>{trace}</LDetail>;
+  if (error) return <LDetail style={{ fontSize: 13, paddingBottom: 14 }}><span style={{ color: "var(--down)" }}>{error}</span>{trace}</LDetail>;
+  if (sortedAllocations.length === 0) {
     return (
       <LDetail style={{ fontSize: 13, paddingBottom: 14 }}>
         <span style={{ color: "var(--subtle)" }}>
@@ -981,7 +1028,7 @@ function RowDetail({
             </tr>
           </thead>
           <tbody>
-            {allocations.map((allocation) => (
+            {sortedAllocations.map((allocation) => (
               <tr key={allocation.jobId}>
                 <td style={{ padding: "8px 12px 8px 0", border: 0 }}>
                   {allocation.jobId} · {allocation.customer} — {allocation.jobName}
@@ -999,7 +1046,7 @@ function RowDetail({
             ))}
             <tr>
               <td colSpan={4} style={{ padding: "8px 12px 0 0", border: 0, color: "var(--subtle)", fontSize: 13 }}>
-                All {allocations.length} {monthLong} allocations by allocated value.
+                All {sortedAllocations.length} {monthLong} allocations by allocated value.
               </td>
             </tr>
           </tbody>
@@ -1386,7 +1433,7 @@ type AllocationBasis = { label: string; def: string; repr: boolean };
  *  data (dotted amber repr mark); when the payload's allocations are real
  *  timesheet hours-shares the copy states that instead (contract map:
  *  "equal-split interim disclosed until timesheet hours-share verified"). */
-function allocationBasis(rows: CommissionComputedRow[]): AllocationBasis {
+function allocationBasis(rows: CommissionComputedRow[], savedBasis?: "equal-split" | "hours-share"): AllocationBasis {
   const byJob = new Map<string, number[]>();
   for (const row of rows) {
     for (const allocation of row.jobAllocations) {
@@ -1396,7 +1443,7 @@ function allocationBasis(rows: CommissionComputedRow[]): AllocationBasis {
   const multiTech = [...byJob.values()].filter((shares) => shares.length > 1);
   const equalSplit = multiTech.length > 0
     && multiTech.every((shares) => shares.every((share) => Math.abs(share - shares[0]) < 1e-9));
-  if (equalSplit) {
+  if (equalSplit || (byJob.size === 0 && savedBasis === "equal-split")) {
     return {
       label: "interim equal-split",
       repr: true,
