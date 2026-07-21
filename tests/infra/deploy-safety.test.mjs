@@ -12,6 +12,7 @@ import {
   migrationChildEnvironment,
   monitoringManagedResourceContract,
   parseDeployArgs,
+  parseMigrationCompatibilityReport,
   preflightChildEnvironment,
   productionDeploymentSupportContract,
   productionDeploymentTargetContract,
@@ -75,6 +76,19 @@ test("production firewall commands use current Azure CLI server and rule flags",
   assert.match(source, /"firewall-rule", "delete"[\s\S]{0,160}"--server-name", POSTGRES_SERVER[\s\S]{0,80}"--name", TEMP_FIREWALL_RULE/);
   assert.match(source, /"firewall-rule",\s*"create"[\s\S]{0,220}"--server-name",\s*POSTGRES_SERVER[\s\S]{0,80}"--name",\s*TEMP_FIREWALL_RULE/);
   assert.doesNotMatch(source, /"--rule-name"/);
+});
+
+test("migration compatibility report requires a non-negative pending count", () => {
+  assert.deepEqual(
+    parseMigrationCompatibilityReport("Accepted 0 pending migrations\nMIGRATION_COMPATIBILITY_REPORT {\"pendingMigrationCount\":0}\n"),
+    { pendingMigrationCount: 0 },
+  );
+  for (const output of [
+    "",
+    "MIGRATION_COMPATIBILITY_REPORT not-json",
+    "MIGRATION_COMPATIBILITY_REPORT {\"pendingMigrationCount\":-1}",
+    "MIGRATION_COMPATIBILITY_REPORT {\"pendingMigrationCount\":0}\nMIGRATION_COMPATIBILITY_REPORT {\"pendingMigrationCount\":0}",
+  ]) assert.throws(() => parseMigrationCompatibilityReport(output), /pending-migration report|pending migration count/);
 });
 
 test("production target convergence retries the exact app and 24-job state before accepting it", async () => {
@@ -1567,6 +1581,10 @@ test("routine deploy remains lean while --full retains exhaustive preflight and 
   const compatibilityCall = releaseSource.indexOf("runMigrationCompatibilityGate(connectionString, previousImage)");
   const migrationCall = releaseSource.indexOf("applyTrackedMigrations(connectionString, previousImage)");
   const deploymentCall = releaseSource.indexOf("finalizeCandidateDeployment({");
+  const migrationFirewallGate = releaseSource.slice(
+    releaseSource.indexOf("const publicIp = await getPublicIp();"),
+    releaseSource.indexOf("const deploymentName = releaseIdentity.deploymentRunId;"),
+  );
   assert.ok(keyVaultGate < buildCall && keyVaultGate < migrationCall);
   assert.match(source, /preflight: \(\) => reviewMonitoringWhatIfAndTarget\(\)/);
   assert.match(source, /if \(args\.mode === "routine"\)/);
@@ -1604,6 +1622,15 @@ test("routine deploy remains lean while --full retains exhaustive preflight and 
   assert.ok(postgresGate >= 0 && postgresGate < migrationCall);
   assert.ok(compatibilityCall >= 0 && compatibilityCall < postgresGate);
   assert.ok(migrationCall < deploymentCall);
+  assert.match(source, /MIGRATION_COMPATIBILITY_REPORT = "1"/);
+  assert.match(compatibilitySource, /MIGRATION_COMPATIBILITY_REPORT \$\{JSON\.stringify\(\{ pendingMigrationCount: pending\.length \}\)\}/);
+  assert.ok(migrationFirewallGate.indexOf("withReconciledTemporaryFirewall({")
+    < migrationFirewallGate.indexOf("runMigrationCompatibilityGate(connectionString, previousImage)"));
+  assert.match(migrationFirewallGate, /const publicIp = await getPublicIp\(\);[\s\S]*withReconciledTemporaryFirewall\(\{/);
+  assert.match(migrationFirewallGate, /verifyPresent: async \(\) => verifyTemporaryMigrationFirewallPresent\(publicIp\)/);
+  assert.match(migrationFirewallGate, /if \(migrationCompatibility\.pendingMigrationCount === 0\) \{\s*log\("no pending migrations; skipping the migration-only predeploy gates"\);\s*return;\s*\}/);
+  assert.match(migrationFirewallGate, /runPostgresPredeployGate\(connectionString, previousImage\)/);
+  assert.match(migrationFirewallGate, /applyTrackedMigrations\(connectionString, previousImage\)/);
   assert.match(source, /MIGRATION_COMPATIBILITY_MODE = "static"/);
   assert.match(releaseSource, /static prior-image compatibility classification \(no production data clone\)/);
   assert.match(releaseSource, /dedicated empty database/);

@@ -35,6 +35,7 @@ const compatibilityMode = parseMigrationCompatibilityMode(
   process.argv.slice(2),
   process.env.MIGRATION_COMPATIBILITY_MODE ?? "static",
 );
+const reportPendingMigrationCount = process.env.MIGRATION_COMPATIBILITY_REPORT === "1";
 const commandTimeoutMs = boundedTimeoutFromEnv("MIGRATION_COMPATIBILITY_COMMAND_TIMEOUT_MS", 180_000, {
   min: 30_000,
   max: 30 * 60_000,
@@ -110,6 +111,9 @@ try {
     console.log(
       `Accepted ${pending.length} pending migration(s) after static prior-image compatibility classification (${strictlyAdditive} strictly additive, ${pending.length - strictlyAdditive} non-additive and covered by the targeted migration gate); full-data clone probing is manual only.`,
     );
+  }
+  if (reportPendingMigrationCount) {
+    console.log(`MIGRATION_COMPATIBILITY_REPORT ${JSON.stringify({ pendingMigrationCount: pending.length })}`);
   }
 } catch (error) {
   let artifactCleanupError;

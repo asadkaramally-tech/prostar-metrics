@@ -316,16 +316,39 @@ function runPostgresPredeployGate(connectionString, previousImage) {
   }
 }
 
+export function parseMigrationCompatibilityReport(output) {
+  const prefix = "MIGRATION_COMPATIBILITY_REPORT ";
+  const reports = String(output ?? "").split(/\r?\n/)
+    .filter((line) => line.startsWith(prefix))
+    .map((line) => line.slice(prefix.length));
+  if (reports.length !== 1) {
+    throw new Error("Migration compatibility gate did not produce exactly one pending-migration report.");
+  }
+  let report;
+  try {
+    report = JSON.parse(reports[0]);
+  } catch {
+    throw new Error("Migration compatibility gate produced an invalid pending-migration report.");
+  }
+  if (!report || !Number.isSafeInteger(report.pendingMigrationCount) || report.pendingMigrationCount < 0) {
+    throw new Error("Migration compatibility gate reported an invalid pending migration count.");
+  }
+  return Object.freeze({ pendingMigrationCount: report.pendingMigrationCount });
+}
+
 function runMigrationCompatibilityGate(connectionString, previousImage) {
   const environment = migrationChildEnvironment(connectionString, previousImage);
   environment.MIGRATION_COMPATIBILITY_MODE = "static";
+  environment.MIGRATION_COMPATIBILITY_REPORT = "1";
   const result = spawnSync("npm", ["run", "migration:compatibility:check"], {
     cwd: ROOT,
     env: environment,
     encoding: "utf8",
-    stdio: "inherit",
   });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
   if (result.status !== 0) throw new Error("Pending migration prior-image compatibility gate failed.");
+  return parseMigrationCompatibilityReport(result.stdout);
 }
 
 function runPreflightCommand(command, args, label, snapshotRoot) {
@@ -1694,25 +1717,25 @@ async function executeProductionRelease(keyVaultContract, buildSnapshot, release
   const publicIp = await getPublicIp();
   await withReconciledTemporaryFirewall({
     create: async () => {
-    log("opening temporary migration firewall rule");
-    az([
-      "postgres",
-      "flexible-server",
-      "firewall-rule",
-      "create",
-      "--resource-group",
-      RESOURCE_GROUP,
-      "--server-name",
-      POSTGRES_SERVER,
-      "--name",
-      TEMP_FIREWALL_RULE,
-      "--start-ip-address",
-      publicIp,
-      "--end-ip-address",
-      publicIp,
-      "--output",
-      "none",
-    ]);
+      log("opening temporary migration firewall rule");
+      az([
+        "postgres",
+        "flexible-server",
+        "firewall-rule",
+        "create",
+        "--resource-group",
+        RESOURCE_GROUP,
+        "--server-name",
+        POSTGRES_SERVER,
+        "--name",
+        TEMP_FIREWALL_RULE,
+        "--start-ip-address",
+        publicIp,
+        "--end-ip-address",
+        publicIp,
+        "--output",
+        "none",
+      ]);
     },
     verifyPresent: async () => verifyTemporaryMigrationFirewallPresent(publicIp),
     remove: async () => {
@@ -1722,7 +1745,11 @@ async function executeProductionRelease(keyVaultContract, buildSnapshot, release
     verifyAbsent: async () => verifyTemporaryMigrationFirewallAbsent(),
     run: async () => {
       log("checking pending migrations with static prior-image compatibility classification (no production data clone)");
-      runMigrationCompatibilityGate(connectionString, previousImage);
+      const migrationCompatibility = runMigrationCompatibilityGate(connectionString, previousImage);
+      if (migrationCompatibility.pendingMigrationCount === 0) {
+        log("no pending migrations; skipping the migration-only predeploy gates");
+        return;
+      }
       log("running PostgreSQL migrations-twice and two-session concurrency gate on a dedicated empty database");
       runPostgresPredeployGate(connectionString, previousImage);
       log("applying hash-tracked metrics migrations under the advisory lock");
