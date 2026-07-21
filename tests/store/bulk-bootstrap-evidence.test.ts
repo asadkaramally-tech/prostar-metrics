@@ -201,7 +201,7 @@ test("historical authority migration cancels only queued reconciliation job nest
   try {
     await seedLedger(db, "job_nested", "2024-03-01");
     await publishVerifiedBulkBootstrapEvidence([
-      evidenceUnit({ sourceFamily: "job_nested", periodStart: "2024-03-01", exactIds: [314, 315] }),
+      evidenceUnit({ sourceFamily: "job_nested", periodStart: "2024-03-01", exactIds: [314, 315, 316] }),
     ], pgliteQuery(db));
     // This is the production failure mode: a later partial reconciliation has
     // replaced the mutable source-period projection. The immutable traversal
@@ -214,10 +214,11 @@ test("historical authority migration cancels only queued reconciliation job nest
       insert into metrics.raw_simpro_snapshots (
         entity_type, entity_id, source_path, source_hash, payload, source_version,
         complete_traversal, parent_identity
-      ) values (
-        'jobs', '314', 'simpro:/jobs/?display=all', 'bulk-root-314', '{}'::jsonb,
-        'bulk-bootstrap:project-manifest', true, '{"projectType":"job","projectId":"314"}'::jsonb
-      );
+      ) values
+        ('jobs', '314', 'simpro:/jobs/?display=all', 'bulk-root-314', '{}'::jsonb,
+         'bulk-bootstrap:project-manifest', true, '{"projectType":"job","projectId":"314"}'::jsonb),
+        ('jobs', '315', 'simpro:/jobs/?display=all', 'bulk-root-315', '{}'::jsonb,
+         'bulk-bootstrap:project-manifest', true, '{"projectType":"job","projectId":"315"}'::jsonb);
     `);
     await db.exec(`
       insert into metrics.ingestion_jobs (
@@ -230,7 +231,7 @@ test("historical authority migration cancels only queued reconciliation job nest
         ('job_nested', 'bounded_refresh', 'active-reconciliation', 50, 100,
          '{"entityId":314,"boundedWork":{"origin":"reconciliation"}}'::jsonb, 'running'),
         ('job_nested', 'bounded_refresh', 'no-raw-reconciliation', 50, 100,
-         '{"entityId":315,"boundedWork":{"origin":"reconciliation"}}'::jsonb, 'queued'),
+         '{"entityId":316,"boundedWork":{"origin":"reconciliation"}}'::jsonb, 'queued'),
         ('job_nested', 'bounded_refresh', 'uncovered-reconciliation', 50, 100,
          '{"entityId":999,"boundedWork":{"origin":"reconciliation"}}'::jsonb, 'queued');
     `);
