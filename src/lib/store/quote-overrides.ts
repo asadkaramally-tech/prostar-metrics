@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/store/postgres";
+import { acceptedOnlineStatusSql } from "@/lib/metrics/quotes";
 import { QUOTE_CLASSIFICATION_LOCK_KEY } from "@/lib/store/quote-classification-rebuild";
 import type { QuoteOutcome } from "@/lib/store/quote-dashboard-read-model";
 
@@ -88,6 +89,7 @@ export async function persistQuoteOverrideAction(
   query: QuoteOverrideQuery = queryPostgres,
 ): Promise<QuoteOverrideRecord> {
   validateQuoteOverrideAction(params);
+  const acceptedOnline = acceptedOnlineStatusSql("q.status_name");
 
   let result: QueryResult<PersistResultRow>;
   try {
@@ -175,14 +177,14 @@ export async function persistQuoteOverrideAction(
        ), target as materialized (
          select q.quote_id, q.category, q.outcome, q.date_approved, q.total,
                 case
-                  when lower(trim(coalesce(q.status_name, ''))) = 'quote accepted online'
+                  when ${acceptedOnline}
                     or exists (select 1 from locked_evidence_jobs) then 'won'
                   else 'lost'
                 end as source_outcome,
                 case
-                  when lower(trim(coalesce(q.status_name, ''))) = 'quote accepted online'
+                  when ${acceptedOnline}
                     and exists (select 1 from locked_evidence_jobs) then 'accepted_online_and_converted'
-                  when lower(trim(coalesce(q.status_name, ''))) = 'quote accepted online' then 'accepted_online'
+                  when ${acceptedOnline} then 'accepted_online'
                   when exists (select 1 from locked_evidence_jobs) then 'converted_job'
                   else 'no_acceptance_evidence'
                 end as source_reason

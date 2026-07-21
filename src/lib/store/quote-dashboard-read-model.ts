@@ -461,20 +461,15 @@ export async function getQuoteMetricsReadModel(options: QuoteMetricsReadModelOpt
     `${selectedMonth}-01`,
   );
   try {
-    if (!hasInteractiveDashboardFilters(options)) {
-      const [freshness, persisted] = await Promise.all([
-        freshnessPromise,
-        getPersistedQuoteDashboard(selectedMonth),
-      ]);
-      if (persisted) return { ...persisted, freshness };
-    } else {
-      const [freshness, records, overrideSummary] = await Promise.all([
-        freshnessPromise,
-        getPersistedQuoteDashboardRecords(selectedMonth, currentCalendarMonth),
-        getQuoteOverrideSummary(),
-      ]);
-      if (records) return buildQuoteMetricsReadModelFromPersistedRecords(freshness, records, overrideSummary, options);
-    }
+    const [freshness, records, overrideSummary] = await Promise.all([
+      freshnessPromise,
+      getPersistedQuoteDashboardRecords(selectedMonth, currentCalendarMonth),
+      getQuoteOverrideSummary(),
+    ]);
+    // Reclassify persisted facts at read time. This keeps accepted-status
+    // normalization correct even when a prior dashboard payload was built with
+    // an older classifier; a missing monthly fact set still falls back below.
+    if (records) return buildQuoteMetricsReadModelFromPersistedRecords(freshness, records, overrideSummary, options);
   } catch {
     // A complete persisted corpus is required for exact filtered results. Fall
     // back to canonical reconstruction whenever a monthly model is missing or
@@ -562,23 +557,6 @@ async function getQuoteOverrideSummary(
       where active = true`,
   );
   return result.rows[0] ?? { active_count: "0", latest_at: null };
-}
-
-function hasInteractiveDashboardFilters(options: QuoteMetricsReadModelOptions): boolean {
-  const entries: Array<[keyof QuoteMetricsReadModelOptions, string | number | undefined, string | null]> = [
-    ["search", options.search, ""],
-    ["category", options.category, ""],
-    ["tier", options.tier, ""],
-    ["outcome", options.outcome, ""],
-    ["acceptancePath", options.acceptancePath, ""],
-    ["sort", options.sort, "date-desc"],
-    ["page", options.page, "1"],
-  ];
-  return entries.some(([, value, defaultValue]) => {
-    if (value === undefined || value === null) return false;
-    const normalized = String(value).trim();
-    return normalized !== "" && normalized !== defaultValue;
-  });
 }
 
 function isUsablePersistedQuoteDashboard(
@@ -833,6 +811,16 @@ function uniquePersistedQuoteRecords(records: PersistedQuoteDashboardRecord[]) {
 function normalizePersistedQuoteDashboardRecord(record: PersistedQuoteDashboardRecord): NormalizedQuote {
   const approved = parseDate(record.dateApproved);
   const issued = parseDate(record.dateIssued);
+  const classification = classifyQuote({
+    quoteId: record.quoteId,
+    totalValue: record.value,
+    statusName: record.status,
+    linkedJobId: record.linkedJobId,
+    convertedFromJobId: record.inverseConversionMatch ? "matched" : null,
+    outcomeOverride: record.override?.effective && record.override.requestedEffect === "excluded"
+      ? "excluded"
+      : null,
+  });
   return {
     quoteId: record.quoteId,
     quoteNo: record.quoteNo,
@@ -853,9 +841,9 @@ function normalizePersistedQuoteDashboardRecord(record: PersistedQuoteDashboardR
     tier: record.tier,
     category: normalizeCategory(record.category),
     categoryBasis: record.categoryBasis,
-    outcome: record.outcome,
-    acceptancePath: record.acceptancePath,
-    evidence: record.evidence,
+    outcome: classification.acceptanceOutcome,
+    acceptancePath: classification.path,
+    evidence: acceptanceEvidence(classification.path),
     override: record.override,
   };
 }

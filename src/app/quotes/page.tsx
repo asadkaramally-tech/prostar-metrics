@@ -30,7 +30,9 @@ export default async function QuotesPage({
       title="Quote Metrics"
       description="Quote activity, acceptance, status mix and value trend."
       freshness={model.freshness}
-      controls={<PeriodSelector action="/quotes" value={model.selectedMonth} />}
+      controls={<PeriodSelector action="/quotes" value={model.selectedMonth} hiddenFields={{
+        states: firstParam(params?.states), mode: firstParam(params?.mode),
+      }} />}
     >
       <QuoteMetricsDashboard
         model={model}

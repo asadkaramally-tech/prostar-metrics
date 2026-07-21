@@ -21,7 +21,10 @@ test("online-only status is Accepted", () => {
 test("accepted-online normalization is exact after trim and case normalization", () => {
   assert.equal(normalizeQuoteStatusName("  QuOtE AcCePtEd OnLiNe  "), "quote accepted online");
   assert.equal(isAcceptedOnlineStatus("  QuOtE AcCePtEd OnLiNe  "), true);
+  assert.equal(normalizeQuoteStatusName(" Quote: Quote Accepted Online "), "quote accepted online");
+  assert.equal(isAcceptedOnlineStatus("Quote: Quote Accepted Online"), true);
   assert.equal(isAcceptedOnlineStatus("Quote Accepted Online - Pending"), false);
+  assert.equal(isAcceptedOnlineStatus("Quote: Quote Accepted Online - Pending"), false);
   assert.equal(isAcceptedOnlineStatus("Accepted Online"), false);
   assert.equal(isAcceptedOnlineStatus(null), false);
 });

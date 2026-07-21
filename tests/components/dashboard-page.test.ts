@@ -3,7 +3,7 @@ import test from "node:test";
 import { createElement, type ComponentProps, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DashboardPage } from "../../src/components/dashboard-page";
-import { losAngelesMonthKey, shiftMonthKey } from "../../src/components/period-selector";
+import { losAngelesMonthKey, PeriodSelector, shiftMonthKey } from "../../src/components/period-selector";
 import type { FreshnessStatus } from "../../src/lib/metrics/freshness";
 
 const TestDashboardPage = DashboardPage as ComponentType<Omit<ComponentProps<typeof DashboardPage>, "children">>;
@@ -59,7 +59,7 @@ test("freshness pill states Updated N ago (never Live) and turns amber off-curre
   assert.doesNotMatch(missing, /Updated NaN/);
 });
 
-test("commission period auto-controls render the month stepper inside the header and preserve summaryYear", () => {
+test("commission period controls render a direct month/year picker inside the header and preserve summaryYear", () => {
   const model = {
     worksheet: { year: 2026, month: 6, periodLabel: "June 2026" },
     summary: { year: 2027 },
@@ -74,9 +74,25 @@ test("commission period auto-controls render the month stepper inside the header
   const contentStart = html.indexOf("data-period");
   const stepper = html.indexOf('aria-label="Commission period"');
   assert.ok(stepper > 0 && stepper < contentStart, "stepper renders inside the header, before page content");
-  assert.match(html, /class="ctl stepper"/);
-  assert.match(html, /June 2026/);
+  assert.match(html, /class="ctl stepper period-picker"/);
+  assert.match(html, /type="month"[^>]*name="month"[^>]*value="2026-06"/);
+  assert.match(html, /type="hidden" name="summaryYear" value="2027"/);
+  assert.match(html, />Go<\/button>/);
   assert.match(html, /href="\/commissions\?summaryYear=2027(&amp;|&)month=2026-05"/);
+});
+
+test("direct picker preserves page-specific query fields when submitted or stepped", () => {
+  const html = renderToStaticMarkup(createElement(PeriodSelector, {
+    action: "/jobs",
+    value: "2026-06",
+    hiddenFields: { category: "HVAC", jobPage: "3", states: "1" },
+  }));
+  assert.match(html, /<form[^>]*action="\/jobs"[^>]*method="get"/);
+  assert.match(html, /type="hidden" name="category" value="HVAC"/);
+  assert.match(html, /type="hidden" name="jobPage" value="3"/);
+  assert.match(html, /type="hidden" name="states" value="1"/);
+  assert.match(html, /type="month"[^>]*min="2023-01"[^>]*max="\d{4}-\d{2}"/);
+  assert.match(html, /href="\/jobs\?category=HVAC(&amp;|&)jobPage=3(&amp;|&)states=1(&amp;|&)month=2026-05"/);
 });
 
 test("month stepper disables the forward step on the live month and links the previous month", () => {

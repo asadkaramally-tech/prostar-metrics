@@ -90,7 +90,8 @@ test("quote rollup accepts only exact status and direct/inverse relationships", 
         (5, 'Q5', date '2026-06-05', date '2026-06-05', 'Pending', 500, null, null),
         (6, 'Q6', date '2026-06-06', date '2026-06-06', 'Quote Accepted Online', 600, null, null),
         (7, 'Q7', date '2026-06-07', date '2026-06-07', 'Pending', 700, 700, null),
-        (8, 'Q8', date '2026-06-08', date '2026-06-08', 'Quote Accepted Online - Pending', 800, null, null);
+        (8, 'Q8', date '2026-06-08', date '2026-06-08', 'Quote Accepted Online - Pending', 800, null, null),
+        (9, 'Q9', date '2026-06-09', date '2026-06-09', 'Quote: Quote Accepted Online', 900, null, null);
 
       insert into metrics.metrics_jobs (
         job_id, job_no, converted_from_type, converted_from_id, source_deleted_at
@@ -113,6 +114,7 @@ test("quote rollup accepts only exact status and direct/inverse relationships", 
         ('quote_details', '6', '{"ID":6,"LinkedJobID":null}', true, '2026-07-01T00:00:00Z'),
         ('quote_details', '7', '{"ID":7,"LinkedJobID":700}', true, '2026-07-01T00:00:00Z'),
         ('quote_details', '8', '{"ID":8,"LinkedJobID":null}', true, '2026-07-01T00:00:00Z'),
+        ('quote_details', '9', '{"ID":9,"LinkedJobID":null}', true, '2026-07-01T00:00:00Z'),
         ('job_details', '200', '{"ID":200,"ConvertedFrom":null}', true, '2026-07-01T00:00:00Z'),
         ('job_details', '300', '{"ID":300,"ConvertedFrom":null}', true, '2026-07-01T00:00:00Z'),
         ('job_details', '400', '{"ID":400,"ConvertedFrom":{"Type":"Quote","ID":4}}', true, '2026-07-01T00:00:00Z'),
@@ -129,13 +131,13 @@ test("quote rollup accepts only exact status and direct/inverse relationships", 
     assert.equal(byId.get(7)?.linkedJobId, null);
 
     const rollup = await buildQuoteMonthlyRollup("2026-06-01", "2026-06-30", query);
-    assert.equal(rollup.quoteCount, 7);
-    assert.equal(rollup.acceptedCount, 3);
+    assert.equal(rollup.quoteCount, 8);
+    assert.equal(rollup.acceptedCount, 4);
     assert.equal(rollup.notAcceptedCount, 4);
     assert.equal(rollup.excludedCount, 1);
     assert.deepEqual(rollup.acceptancePaths, {
       accepted_online_and_converted: 0,
-      accepted_online_only: 1,
+      accepted_online_only: 2,
       converted_only: 2,
       not_accepted: 4,
       excluded: 1,

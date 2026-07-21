@@ -56,7 +56,7 @@ test("classification uses normalized exact online status and direct/inverse conv
 
     assert.equal(projected.get(2)?.projected.outcome, "won");
     assert.equal(projected.get(2)?.evidence.acceptedOnlineExact, true);
-    assert.equal(projected.get(2)?.evidence.statusName, " Quote Accepted Online ");
+    assert.equal(projected.get(2)?.evidence.statusName, " Quote: Quote Accepted Online ");
 
     assert.equal(projected.get(3)?.projected.outcome, "won");
     assert.equal(projected.get(3)?.evidence.authoritativeLinkedJobId, 300);
@@ -81,7 +81,8 @@ test("classification uses normalized exact online status and direct/inverse conv
     assert.equal(projected.get(9)?.evidence.linkedJobMatchId, null);
 
     assert.doesNotMatch(quoteClassificationRebuildSql, /customer_stage|salesperson|is_closed/);
-    assert.match(quoteClassificationRebuildSql, /lower\(trim\(coalesce\(q\.status_name, ''\)\)\) = 'quote accepted online'/);
+    assert.match(quoteClassificationRebuildSql, /lower\(trim\(coalesce\(q\.status_name, ''\)\)\) like 'quote:%'/);
+    assert.match(quoteClassificationRebuildSql, /position\(':' in trim\(coalesce\(q\.status_name, ''\)\)\)/);
     assert.doesNotMatch(quoteClassificationRebuildSql, /q\.status_name = 'Quote Accepted Online'/);
     assert.doesNotMatch(quoteClassificationRebuildSql, /q\.job_no/);
     assert.doesNotMatch(quoteClassificationRebuildSql, /j\.job_no/);
@@ -948,7 +949,7 @@ async function rebuildDatabase(): Promise<PGlite> {
       total, linked_job_id, job_no, outcome, outcome_reason, won_reason
     ) values
       (1, date '2025-05-02', 'Quote Accepted Online', 'Pending', 'Pending', 'Nobody', 100, null, null, 'unknown', 'seed', 'seed'),
-      (2, date '2025-05-03', ' Quote Accepted Online ', 'Accepted', 'Won', 'Top Seller', 200, null, null, 'unknown', 'seed', 'seed'),
+      (2, date '2025-05-03', ' Quote: Quote Accepted Online ', 'Accepted', 'Won', 'Top Seller', 200, null, null, 'unknown', 'seed', 'seed'),
       (3, date '2025-05-04', 'Pending', 'Lost', 'Lost', 'Nobody', 300, 300, null, 'unknown', 'seed', 'seed'),
       (4, date '2025-05-05', 'Pending', 'Lost', 'Lost', 'Nobody', 400, null, '400', 'unknown', 'seed', 'seed'),
       (5, date '2025-05-06', 'Pending', 'Accepted', 'Won', 'Top Seller', 500, null, 'A500', 'unknown', 'seed', 'seed'),

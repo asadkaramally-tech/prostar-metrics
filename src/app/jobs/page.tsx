@@ -35,7 +35,10 @@ export default async function JobsPage({
       title="Job Metrics"
       description="Revenue, profit and outcomes for completed work."
       freshness={model.freshness}
-      controls={<PeriodSelector action="/jobs" value={model.selectedMonth} />}
+      controls={<PeriodSelector action="/jobs" value={model.selectedMonth} hiddenFields={{
+        category: params?.category, costCenter: params?.costCenter, technician: params?.technician,
+        jobPage: params?.jobPage, states: params?.states,
+      }} />}
     >
       <JobsDashboard model={model} showStates={params?.states === "1"} />
     </DashboardPage>

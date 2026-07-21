@@ -17,6 +17,7 @@ import {
   technicianPayload,
   technicianScoreRows,
   TechniciansDashboard,
+  utilizationComparison,
 } from "../../src/components/technicians-dashboard";
 import {
   buildTechnicianPerformanceReadModel,
@@ -137,9 +138,9 @@ test("KPI band renders the payload's utilization, unbilled split and efficiency 
   assert.match(html, /Productive utilization/);
   assert.match(html, /258h on jobs of 378h recorded/);
   assert.match(html, />68%</);
-  // ONE bullet bar with honest pending ghosts — the model has no prior period.
-  assert.match(html, /May ’26 · Jun ’25 ticks pending timesheet verification/);
-  assert.match(html, /No prior-period comparison yet — timesheet history verification is pending\./);
+  // No supplied comparison data means unavailable, not permanently "pending".
+  assert.match(html, /May ’26 unavailable · Jun ’25 unavailable/);
+  assert.match(html, /No prior-period technician model is available for comparison\./);
   // Unbilled tile (spans 2): 120h with the REAL activity split, never lumped.
   assert.match(html, />120h</);
   assert.match(html, /Travel 120h/);
@@ -152,6 +153,30 @@ test("KPI band renders the payload's utilization, unbilled split and efficiency 
   // OWNER RULINGS: the capacity model and the alert banners are gone.
   assert.doesNotMatch(html, /of capacity|Capacity Used|Capacity use|capacity 8h|above 115%|\(example\)|Target 65%/);
   assert.doesNotMatch(html, /is an active technician with|recorded 210h vs 176h capacity|archived but worked/);
+});
+
+test("lean comparison summaries render historical utilization without serializing employee history", () => {
+  const payload = juneFixture();
+  const model = dashboardModel(payload);
+  model.technicianHistory = {
+    availableFrom: "2023-01-01",
+    comparisons: [
+      { periodStart: "2025-06-01", jobHours: 75, recordedHours: 100 },
+      { periodStart: "2026-05-01", jobHours: 60, recordedHours: 100 },
+    ],
+  };
+
+  assert.deepEqual(utilizationComparison(model.technicianHistory, payload.periodStart, -1), {
+    periodStart: "2026-05-01", utilizationPercent: 60,
+  });
+  assert.deepEqual(utilizationComparison(model.technicianHistory, payload.periodStart, -12), {
+    periodStart: "2025-06-01", utilizationPercent: 75,
+  });
+
+  const html = render(model);
+  assert.match(html, /May ’26 60% · Jun ’25 75%/);
+  assert.match(html, /data is available from January 2023/);
+  assert.doesNotMatch(html, /pending timesheet verification/);
 });
 
 test("recorded-time rows split job / travel / other unbilled and mark the primary visualization", () => {
@@ -256,7 +281,7 @@ test("drilldown replaces the scorecard with per-technician facts and the per-act
   assert.match(html, /1001 · Boiler service/);
   assert.match(html, /10h<\/td><td class="num tnum">8h/);
   assert.match(html, /1\.25×/);
-  assert.match(html, /Alice’s <span class="repr"[^>]*>1\.25× is representative<\/span>; the verified team ratio is 1\.00× across 2 covered jobs\./);
+  assert.match(html, /Alice’s <span[^>]*>1\.25× uses the hour-share allocation<\/span>; the team ratio is 1\.00× across 2 covered jobs\./);
   // Economics context prose incl. the pre-month-hours disclosure (6h outside June on j6).
   assert.match(html, /Completed-job economics — separate cohort/);
   assert.match(html, /\$1,500/);
@@ -322,8 +347,8 @@ test("economics ranks roster technicians by allocated net with hatched single-se
   assert.ok(aliceAt > -1 && bobAt > -1 && aliceAt < bobAt);
   assert.match(econ, /class="hatch"/);
   assert.match(econ, /\$330<\/b> net · <b[^>]*>77%<\/b> of\s*team net/);
-  assert.match(econ, /hatched = interim allocation/);
-  assert.match(econ, /interim hours-share split/);
+  assert.match(econ, /hatched = hours-share allocation/);
+  assert.match(econ, /hours-share split/);
   // Single Net profit legend — the revenue series moved to the hover detail.
   assert.match(econ.slice(0, econ.indexOf("Alice Field")), /Net profit/);
   assert.doesNotMatch(econ.slice(0, econ.indexOf("Alice Field")), /Revenue/);
@@ -341,12 +366,12 @@ test("labor efficiency renders payload-driven diverging bars", () => {
   const html = render(dashboardModel(payload));
 
   assert.match(html, /Labor Efficiency/);
-  assert.match(html, /per-tech split representative/);
+  assert.match(html, /per-tech hour-share allocation/);
   assert.match(html, /1\.00× — estimate met exactly/);
   assert.match(html, /Quote-linked/);
   assert.match(html, /Recurring/);
   assert.match(html, /2 covered jobs \(team\)/);
-  assert.match(html, /the team figure is verified, the per-tech split is not yet\./);
+  assert.match(html, /team and per-technician figures use the recorded-time allocation\./);
   // Only technicians with allocated jobs appear as efficiency bars: Alice 1.25×, Bob 0.75×.
   assert.match(html, /1\.25×/);
   assert.match(html, /0\.75×/);

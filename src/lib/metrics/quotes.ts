@@ -83,9 +83,13 @@ export type QuoteMonthlyReadModel = {
 };
 
 export const ACCEPTED_ONLINE_STATUS = "quote accepted online";
+const QUOTE_STATUS_NAMESPACE = "quote:";
 
 export function normalizeQuoteStatusName(value: string | null | undefined): string {
-  return value?.trim().toLowerCase() ?? "";
+  const normalized = value?.trim().toLowerCase() ?? "";
+  return normalized.startsWith(QUOTE_STATUS_NAMESPACE)
+    ? normalized.slice(QUOTE_STATUS_NAMESPACE.length).trim()
+    : normalized;
 }
 
 export function isAcceptedOnlineStatus(value: string | null | undefined): boolean {
@@ -93,7 +97,13 @@ export function isAcceptedOnlineStatus(value: string | null | undefined): boolea
 }
 
 export function acceptedOnlineStatusSql(columnExpression: string): string {
-  return `lower(trim(coalesce(${columnExpression}, ''))) = '${ACCEPTED_ONLINE_STATUS}'`;
+  const trimmed = `trim(coalesce(${columnExpression}, ''))`;
+  const normalized = `lower(${trimmed})`;
+  return `lower(trim(case
+    when ${normalized} like '${QUOTE_STATUS_NAMESPACE}%'
+      then substr(${trimmed}, position(':' in ${trimmed}) + 1)
+    else ${trimmed}
+  end)) = '${ACCEPTED_ONLINE_STATUS}'`;
 }
 
 export function classifyQuote(input: QuoteClassificationInput): QuoteAcceptanceClassification {

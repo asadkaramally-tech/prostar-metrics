@@ -56,6 +56,7 @@ test("persistQuoteOverrideAction writes an atomic audited exclusion with caller 
   assert.match(capturedSql, /\$2 = 'reinstate'/);
   assert.match(capturedSql, /manual_reinstated/);
   assert.match(capturedSql, /lower\(trim\(coalesce\(q\.status_name/);
+  assert.match(capturedSql, /like 'quote:%'/);
   assert.match(capturedSql, /authoritative_quote_linked_job_id/);
   assert.match(capturedSql, /authoritative_job_source_quote_id/);
   assert.match(capturedSql, /complete_traversal = true/);
@@ -583,7 +584,7 @@ async function seedClassificationPaths(db: PGlite) {
       quote_id, category, status_name, linked_job_id, job_no, outcome, date_approved, total,
       outcome_reason, won_reason
     ) values
-      (700, 'HVAC', ' Quote Accepted Online ', null, null, 'lost', '2026-06-10', 1000, 'manual_lost', 'manual_lost'),
+      (700, 'HVAC', ' Quote: Quote Accepted Online ', null, null, 'lost', '2026-06-10', 1000, 'manual_lost', 'manual_lost'),
       (701, 'HVAC', 'Other', 9001, null, 'lost', '2026-06-11', 1100, 'manual_lost', 'manual_lost'),
       (702, 'HVAC', 'Other', null, '9002', 'lost', '2026-06-12', 1200, 'manual_lost', 'manual_lost'),
       (703, 'HVAC', 'Other', null, null, 'lost', '2026-06-13', 1300, 'manual_lost', 'manual_lost'),

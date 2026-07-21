@@ -1,6 +1,7 @@
 import { getRollups, type RollupScope, type RollupRow } from "@/lib/store/rollups";
 import { getPageFreshness } from "@/lib/store/freshness";
 import { getLatestReadModelPayload, type ReadModelPayload } from "@/lib/store/read-model-rebuilds";
+import { queryPostgres } from "@/lib/store/postgres";
 import type { FreshnessStatus } from "@/lib/metrics/freshness";
 import type { TechnicianPerformanceReadModel } from "@/lib/metrics/technicians";
 
@@ -11,6 +12,18 @@ export type DashboardReadModel = {
   payload: ReadModelPayload | null;
   kpis: Array<{ label: string; value: string; detail?: string }>;
   warnings: string[];
+  technicianHistory?: TechnicianHistorySummary;
+};
+
+/** The small comparison payload /technicians needs, without serializing the
+ * full employee-by-month history collection. */
+export type TechnicianHistorySummary = {
+  availableFrom: string | null;
+  comparisons: Array<{
+    periodStart: string;
+    jobHours: number;
+    recordedHours: number;
+  }>;
 };
 
 const metricLabels: Record<RollupScope, Record<string, string>> = {
@@ -55,10 +68,13 @@ export async function getDashboardReadModel(
   const freshnessPromise = getPageFreshness(scope, options.periodStart);
 
   try {
-    const [freshness, latestPayload, rollups] = await Promise.all([
+    const [freshness, latestPayload, rollups, technicianHistory] = await Promise.all([
       freshnessPromise,
       getLatestReadModelPayload(scope, options.periodStart, options.compactTechnicianDetails),
       getRollups(scope, options.periodStart ? 100 : 24, options.periodStart),
+      scope === "technicians" && options.periodStart
+        ? getTechnicianHistorySummary(options.periodStart).catch(() => undefined)
+        : Promise.resolve(undefined),
     ]);
     const payload = latestPayload?.values_json ?? null;
     return {
@@ -68,6 +84,7 @@ export async function getDashboardReadModel(
       payload,
       kpis: payload ? buildPayloadKpis(scope, payload) : buildKpis(scope, rollups),
       warnings: buildWarnings(scope, rollups, payload),
+      technicianHistory,
     };
   } catch (error) {
     const freshness = await freshnessPromise;
@@ -80,6 +97,51 @@ export async function getDashboardReadModel(
       warnings: [error instanceof Error ? error.message : "Unable to read app-owned rollups."],
     };
   }
+}
+
+export async function getTechnicianHistorySummary(periodStart: string): Promise<TechnicianHistorySummary> {
+  const [earliest, comparisonRows] = await Promise.all([
+    queryPostgres<{ period_start: string | null }>(
+      `select min(period_start)::text as period_start
+         from metrics.dashboard_read_models
+        where metric_family = 'technicians'
+          and period_grain = 'month'
+          and status = 'ready'
+          and superseded_at is null
+          and jsonb_typeof(values_json -> 'technicians') = 'array'
+          and jsonb_array_length(values_json -> 'technicians') > 0`,
+    ),
+    queryPostgres<{ period_start: string; job_hours: string; recorded_hours: string }>(
+      `select period_start::text,
+              coalesce(nullif(values_json -> 'coverage' ->> 'jobHours', '')::numeric, 0)::text as job_hours,
+              coalesce(nullif(values_json -> 'coverage' ->> 'totalRecordedHours', '')::numeric, 0)::text as recorded_hours
+         from metrics.dashboard_read_models
+        where metric_family = 'technicians'
+          and period_grain = 'month'
+          and status = 'ready'
+          and superseded_at is null
+          and period_start = any($1::date[])
+        order by period_start`,
+      [[shiftTechnicianPeriod(periodStart, -12), shiftTechnicianPeriod(periodStart, -1)]],
+    ),
+  ]);
+
+  return {
+    availableFrom: earliest.rows[0]?.period_start ?? null,
+    comparisons: comparisonRows.rows
+      .map((row) => ({
+        periodStart: row.period_start,
+        jobHours: Number(row.job_hours),
+        recordedHours: Number(row.recorded_hours),
+      }))
+      .filter((row) => Number.isFinite(row.jobHours) && Number.isFinite(row.recordedHours) && row.recordedHours > 0),
+  };
+}
+
+function shiftTechnicianPeriod(periodStart: string, offset: number): string {
+  const [year, month] = periodStart.slice(0, 7).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + offset, 1));
+  return date.toISOString().slice(0, 10);
 }
 
 function buildKpis(scope: RollupScope, rollups: RollupRow[]) {

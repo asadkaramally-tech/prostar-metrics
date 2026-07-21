@@ -947,6 +947,10 @@ body.show-states .states{display:block}
   color:var(--subtle);font-size:15px;border-radius:8px;transition:all .15s}
 .ctl.stepper .stepbtn:hover{color:var(--ink);background:#f1f2f7}
 .ctl.stepper .lbl{display:inline-flex;align-items:center;gap:8px;padding:0 8px}
+.ctl.period-picker .lbl{padding-right:4px}
+.ctl.period-picker .period-input{border:0;background:transparent;color:var(--ink);font:inherit;font-weight:600;min-width:128px;outline-offset:3px}
+.ctl.period-picker .period-go{height:28px;padding:0 8px;border-radius:7px;font-size:12px;font-weight:700;color:var(--muted)}
+.ctl.period-picker .period-go:hover{background:#f1f2f7;color:var(--ink)}
 
 /* ── Card body that fills to its row-matched height (desktop only) ── */
 .fillbd{display:flex;flex-direction:column;justify-content:space-between}

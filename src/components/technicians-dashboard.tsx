@@ -28,7 +28,7 @@ import type {
   TechnicianPerformanceReadModel,
   TechnicianPunctualityDistribution,
 } from "@/lib/metrics/technicians";
-import type { DashboardReadModel } from "@/lib/store/dashboard-read-models";
+import type { DashboardReadModel, TechnicianHistorySummary } from "@/lib/store/dashboard-read-models";
 
 /* /technicians — implements the owner-approved redesign
    docs/approved-design/mockups/technicians.html exactly, with every figure
@@ -287,6 +287,11 @@ export type TechnicianTeamFacts = {
   otFloorPct: number | null;
 };
 
+export type TechnicianUtilizationHistory = {
+  periodStart: string;
+  utilizationPercent: number;
+};
+
 export function deriveTeamFacts(payload: TechnicianPerformanceReadModel, rows: TechnicianScoreRow[]): TechnicianTeamFacts {
   const job = rows.reduce((sum, row) => sum + row.job, 0);
   const rec = rows.reduce((sum, row) => sum + row.rec, 0);
@@ -329,15 +334,32 @@ export function deriveTeamFacts(payload: TechnicianPerformanceReadModel, rows: T
   };
 }
 
+function shiftPeriodStart(periodStart: string, offset: number): string {
+  const [year, month] = periodStart.slice(0, 7).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + offset, 1));
+  return date.toISOString().slice(0, 10);
+}
+
+export function utilizationComparison(
+  summary: TechnicianHistorySummary | undefined,
+  periodStart: string,
+  offset: number,
+): TechnicianUtilizationHistory | null {
+  const comparison = summary?.comparisons.find((entry) => entry.periodStart === shiftPeriodStart(periodStart, offset));
+  return comparison && comparison.recordedHours > 0
+    ? { periodStart: comparison.periodStart, utilizationPercent: (comparison.jobHours / comparison.recordedHours) * 100 }
+    : null;
+}
+
 function effDef(facts: TechnicianTeamFacts): string {
   const verified = facts.teamEff !== null
-    ? ` The ${ratioX(facts.teamEff)} team ratio (${fmt.hrs(facts.teamEffEstHours)} ÷ ${fmt.hrs(facts.teamEffActHours)}) is verified.`
+    ? ` The ${ratioX(facts.teamEff)} team ratio (${fmt.hrs(facts.teamEffEstHours)} ÷ ${fmt.hrs(facts.teamEffActHours)}) uses the same recorded-time allocation.`
     : "";
-  return `Per-technician split is representative until timesheet attribution is re-verified.${verified}`;
+  return `Per-technician ratios allocate each crew job's estimated and actual hours by recorded job time.${verified}`;
 }
 
 function otDef(facts: TechnicianTeamFacts): string {
-  return `Representative until mobile-arrival matching is re-verified — team coverage is ${facts.verifiedVisits} of ${facts.scheduledVisits} ${facts.monthLong} visits.`;
+  return `Verified mobile arrival events matched ${facts.verifiedVisits} of ${facts.scheduledVisits} ${facts.monthLong} scheduled visits. Visits without a matched arrival event are uncovered, not counted late.`;
 }
 
 /* ── Dashboard ─────────────────────────────────────────── */
@@ -357,7 +379,11 @@ export function TechniciansDashboard({ model, showStates, initialDrillEmployeeId
   return (
     <DefTooltipProvider>
       {payload ? (
-        <TechniciansContent payload={payload} initialDrillEmployeeId={initialDrillEmployeeId} />
+        <TechniciansContent
+          payload={payload}
+          historySummary={model.technicianHistory}
+          initialDrillEmployeeId={initialDrillEmployeeId}
+        />
       ) : emptyPayload ? (
         <TechniciansEmptyMonth payload={emptyPayload} />
       ) : (
@@ -404,9 +430,11 @@ function TechniciansEmptyMonth({ payload }: { payload: EmptyTechnicianPayload })
 
 function TechniciansContent({
   payload,
+  historySummary,
   initialDrillEmployeeId,
 }: {
   payload: TechnicianPerformanceReadModel;
+  historySummary?: TechnicianHistorySummary;
   initialDrillEmployeeId?: string;
 }) {
   const rows = useMemo(() => technicianScoreRows(payload), [payload]);
@@ -420,7 +448,7 @@ function TechniciansContent({
 
   return (
     <>
-      <TechniciansBand facts={facts} payload={payload} />
+      <TechniciansBand facts={facts} payload={payload} historySummary={historySummary} />
       {drillRow ? (
         <TechnicianDrill row={drillRow} facts={facts} payload={payload} onBack={() => setDrillId(null)} />
       ) : (
@@ -456,10 +484,20 @@ function TechniciansContent({
 
 /* ── Row 1: KPI band ───────────────────────────────────── */
 
-function TechniciansBand({ facts, payload }: { facts: TechnicianTeamFacts; payload: TechnicianPerformanceReadModel }) {
+function TechniciansBand({
+  facts,
+  payload,
+  historySummary,
+}: {
+  facts: TechnicianTeamFacts;
+  payload: TechnicianPerformanceReadModel;
+  historySummary?: TechnicianHistorySummary;
+}) {
   const { monthLong } = facts;
   const prevName = shiftedSeriesName(payload.periodStart, -1);
   const lyName = shiftedSeriesName(payload.periodStart, -12);
+  const priorMonth = utilizationComparison(historySummary, payload.periodStart, -1);
+  const priorYear = utilizationComparison(historySummary, payload.periodStart, -12);
   const utilDef = `Job-assigned timesheet hours ÷ all recorded hours, using timesheets dated in ${monthLong}, across the ${facts.rosterCount}-person recorded-work roster only.`;
   const unbilledDef = `All recorded hours minus job-assigned hours — the split lists every recorded activity type from the ${monthLong} timesheets.`;
   const effStatDef = `Σ estimated ÷ Σ actual hours on quote-linked ${monthLong} jobs where both are present: ${fmt.hrs(facts.teamEffEstHours)} ÷ ${fmt.hrs(facts.teamEffActHours)}. Above 1.00× beats the estimate${
@@ -485,14 +523,18 @@ function TechniciansBand({ facts, payload }: { facts: TechnicianTeamFacts; paylo
           <div
             className="bullet"
             data-viz=""
-            aria-label={`Productive utilization ${utilValue}; prior-period ticks pending timesheet verification`}
+            aria-label={`Productive utilization ${utilValue}${
+              priorMonth ? `; ${prevName} ${pctInt(priorMonth.utilizationPercent)}` : ""
+            }${priorYear ? `; ${lyName} ${pctInt(priorYear.utilizationPercent)}` : ""}`}
           >
             <div className="btrack">
               <i style={{ width: `${Math.min(100, Math.max(facts.utilPct ?? 0, 0))}%` }} />
             </div>
             <div className="bcap">
               <span className="bkey">
-                {prevName} · {lyName} ticks pending timesheet verification
+                {priorMonth ? `${prevName} ${pctInt(priorMonth.utilizationPercent)}` : `${prevName} unavailable`}
+                {" · "}
+                {priorYear ? `${lyName} ${pctInt(priorYear.utilizationPercent)}` : `${lyName} unavailable`}
               </span>
             </div>
           </div>
@@ -531,7 +573,11 @@ function TechniciansBand({ facts, payload }: { facts: TechnicianTeamFacts; paylo
           />
         </KpiTiles>
       </KpiBand>
-      <KpiBandNote>No prior-period comparison yet — timesheet history verification is pending.</KpiBandNote>
+      <KpiBandNote>
+        {priorMonth || priorYear
+          ? `Prior-period utilization is from stored timesheet models${historySummary?.availableFrom ? `; data is available from ${monthLongName(historySummary.availableFrom)} ${periodYear(historySummary.availableFrom)}` : ""}.`
+          : "No prior-period technician model is available for comparison."}
+      </KpiBandNote>
     </>
   );
 }
@@ -641,8 +687,8 @@ function EfficiencyCard({ rows, facts }: { rows: TechnicianScoreRow[]; facts: Te
       subtitle={
         <>
           Estimated ÷ actual hours — above 1.00× beats the estimate ·{" "}
-          <span className="repr" data-def={EFF_DEF}>
-            per-tech split representative
+          <span data-def={EFF_DEF}>
+            per-tech hour-share allocation
           </span>
         </>
       }
@@ -678,7 +724,7 @@ function EfficiencyCard({ rows, facts }: { rows: TechnicianScoreRow[]; facts: Te
         <Fnote>
           <span style={{ color: "var(--success-fg)" }}>●</span> right of the line = beat the estimate{"  "}
           <span style={{ color: "var(--state-failed-fg)" }}>●</span> left = over · {facts.effCoveredJobs} covered jobs (team)
-          {facts.teamEff !== null ? <> — the team figure is verified, the per-tech split is not yet.</> : "."}
+          {facts.teamEff !== null ? <> — team and per-technician figures use the recorded-time allocation.</> : "."}
         </Fnote>
         {mode === "recurring" ? (
           <Fnote style={{ borderTop: "none", paddingTop: 0 }}>
@@ -719,9 +765,9 @@ function PunctualityCard({
           Verified arrivals vs planned start ·{" "}
           <span
             className="repr"
-            data-def={`Verified-arrival coverage is ${facts.verifiedVisits} of ${facts.scheduledVisits} ${facts.monthLong} visits; per-technician rates are representative until mobile-event matching is re-verified.`}
+            data-def={`Verified mobile arrivals cover ${facts.verifiedVisits} of ${facts.scheduledVisits} ${facts.monthLong} visits. Visits without a matching arrival event are excluded from technician rates.`}
           >
-            representative until mobile-event matching is re-verified
+            {facts.verifiedVisits} of {facts.scheduledVisits} visits covered
           </span>
           {" "}· click for per-technician detail
         </>
@@ -1139,11 +1185,11 @@ export function TechnicianDrill({
                 <tr>
                   <td colSpan={4} style={{ border: 0, paddingTop: 10, color: "var(--subtle)", fontSize: 13 }}>
                     {first}’s{" "}
-                    <span className="repr" data-def={EFF_DEF}>
-                      {ratioX(row.effQ)} is representative
+                    <span data-def={EFF_DEF}>
+                      {ratioX(row.effQ)} uses the hour-share allocation
                     </span>
                     {facts.teamEff !== null
-                      ? `; the verified team ratio is ${ratioX(facts.teamEff)} across ${facts.effCoveredJobs} covered jobs.`
+                      ? `; the team ratio is ${ratioX(facts.teamEff)} across ${facts.effCoveredJobs} covered jobs.`
                       : "."}
                   </td>
                 </tr>
@@ -1164,7 +1210,7 @@ export function TechnicianDrill({
               ) : (
                 <>no covered net profit</>
               )}{" "}
-              (interim hours-share split until timesheet attribution is re-verified). This cohort includes hours recorded before{" "}
+              (hours-share allocation from recorded job time). This cohort includes hours recorded before{" "}
               {facts.monthLong} on jobs that finished in {facts.monthLong}
               {row.outsidePeriodHours !== null && row.outsidePeriodHours > 0
                 ? ` — ${fmt.hrs(row.outsidePeriodHours)} of ${first}’s allocation basis`
@@ -1231,7 +1277,7 @@ function EconomicsCard({
     <Card
       className="span12"
       title="Completed-Job Economics"
-      subtitle={`Ranked by allocated net profit · ${facts.monthLong}-completed jobs, including pre-${facts.monthLong} hours on those jobs · hatched = interim allocation · hover or tap a row`}
+      subtitle={`Ranked by allocated net profit · ${facts.monthLong}-completed jobs, including pre-${facts.monthLong} hours on those jobs · hatched = hours-share allocation · hover or tap a row`}
       aside={
         <Legend
           style={{ padding: 0 }}
@@ -1292,11 +1338,8 @@ function EconomicsCard({
         )}
         <Fnote>
           Allocation is an{" "}
-          <span
-            className="repr"
-            data-def="Each completed job’s value is split by each technician’s share of the job’s timesheet hours — interim until timesheet attribution is re-verified; totals are exact, shares may shift."
-          >
-            interim hours-share split
+          <span data-def="Each completed job’s value is split by each technician’s recorded share of job time; totals equal the job total.">
+            hours-share split
           </span>
           {outsideTotal > 0 ? (
             <>

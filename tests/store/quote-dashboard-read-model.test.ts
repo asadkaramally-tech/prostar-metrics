@@ -106,6 +106,32 @@ test("filtered quote dashboard preserves pagination semantics from persisted mon
   assert.deepEqual(persisted.sentMonthly, canonical.sentMonthly);
 });
 
+test("persisted quote records are reclassified when an older payload stored a stale outcome", () => {
+  const records = buildPersistedQuoteDashboardRecords([
+    quoteRow({
+      id: 2756,
+      dateApproved: "2026-07-12",
+      total: 1_250,
+      status: "Quote: Quote Accepted Online",
+    }),
+  ], "2026-07-01").map((record) => ({
+    ...record,
+    outcome: "not_accepted" as const,
+    acceptancePath: "not_accepted" as const,
+    evidence: "No accepted-online status or exact converted-job relationship",
+  }));
+
+  const model = buildQuoteMetricsReadModelFromPersistedRecords(freshness, records, undefined, {
+    selectedMonth: "2026-07",
+    now: new Date("2026-07-20T20:00:00Z"),
+  });
+
+  assert.equal(model.currentMonth?.quoteCount, 1);
+  assert.equal(model.currentMonth?.acceptedCount, 1);
+  assert.equal(model.currentMonth?.acceptedValue, 1_250);
+  assert.equal(model.classificationRows[0]?.acceptancePath, "accepted_online_only");
+});
+
 test("persisted quote records require every requested monthly serving model", async () => {
   let capturedSql = "";
   let capturedValues: unknown[] | undefined;
