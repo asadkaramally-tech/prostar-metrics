@@ -14,6 +14,10 @@ const historicalAuthorityMigration = readFileSync(
   new URL("../../infra/db/migrations/049_cancel_historically_superseded_job_nested_refreshes.sql", import.meta.url),
   "utf8",
 );
+const nestedQueueCoalescingMigration = readFileSync(
+  new URL("../../infra/db/migrations/050_coalesce_queued_nested_refreshes.sql", import.meta.url),
+  "utf8",
+);
 
 test("prebootstrap cancellation is limited to queued, older, artifact-covered nested work", () => {
   assert.match(migration, /entity_type in \('quote_nested', 'job_nested'\)/);
@@ -48,4 +52,17 @@ test("historical job nested repair cancels only reconciliation work proven by ex
   assert.match(historicalAuthorityMigration, /root\.complete_traversal = true/);
   assert.match(historicalAuthorityMigration, /historical_job_nested_refresh_cancelled/);
   assert.doesNotMatch(historicalAuthorityMigration, /status\s*=\s*'running'/);
+});
+
+test("nested queue coalescing keeps the newest queued refresh for every project", () => {
+  assert.match(nestedQueueCoalescingMigration, /entity_type in \('quote_nested', 'job_nested'\)/);
+  assert.match(nestedQueueCoalescingMigration, /q\.status = 'queued'/);
+  assert.match(nestedQueueCoalescingMigration, /partition by q\.entity_type, q\.params->>'entityId'/);
+  assert.match(nestedQueueCoalescingMigration, /order by q\.updated_at desc, q\.created_at desc, q\.id desc/);
+  assert.match(nestedQueueCoalescingMigration, /where queue_rank > 1/);
+  assert.match(nestedQueueCoalescingMigration, /lock table metrics\.ingestion_jobs in share row exclusive mode/);
+  assert.match(nestedQueueCoalescingMigration, /create unique index if not exists ingestion_jobs_nested_queued_entity_uidx/);
+  assert.match(nestedQueueCoalescingMigration, /where status = 'queued'/);
+  assert.match(nestedQueueCoalescingMigration, /duplicate_nested_refresh_coalesced/);
+  assert.doesNotMatch(nestedQueueCoalescingMigration, /status\s*=\s*'running'/);
 });

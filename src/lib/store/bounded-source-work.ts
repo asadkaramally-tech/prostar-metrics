@@ -5,6 +5,11 @@ import {
   type BackfillSourceFamily,
 } from "@/lib/backfill/plan";
 import type { IngestionEntity } from "@/lib/simpro/ingest";
+import {
+  acquireNestedRefreshQueueLock,
+  ingestionJobTransaction,
+  type IngestionJobTransaction,
+} from "@/lib/store/ingestion-jobs";
 import { queryPostgres } from "@/lib/store/postgres";
 
 export const BOUNDED_BACKFILL_MAX_MONTHS = 3;
@@ -149,6 +154,7 @@ export async function enqueueBoundedSourceWork(params: {
   query?: BoundedSourceWorkQuery;
   requestId?: string;
   now?: Date;
+  transaction?: IngestionJobTransaction;
 } = {}): Promise<BoundedSourceWorkRequest> {
   const query = options.query ?? queryPostgres;
   const requestId = options.requestId ?? randomUUID();
@@ -187,7 +193,13 @@ export async function enqueueBoundedSourceWork(params: {
   }
 
   const row = work.kind === "entity_refresh"
-    ? await enqueueEntityRefresh({ query, requestId, now, requestedBy, reason, origin, work })
+    ? await ingestionJobTransaction(query, options.transaction)(async (transactionQuery) => {
+      const entity = entityQueueConfig[work.entityType].entity;
+      if (entity === "quote_nested" || entity === "job_nested") {
+        await acquireNestedRefreshQueueLock(transactionQuery);
+      }
+      return enqueueEntityRefresh({ query: transactionQuery, requestId, now, requestedBy, reason, origin, work });
+    })
     : await enqueuePeriodBackfill({ query, requestId, now, requestedBy, reason, origin, work });
 
   return mapRequest(row);
@@ -277,17 +289,43 @@ async function enqueueEntityRefresh(params: {
   const result = await params.query<EnqueueRow>(
     `with lock_scope as materialized (
        select pg_advisory_xact_lock(hashtext($1))
-     ), prior as materialized (
-       select job.id, job.status::text as status, job.generation
+     ), target_jobs as materialized (
+       select job.id, job.idempotency_key, job.status::text as status, job.generation
          from metrics.ingestion_jobs job, lock_scope
         where job.entity_type = $2::metrics.ingestion_entity_type
-          and job.idempotency_key = $3
+          and job.params->>'entityId' = $10::text
+     ), selected_key as materialized (
+       select case
+         when $2::text in ('quote_nested', 'job_nested') then coalesce(
+           (
+             select job.idempotency_key
+               from target_jobs job
+              where job.status = 'queued'
+              order by job.id desc
+              limit 1
+           ),
+           (
+             select $3 || ':after-running:' || job.id::text || ':' || job.generation::text
+               from target_jobs job
+              where job.status = 'running'
+              order by job.id desc
+              limit 1
+           ),
+           $3
+         )
+         else $3
+       end as idempotency_key
+     ), prior as materialized (
+       select job.id, job.status::text as status, job.generation
+         from metrics.ingestion_jobs job
+        where job.entity_type = $2::metrics.ingestion_entity_type
+          and job.idempotency_key = (select idempotency_key from selected_key)
      ), queued as (
        insert into metrics.ingestion_jobs (
          entity_type, operation, idempotency_key, priority, request_budget,
          continuation_token, params, source_window_start, source_window_end
        )
-       values ($2, 'bounded_refresh', $3, 50, $4, null, $5::jsonb, null, null)
+       values ($2, 'bounded_refresh', (select idempotency_key from selected_key), 50, $4, null, $5::jsonb, null, null)
        on conflict (entity_type, idempotency_key) do update set
          priority = least(metrics.ingestion_jobs.priority, excluded.priority),
          request_budget = case

@@ -9,6 +9,7 @@ import {
   failIngestionJob,
   heartbeatIngestionJob,
   type IngestionJob,
+  type IngestionJobTransaction,
 } from "../../src/lib/store/ingestion-jobs";
 
 type IngestionQuery = NonNullable<Parameters<typeof enqueueIngestionJob>[1]>;
@@ -78,6 +79,72 @@ test("duplicate scheduled enqueues reopen one new generation", async () => {
       select status::text as status, generation from metrics.ingestion_jobs where idempotency_key='jobs:2026-07-09'
     `);
     assert.deepEqual(preserved.rows[0], { status: "succeeded", generation: 5 });
+  } finally {
+    await db.close();
+  }
+});
+
+test("generic nested enqueue keeps one successor when the current refresh is running", async () => {
+  const db = await ingestionDatabase();
+  const query = pgliteQuery(db);
+  try {
+    const refresh = {
+      entity: "job_nested" as const,
+      idempotencyKey: "job_nested:44",
+      requestBudget: 250,
+      params: { entityId: 44 },
+    };
+    await enqueueIngestionJob(refresh, query);
+    await db.exec(`
+      update metrics.ingestion_jobs
+         set status = 'running', locked_by = 'worker-a', locked_at = now(),
+             lock_expires_at = now() + interval '10 minutes', heartbeat_at = now()
+       where idempotency_key = 'job_nested:44'
+    `);
+    await enqueueIngestionJob(refresh, query);
+    await enqueueIngestionJob(refresh, query);
+
+    const queue = await db.query<{ status: string; idempotency_key: string; entity_id: string }>(`
+      select status::text as status, idempotency_key, params->>'entityId' as entity_id
+        from metrics.ingestion_jobs
+       where entity_type = 'job_nested'
+       order by id
+    `);
+    assert.deepEqual(queue.rows, [
+      { status: "running", idempotency_key: "job_nested:44", entity_id: "44" },
+      { status: "queued", idempotency_key: "job_nested:44:after-running:1:1", entity_id: "44" },
+    ]);
+  } finally {
+    await db.close();
+  }
+});
+
+test("simultaneous distinct nested enqueue keys coalesce under the shared transaction lock", async () => {
+  const db = await ingestionDatabase();
+  const query = pgliteQuery(db);
+  const transaction = serialTransaction(query);
+  try {
+    await Promise.all([
+      enqueueIngestionJob({
+        entity: "job_nested",
+        idempotencyKey: "job_nested:44:first-source-version",
+        requestBudget: 250,
+        params: { entityId: 44 },
+      }, query, { transaction }),
+      enqueueIngestionJob({
+        entity: "job_nested",
+        idempotencyKey: "job_nested:44:second-source-version",
+        requestBudget: 250,
+        params: { entityId: 44 },
+      }, query, { transaction }),
+    ]);
+
+    const queue = await db.query<{ count: number; status: string; entity_id: string }>(`
+      select count(*)::integer as count, max(status::text) as status, max(params->>'entityId') as entity_id
+        from metrics.ingestion_jobs
+       where entity_type = 'job_nested'
+    `);
+    assert.deepEqual(queue.rows[0], { count: 1, status: "queued", entity_id: "44" });
   } finally {
     await db.close();
   }
@@ -436,6 +503,52 @@ test("completion atomically publishes candidates and rollups", async () => {
   }
 });
 
+test("a nested candidate arriving during a running refresh is queued as one successor", async () => {
+  const db = await ingestionDatabase();
+  const query = pgliteQuery(db);
+  try {
+    const sourceJob = await runningJob(db);
+    await db.exec(`
+      insert into metrics.ingestion_jobs (
+        id, entity_type, status, idempotency_key, params, locked_by, locked_at,
+        lock_expires_at, heartbeat_at, generation
+      ) values (
+        2, 'job_nested', 'running', 'job_nested:44:old-state', '{"entityId":44}'::jsonb,
+        'nested-worker', now(), now() + interval '10 minutes', now(), 1
+      );
+      insert into metrics.ingestion_runs (id, job_id, entity_type, worker_id, job_generation)
+      values (2, 2, 'job_nested', 'nested-worker', 1);
+      select setval('metrics.ingestion_jobs_id_seq', 2, true);
+    `);
+
+    const publication = await completeIngestionJob({
+      job: sourceJob,
+      workerId: "worker-a",
+      runId: 1,
+      requestCount: 1,
+      snapshotCount: 1,
+      normalizedCount: 0,
+      continuationToken: null,
+      candidateRefreshes: [{ entity: "job_nested", entityId: 44, sourceHash: "changed-summary" }],
+      affectedPeriods: [],
+    }, query);
+
+    assert.deepEqual(publication, { candidate_count: 1, rollup_count: 0 });
+    const nested = await db.query<{ status: string; idempotency_key: string; entity_id: string }>(`
+      select status::text as status, idempotency_key, params->>'entityId' as entity_id
+        from metrics.ingestion_jobs
+       where entity_type = 'job_nested'
+       order by id
+    `);
+    assert.deepEqual(nested.rows, [
+      { status: "running", idempotency_key: "job_nested:44:old-state", entity_id: "44" },
+      { status: "queued", idempotency_key: "job_nested:44:after-running:2:1", entity_id: "44" },
+    ]);
+  } finally {
+    await db.close();
+  }
+});
+
 test("summary candidates do not reopen nested work without a newer Simpro modification", async () => {
   const db = await ingestionDatabase();
   const query = pgliteQuery(db);
@@ -573,6 +686,23 @@ function pgliteQuery(db: PGlite): IngestionQuery {
     const result = await db.query<T>(sql, values as never[]);
     return { rows: result.rows, rowCount: result.rows.length };
   }) as IngestionQuery;
+}
+
+function serialTransaction(query: IngestionQuery): IngestionJobTransaction {
+  let predecessor = Promise.resolve();
+  return async <T>(callback: (transactionQuery: IngestionQuery) => Promise<T>) => {
+    const prior = predecessor;
+    let release: (() => void) | undefined;
+    predecessor = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await prior;
+    try {
+      return await callback(query);
+    } finally {
+      release?.();
+    }
+  };
 }
 
 async function ingestionDatabase() {

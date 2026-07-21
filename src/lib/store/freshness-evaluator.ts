@@ -508,7 +508,10 @@ function preserveExplicitSuspect(input: AggregateFreshnessInput, reconciliationC
     explicitReconciledAt
     && input.reconciliation.status === "matched"
     && reconciliationCheckedAt
-    && reconciliationCheckedAt > explicitReconciledAt
+    // The reconciliation worker can persist the matched timestamp before the
+    // aggregate evaluator clears the prior suspect state. Equality therefore
+    // means the stored state has already observed this authoritative match.
+    && reconciliationCheckedAt >= explicitReconciledAt
   );
 }
 

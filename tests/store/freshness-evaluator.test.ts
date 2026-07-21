@@ -288,12 +288,22 @@ test("explicit failure and suspect states remain until durable evidence supersed
     assert.equal(result.state, "failed");
   });
 
-  await t.test("explicit suspect needs a newer matched reconciliation", () => {
+  await t.test("an equally current matched reconciliation clears explicit suspect", () => {
     const result = evaluatePageFreshness({
       ...baseInput("quotes", successfulSources("quotes")),
       explicitState: "suspect",
       explicitDetail: "Prior mismatch",
       explicitReconciledAt: reconciliationAt,
+    });
+    assert.equal(result.state, "current");
+  });
+
+  await t.test("explicit suspect remains when its evidence is newer than the matched reconciliation", () => {
+    const result = evaluatePageFreshness({
+      ...baseInput("quotes", successfulSources("quotes")),
+      explicitState: "suspect",
+      explicitDetail: "Prior mismatch",
+      explicitReconciledAt: "2026-07-09T11:40:00.000Z",
     });
     assert.equal(result.state, "suspect");
     assert.equal(result.detail, "Prior mismatch");

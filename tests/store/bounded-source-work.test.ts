@@ -145,6 +145,52 @@ test("entity refresh is queued once, audited, and deduplicated while active", as
   }
 });
 
+test("a nested refresh requested during a running refresh keeps one queued successor", async () => {
+  const db = await boundedWorkDatabase();
+  const query = pgliteQuery(db);
+  try {
+    await enqueueBoundedSourceWork({
+      work: { kind: "entity_refresh", entityType: "job", entityId: 314 },
+      requestedBy: "asad@prostarmechanical.com",
+      reason: "Refresh current job nested state",
+    }, { query, requestId: "running-request", now });
+    await db.exec(`
+      update metrics.ingestion_jobs
+         set status = 'running', locked_by = 'worker-a', locked_at = now(),
+             lock_expires_at = now() + interval '10 minutes', heartbeat_at = now()
+       where entity_type = 'job_nested'
+    `);
+
+    const successor = await enqueueBoundedSourceWork({
+      work: { kind: "entity_refresh", entityType: "job", entityId: 314 },
+      requestedBy: "laila@prostarmechanical.com",
+      reason: "Refresh state changed while the prior request was running",
+    }, { query, requestId: "successor-request", now: new Date(now.getTime() + 1_000) });
+    const coalesced = await enqueueBoundedSourceWork({
+      work: { kind: "entity_refresh", entityType: "job", entityId: 314 },
+      requestedBy: "laila@prostarmechanical.com",
+      reason: "Refresh a second state change during the same running request",
+    }, { query, requestId: "coalesced-request", now: new Date(now.getTime() + 2_000) });
+
+    assert.equal(successor.status, "queued");
+    assert.equal(successor.duplicate, false);
+    assert.equal(coalesced.status, "queued");
+    assert.equal(coalesced.duplicate, true);
+    const queue = await db.query<{ status: string; idempotency_key: string; entity_id: string }>(`
+      select status::text as status, idempotency_key, params->>'entityId' as entity_id
+        from metrics.ingestion_jobs
+       where entity_type = 'job_nested'
+       order by id
+    `);
+    assert.deepEqual(queue.rows, [
+      { status: "running", idempotency_key: "bounded:job:314", entity_id: "314" },
+      { status: "queued", idempotency_key: "bounded:job:314:after-running:1:1", entity_id: "314" },
+    ]);
+  } finally {
+    await db.close();
+  }
+});
+
 test("reconciliation job refresh is superseded by exact historical checksum-backed nested authority", async () => {
   const db = await boundedWorkDatabase();
   const query = pgliteQuery(db);
