@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser, assertRole } from "@/lib/auth/roles";
-import { businessCurrentMonth } from "@/lib/backfill/plan";
-import { monthParamToPeriodStart } from "@/lib/metrics/periods";
+import { parseCommissionDashboardPeriod } from "@/lib/commissions/period";
 import { getCommissionDashboardReadModel } from "@/lib/store/commissions-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -37,35 +36,10 @@ export function commissionDashboardReadModelParams(
   searchParams: URLSearchParams,
   now = new Date(),
 ): { year: number; month: number; summaryYear: number } | null {
-  const currentPeriodStart = businessCurrentMonth(now);
-  const currentYear = Number(currentPeriodStart.slice(0, 4));
-  const monthParam = searchParams.get("month");
-  const yearParam = searchParams.get("year");
-
-  let periodStart: string;
-  if (monthParam === null && yearParam === null) {
-    periodStart = currentPeriodStart;
-  } else if (monthParam && monthParamToPeriodStart(monthParam)) {
-    periodStart = monthParamToPeriodStart(monthParam)!;
-    if (yearParam !== null && yearParam !== periodStart.slice(0, 4)) return null;
-  } else {
-    if (!yearParam || !monthParam || !/^\d{4}$/.test(yearParam) || !/^(?:0?[1-9]|1[0-2])$/.test(monthParam)) return null;
-    periodStart = `${yearParam}-${monthParam.padStart(2, "0")}-01`;
-  }
-
-  if (periodStart < "2023-01-01" || periodStart > currentPeriodStart) return null;
-
-  const summaryYearParam = searchParams.get("summaryYear");
-  const summaryYear = summaryYearParam === null ? Number(periodStart.slice(0, 4)) : strictYear(summaryYearParam);
-  if (summaryYear === null || summaryYear < 2023 || summaryYear > currentYear) return null;
-
-  return {
-    year: Number(periodStart.slice(0, 4)),
-    month: Number(periodStart.slice(5, 7)),
-    summaryYear,
-  };
-}
-
-function strictYear(value: string): number | null {
-  return /^\d{4}$/.test(value) ? Number(value) : null;
+  const period = parseCommissionDashboardPeriod({
+    year: searchParams.get("year"),
+    month: searchParams.get("month"),
+    summaryYear: searchParams.get("summaryYear"),
+  }, now);
+  return period && { year: period.year, month: period.month, summaryYear: period.summaryYear };
 }

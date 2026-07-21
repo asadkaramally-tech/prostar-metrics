@@ -107,8 +107,8 @@ const queue: QuoteFollowUpQueue = {
   ],
 };
 
-/* Heatmap — representative values for earlier months, June verified; one
-   empty cell to prove the "—, never 0%" treatment. */
+/* Heatmap — monthly rates from the payload; one empty cell proves the
+   "—, never 0%" treatment. */
 const HM: Record<QuoteDealTier, Array<number | null>> = {
   "Under $750": [38, 45, null, 42, 48, 57, 40, 33, 25, 31, 36, 38.5],
   "$750-$2K": [30, 42, 36, 40, 44, 52, 36, 30, 27, 33, 32, 25.0],
@@ -340,27 +340,27 @@ test("exclusion writes preserve the revision and idempotency semantics of the ov
 
 /* ── Row 4: heatmap ────────────────────────────────────── */
 
-test("heatmap keeps the validated ramp, hatched representative cells and honest empty cells", () => {
+test("heatmap keeps the validated ramp and factual monthly cells without unsupported verification claims", () => {
   const html = render();
   assert.match(html, /Acceptance by Deal Size and Month/);
   assert.match(html, /Count-based acceptance per tier · Jul ’25 – Jun ’26 · hover or tap any cell/);
-  for (const bound of ["&lt;15%", "15–25", "25–35", "35–45", "45%+", "hatched = representative"]) {
+  for (const bound of ["&lt;15%", "15–25", "25–35", "35–45", "45%+"]) {
     assert.ok(html.includes(bound), `legend includes ${bound}`);
   }
-  assert.match(html, /Hatched cells are representative, pending per-month reconciliation — the Jun column is verified against Simpro\./);
+  assert.doesNotMatch(html, /representative|column verified against Simpro|pending per-month reconciliation/i);
   // Validated ordinal ramp: color-mix tints over --acc, red band from --down.
   assert.match(html, /background-color:color-mix\(in srgb,#5b63d3,#fff 46%\)/);
   assert.match(html, /background-color:color-mix\(in srgb,#d0463a,#fff 30%\)/);
   // Year anchors on the first column and January.
   assert.match(html, /Jul ’25/);
   assert.match(html, /Jan ’26/);
-  // Earlier cells hatched, the selected June column solid + highlighted.
+  // Every data-bearing cell is rendered on the same factual basis; selected June stays highlighted.
   const hatched = html.match(/data-r="1"/g) ?? [];
-  assert.equal(hatched.length, 43); // 4 tiers × 11 representative months − 1 empty cell
+  assert.equal(hatched.length, 0);
   assert.match(html, /class="hcell now" data-m="Jun" data-t="Under \$750" data-v="38\.5" data-r=""/);
   // Empty cell renders — (never 0%).
   assert.match(html, /class="hcell na" data-m="Sep" data-t="Under \$750">—</);
-  assert.match(html, /Jun column verified against Simpro · the pattern: big deals rarely clear 15%\./);
+  assert.match(html, /Each cell is the count-based acceptance rate for that tier and month; — means no denominator\./);
 });
 
 /* ── Row 5: Monthly Breakdown (tabs removed) ───────────── */

@@ -1,7 +1,8 @@
+import { notFound } from "next/navigation";
 import { DashboardPage } from "@/components/dashboard-page";
 import { PeriodSelector } from "@/components/period-selector";
 import { QuoteMetricsDashboard } from "@/components/quotes/quote-metrics-dashboard";
-import { monthParamToPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
+import { boundedDashboardPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
 import { getQuoteMetricsReadModel } from "@/lib/store/quote-dashboard-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -19,7 +20,8 @@ export default async function QuotesPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const periodStart = monthParamToPeriodStart(firstParam(params?.month));
+  const periodStart = boundedDashboardPeriodStart(firstParam(params?.month));
+  if (!periodStart) notFound();
   const selectedMonth = periodStartToMonthKey(periodStart);
   const model = await cachedPageLoad(`quotes:${selectedMonth}`, 120_000, () =>
     getQuoteMetricsReadModel({ selectedMonth }),

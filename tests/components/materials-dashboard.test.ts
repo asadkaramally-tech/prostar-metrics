@@ -257,6 +257,33 @@ test("empty months render a truthful coverage state, not a zero dashboard", () =
   const empty = buildModel({ selectedLines: [] });
   assert.match(render(empty), /No materials were billed on jobs completed in July\./);
   assert.doesNotMatch(render(empty), /\$0/);
+
+  empty.freshness = { ...empty.freshness, state: "stale", label: "Data is stale", detail: "Data-through is July 12." };
+  assert.match(render(empty), /Selected-month results may be incomplete and should not be treated as current/);
+});
+
+test("retained selected-month totals carry a visible incomplete or stale warning and are never labeled current", () => {
+  const incomplete = buildModel({
+    coverage: {
+      selectedMonth: coverage("2026-07-01", "failed"),
+      priorMonth: coverage("2026-06-01"),
+      priorYearMonth: coverage("2025-07-01"),
+    },
+  });
+  const incompleteHtml = render(incomplete);
+  assert.match(incompleteHtml, /role="alert"/);
+  assert.match(incompleteHtml, /Coverage warning\./);
+  assert.match(incompleteHtml, /The July materials walk is failed\./);
+  assert.match(incompleteHtml, /latest retained values and should not be treated as current/);
+  assert.match(incompleteHtml, /Materials sold · latest retained/);
+  assert.doesNotMatch(incompleteHtml, /Materials sold · MTD/);
+  assert.doesNotMatch(incompleteHtml, /on pace for/);
+
+  const stale = buildModel();
+  stale.freshness = { ...stale.freshness, state: "stale", label: "Data is stale", detail: "Data-through is July 12." };
+  const staleHtml = render(stale);
+  assert.match(staleHtml, /Data is stale\. Data-through is July 12\./);
+  assert.match(staleHtml, /Materials sold · latest retained/);
 });
 
 test("pace helpers: even-with band, whole-K text, and CSV escapes the ranked list", () => {

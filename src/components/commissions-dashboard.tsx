@@ -475,7 +475,7 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
     if (allocationDetails[employeeId] || worksheet.servingStatus !== "ready" || !computed?.rows.find((row) => row.employeeId === employeeId)?.jobCount) return;
     setAllocationLoading(employeeId);
     setAllocationError(null);
-    const search = new URLSearchParams({ month: worksheet.periodLabel, employeeId });
+    const search = commissionAllocationDetailSearch(worksheet.periodStart, employeeId);
     void fetch(`/api/commissions/allocations?${search.toString()}`, { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Allocation detail could not be loaded.");
@@ -533,6 +533,10 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
       )}
     </>
   );
+}
+
+export function commissionAllocationDetailSearch(periodStart: string, employeeId: string): URLSearchParams {
+  return new URLSearchParams({ month: periodStart.slice(0, 7), employeeId });
 }
 
 /* ── Honest non-ready states (never fabricated zeros) ──── */

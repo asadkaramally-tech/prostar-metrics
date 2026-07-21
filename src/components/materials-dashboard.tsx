@@ -92,16 +92,20 @@ export function MaterialsDashboard({ model }: MaterialsDashboardProps) {
 
   if ((model.itemPagination?.total ?? model.items.length) === 0) {
     return (
-      <Card>
-        <CardBody>
-          <StateEmpty>{emptyMonthMessage(model, monthLong)}</StateEmpty>
-        </CardBody>
-      </Card>
+      <DefTooltipProvider>
+        <MaterialsCoverageWarning model={model} monthLong={monthLong} hasRetainedTotals={false} />
+        <Card>
+          <CardBody>
+            <StateEmpty>{emptyMonthMessage(model, monthLong)}</StateEmpty>
+          </CardBody>
+        </Card>
+      </DefTooltipProvider>
     );
   }
 
   return (
     <DefTooltipProvider>
+      <MaterialsCoverageWarning model={model} monthLong={monthLong} hasRetainedTotals />
       <MaterialsBand model={model} />
       <MaterialsTableCard model={model} onOpen={openDrawer} />
       <Drawer
@@ -121,6 +125,47 @@ export function MaterialsDashboard({ model }: MaterialsDashboardProps) {
         ) : null}
       </Drawer>
     </DefTooltipProvider>
+  );
+}
+
+function MaterialsCoverageWarning({
+  model,
+  monthLong,
+  hasRetainedTotals,
+}: {
+  model: MaterialsDashboardModel;
+  monthLong: string;
+  hasRetainedTotals: boolean;
+}) {
+  const issues: string[] = [];
+  if (model.coverage.selectedMonth.status !== "complete") {
+    issues.push(`The ${monthLong} materials walk is ${model.coverage.selectedMonth.status}.`);
+  }
+  if (model.freshness.state !== "current") {
+    issues.push(`${model.freshness.label}. ${model.freshness.detail}`);
+  }
+  if (issues.length === 0) return null;
+  return (
+    <div
+      role="alert"
+      className="materials-coverage-warning"
+      style={{
+        marginBottom: 12,
+        border: "1px solid color-mix(in srgb,var(--warn),#fff 55%)",
+        borderLeft: "4px solid var(--warn)",
+        borderRadius: 8,
+        padding: "10px 12px",
+        background: "color-mix(in srgb,var(--warn),#fff 92%)",
+        color: "var(--ink)",
+        fontSize: 13,
+        lineHeight: 1.45,
+      }}
+    >
+      <b>Coverage warning.</b> {issues.join(" ")}{" "}
+      {hasRetainedTotals
+        ? "Totals shown are the latest retained values and should not be treated as current."
+        : "Selected-month results may be incomplete and should not be treated as current."}
+    </div>
   );
 }
 
@@ -164,14 +209,15 @@ function MaterialsBand({ model }: { model: MaterialsDashboardModel }) {
   const lyDef = partial ? `vs ${lyName}, aligned to day ${totals.elapsedDays}` : `vs ${lyName}, full month`;
   const yoyDelta = priorYearValue != null ? ((totals.current - priorYearValue) / priorYearValue) * 100 : null;
   const comparisonWord = paceComparison(partial ? totals.paceProjection : totals.current, priorMonthValue);
+  const retained = model.coverage.selectedMonth.status !== "complete" || model.freshness.state !== "current";
 
   return (
     <KpiBand className="bandpair" ariaLabel={`${monthLong} materials`}>
       <PrimaryStatCard
-        label={partial ? "Materials sold · MTD" : "Materials sold"}
+        label={retained ? "Materials sold · latest retained" : partial ? "Materials sold · MTD" : "Materials sold"}
         labelDef={`Extended sell (ex-tax) of catalog, one-off Material and prebuild lines on jobs completed in ${monthLong}. Service Fee lines and the Service Contract group are excluded.`}
         pills={
-          yoyDelta != null ? (
+          !retained && yoyDelta != null ? (
             <Dpill tone={yoyDelta < 0 ? "down" : yoyDelta > 0 ? "up" : "neutral"} def={lyDef}>
               {yoyDelta < 0 ? "↓" : "↑"} {Math.abs(yoyDelta).toFixed(1)}% vs {lyName}
             </Dpill>
@@ -179,9 +225,11 @@ function MaterialsBand({ model }: { model: MaterialsDashboardModel }) {
         }
         value={fmt.moneyFull(totals.current)}
         sub={
-          partial
-            ? `on pace for ${paceText(totals.paceProjection)} full-month${comparisonWord ? ` — ${comparisonWord} ${priorLong}` : ""}`
-            : `full month${comparisonWord ? ` · ${comparisonWord} ${priorLong}` : ""}`
+          retained
+            ? "selected-month coverage is not current"
+            : partial
+              ? `on pace for ${paceText(totals.paceProjection)} full-month${comparisonWord ? ` — ${comparisonWord} ${priorLong}` : ""}`
+              : `full month${comparisonWord ? ` · ${comparisonWord} ${priorLong}` : ""}`
         }
         bullet={{
           value: totals.current,

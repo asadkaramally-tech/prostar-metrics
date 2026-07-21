@@ -1,7 +1,8 @@
+import { notFound } from "next/navigation";
 import { DashboardPage } from "@/components/dashboard-page";
 import { MaterialsDashboard } from "@/components/materials-dashboard";
 import { PeriodSelector } from "@/components/period-selector";
-import { monthParamToPeriodStart } from "@/lib/metrics/periods";
+import { boundedDashboardPeriodStart } from "@/lib/metrics/periods";
 import { getMaterialsPageReadModel, materialsPageParam } from "@/lib/store/materials-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -11,9 +12,10 @@ export default async function MaterialsPage({
   searchParams?: Promise<{ month?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const periodStart = monthParamToPeriodStart(params?.month);
+  const periodStart = boundedDashboardPeriodStart(params?.month);
+  if (!periodStart) notFound();
   const page = materialsPageParam(params?.page);
-  const model = await cachedPageLoad(`materials:${periodStart ?? "current"}:page:${page}`, 120_000, () =>
+  const model = await cachedPageLoad(`materials:${periodStart}:page:${page}`, 120_000, () =>
     getMaterialsPageReadModel(periodStart, page),
   );
 

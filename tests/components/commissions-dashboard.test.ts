@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { fmt } from "../../src/components/charts";
 import {
   buildSessionInputs,
+  commissionAllocationDetailSearch,
   buildSummaryCsv,
   buildSummaryVM,
   buildWorksheetRows,
@@ -41,6 +42,13 @@ import {
       proof lives in tests/metrics/commissions.test.ts — the serving fixture
       reconstructs its roster from technicianWork, so it is always
       post-normalization.) ───────────── */
+
+test("commission allocation detail requests use the canonical YYYY-MM key", () => {
+  assert.equal(
+    commissionAllocationDetailSearch("2026-06-01", "42").toString(),
+    "month=2026-06&employeeId=42",
+  );
+});
 
 const SAVED_CONFIG: CommissionPeriodConfig = {
   poolPercent: 0.5,

@@ -710,17 +710,13 @@ function HeatmapCard({ model, months }: { model: QuoteMetricsReadModel; months: 
     return () => mq.removeEventListener("change", update);
   }, []);
   const keep = narrow ? 6 : 12;
-  const monShort = monthLong(model.selectedMonth).slice(0, 3);
   const heatLabels = months.map((m, i) => heatLabel(m.month, i)).slice(-keep);
   const heatRows = model.heatmap.map((row) => ({
     name: displayTier(row.tier),
     cells: row.months.slice(-keep).map((cell) => ({
       v: cell.acceptanceRate,
-      repr: cell.month !== model.selectedMonth || undefined,
     })),
   }));
-  const bigTier = model.acceptanceByTier.find((t) => t.tier === "$10K+");
-  const bigTierLow = bigTier != null && bigTier.acceptanceRateCount !== null && bigTier.acceptanceRateCount < 15;
   const swatch = (background: string, extra?: CSSProperties) => (
     <i style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background, ...extra }} />
   );
@@ -751,14 +747,6 @@ function HeatmapCard({ model, months }: { model: QuoteMetricsReadModel; months: 
               </span>
             ))}
           </div>
-          <span
-            className="def"
-            data-def={`Hatched cells are representative, pending per-month reconciliation — the ${monShort} column is verified against Simpro.`}
-            style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", fontSize: 12, color: "var(--muted)" }}
-          >
-            {swatch("repeating-linear-gradient(45deg,color-mix(in srgb,#5b63d3,#fff 23%) 0 3px,#fff 3px 5px)")}
-            hatched = representative
-          </span>
         </div>
       }
     >
@@ -778,7 +766,7 @@ function HeatmapCard({ model, months }: { model: QuoteMetricsReadModel; months: 
       ) : null}
       <CardBody style={{ paddingTop: 0 }}>
         <Fnote>
-          {monShort} column verified against Simpro{bigTierLow ? " · the pattern: big deals rarely clear 15%." : ""}
+          Each cell is the count-based acceptance rate for that tier and month; — means no denominator.
         </Fnote>
       </CardBody>
     </Card>

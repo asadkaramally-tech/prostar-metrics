@@ -7,6 +7,7 @@ import type {
   CommissionReadModel,
 } from "@/lib/metrics/commissions";
 import type { FreshnessStatus } from "@/lib/metrics/freshness";
+import { requireCommissionDashboardPeriod } from "@/lib/commissions/period";
 import { getCommissionExportBlobStatus } from "@/lib/store/blob-exports";
 import {
   verifyCommissionCanonicalRun,
@@ -289,6 +290,7 @@ type CommissionSummarySourceRow = PeriodRunRow | CommissionSummaryRunRow;
 export type CommissionReadModelDependencies = {
   query?: PostgresQuery;
   getFreshness?: typeof getPageFreshness;
+  now?: Date;
 };
 
 const defaultConfig: CommissionConfig = {
@@ -305,9 +307,12 @@ export async function getCommissionDashboardReadModel(params: {
   summaryYear: number;
   includeAllocationDetails?: boolean;
 }, dependencies: CommissionReadModelDependencies = {}): Promise<CommissionDashboardReadModel> {
-  const year = clamp(params.year, 2023, 2100);
-  const month = clamp(params.month, 1, 12);
-  const summaryYear = clamp(params.summaryYear, 2023, 2100);
+  const period = requireCommissionDashboardPeriod({
+    year: String(params.year),
+    month: String(params.month),
+    summaryYear: String(params.summaryYear),
+  }, dependencies.now);
+  const { year, month, summaryYear } = period;
   const query = dependencies.query ?? queryPostgres;
   const freshnessPromise = (dependencies.getFreshness ?? getPageFreshness)(
     "commissions",
@@ -359,7 +364,11 @@ export function withoutCommissionAllocationDetails(model: CommissionDashboardRea
 export async function getCommissionTechnicianAllocations(params: {
   year: number; month: number; employeeId: string;
 }, dependencies: CommissionReadModelDependencies = {}): Promise<CommissionJobAllocation[]> {
-  const worksheet = await getWorksheet(clamp(params.year, 2023, 2100), clamp(params.month, 1, 12), dependencies.query ?? queryPostgres);
+  const period = requireCommissionDashboardPeriod({
+    year: String(params.year),
+    month: String(params.month),
+  }, dependencies.now);
+  const worksheet = await getWorksheet(period.year, period.month, dependencies.query ?? queryPostgres);
   if (worksheet.servingStatus !== "ready") return [];
   return worksheet.technicians.find((technician) => technician.employeeId === params.employeeId)?.jobAllocations ?? [];
 }
@@ -1232,10 +1241,6 @@ function formatPeriod(year: number, month: number) {
 function shortMonth(year: number, month: number) {
   return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: "UTC" })
     .format(new Date(Date.UTC(year, month - 1, 1)));
-}
-
-function clamp(value: number, minimum: number, maximum: number) {
-  return Number.isFinite(value) ? Math.min(maximum, Math.max(minimum, Math.trunc(value))) : minimum;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

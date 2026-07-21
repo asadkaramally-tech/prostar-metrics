@@ -1,8 +1,8 @@
+import { notFound } from "next/navigation";
 import { DashboardPage } from "@/components/dashboard-page";
 import { PeriodSelector } from "@/components/period-selector";
 import { TechniciansDashboard } from "@/components/technicians-dashboard";
-import { businessCurrentMonth } from "@/lib/backfill/plan";
-import { monthParamToPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
+import { boundedDashboardPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
 import { getDashboardReadModel } from "@/lib/store/dashboard-read-models";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -18,7 +18,8 @@ export default async function TechniciansPage({
   searchParams?: Promise<{ month?: string; states?: string }>;
 }) {
   const params = await searchParams;
-  const periodStart = monthParamToPeriodStart(params?.month) ?? businessCurrentMonth();
+  const periodStart = boundedDashboardPeriodStart(params?.month);
+  if (!periodStart) notFound();
   const model = await cachedPageLoad(`technicians:${periodStart}`, 120_000, () =>
     getDashboardReadModel("technicians", { periodStart, compactTechnicianDetails: true }),
   );
@@ -33,7 +34,7 @@ export default async function TechniciansPage({
       description={
         rosterCount
           ? `Capacity, productive time, efficiency and punctuality across the ${rosterCount}-technician roster.`
-          : "Capacity, productive time, efficiency and punctuality across the verified technician roster."
+          : "Capacity, productive time, efficiency and punctuality for the selected month."
       }
       freshness={model.freshness}
       controls={
