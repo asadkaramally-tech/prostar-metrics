@@ -12,6 +12,11 @@ const RATE_LIMIT_POSTGRES_ENV = Object.freeze({
   POSTGRES_CONNECTION_TIMEOUT_MS: "60000",
   POSTGRES_POOL_IDLE_TIMEOUT_MS: "1000",
 });
+const RESERVATION_COUNT = 12;
+// Azure Flexible Server keeps several connections for platform maintenance. Keep
+// enough independent workers to exercise cross-process serialization without
+// making the deploy gate depend on every remaining customer connection slot.
+const WORKER_BATCH_SIZE = 4;
 
 async function main() {
   for (const [name, value] of Object.entries(RATE_LIMIT_POSTGRES_ENV)) {
@@ -42,13 +47,20 @@ async function main() {
     await closePostgresPool();
   }
 
-  const reservations = await Promise.all(
-    Array.from({ length: 12 }, () => runWorker(bucketKey)),
-  );
+  const reservations: DistributedRateLimitReservation[] = [];
+  for (let offset = 0; offset < RESERVATION_COUNT; offset += WORKER_BATCH_SIZE) {
+    const batchSize = Math.min(WORKER_BATCH_SIZE, RESERVATION_COUNT - offset);
+    reservations.push(...await Promise.all(
+      Array.from({ length: batchSize }, () => runWorker(bucketKey)),
+    ));
+  }
   const scheduled = reservations
     .map((reservation) => Date.parse(reservation.scheduledAt))
     .sort((left, right) => left - right);
-  assert.equal(new Set(reservations.map((reservation) => reservation.reservationCount)).size, 12);
+  assert.equal(
+    new Set(reservations.map((reservation) => reservation.reservationCount)).size,
+    RESERVATION_COUNT,
+  );
   for (let index = 1; index < scheduled.length; index += 1) {
     assert.ok(
       scheduled[index] - scheduled[index - 1] >= 199,
@@ -59,7 +71,7 @@ async function main() {
     const rollingCount = scheduled.filter((value) => value >= start && value < start + 1000).length;
     assert.ok(rollingCount <= 5, `Rolling one-second window beginning ${start} contained ${rollingCount} reservations.`);
   }
-  console.log("Real PostgreSQL concurrent-worker GCRA test passed with 12 reservations.");
+  console.log(`Real PostgreSQL concurrent-worker GCRA test passed with ${RESERVATION_COUNT} reservations.`);
 }
 
 main().catch((error) => {
