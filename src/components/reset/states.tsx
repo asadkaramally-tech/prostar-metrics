@@ -46,7 +46,7 @@ export function StateEmpty({ children }: { children?: ReactNode }) {
 
 export type StateErrorProps = {
   children?: ReactNode;
-  onRetry?: MouseEventHandler<HTMLSpanElement>;
+  onRetry?: MouseEventHandler<HTMLButtonElement>;
   retryLabel?: ReactNode;
 };
 
@@ -58,10 +58,19 @@ export function StateError({ children, onRetry, retryLabel = "Try again" }: Stat
       </span>
       <span>
         {children}
-        <br />
-        <span className="retry" onClick={onRetry} role={onRetry ? "button" : undefined}>
-          {retryLabel}
-        </span>
+        {onRetry ? (
+          <>
+            <br />
+            <button
+              type="button"
+              className="retry"
+              onClick={onRetry}
+              style={{ border: 0, padding: 0, background: "none", color: "inherit", font: "inherit", cursor: "pointer" }}
+            >
+              {retryLabel}
+            </button>
+          </>
+        ) : null}
       </span>
     </div>
   );

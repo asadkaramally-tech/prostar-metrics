@@ -222,11 +222,15 @@ export function commissionArtifactFromServingRow(row: CommissionPeriodRunRow): C
 export function commissionQuery(params: {
   selectedRows?: CommissionPeriodRunRow[];
   summaryRows?: CommissionPeriodRunRow[];
+  priorMonthRows?: CommissionPeriodRunRow[];
   error?: Error;
 }): PostgresQuery {
   return async <T>(sql: string): Promise<QueryResult<T>> => {
     if (params.error) throw params.error;
     if (sql.includes("p.period_start >= $1::date")) return result(params.summaryRows ?? []);
+    if (params.priorMonthRows && sql.includes("r.read_model - 'jobAllocations'") && sql.includes("where p.period_start = $1::date")) {
+      return result(params.priorMonthRows);
+    }
     if (sql.includes("limit 1")) return result(params.selectedRows ?? []);
     if (sql.includes("from metrics.commission_periods p") && sql.includes("order by p.revision desc")) return result(params.selectedRows ?? []);
     return result([]);

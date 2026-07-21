@@ -181,6 +181,7 @@ test("all-materials table is ordered by total sold value with Δ grammar, unit s
   // CSV + pager + count line (5 ranked items: the two copper lines aggregate).
   assert.equal(model.items.length, 5);
   assert.match(html, /Download CSV/);
+  assert.match(html, /<tr[^>]*class="rowlink"[^>]*tabindex="0"[^>]*aria-label="Open .* material detail"/);
   assert.match(html, /Showing 1–5 of 5 by total sold value/);
   assert.match(html, /aria-label="Next page"/);
 });

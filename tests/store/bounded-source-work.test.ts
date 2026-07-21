@@ -145,6 +145,46 @@ test("entity refresh is queued once, audited, and deduplicated while active", as
   }
 });
 
+test("reconciliation job refresh is superseded by exact historical checksum-backed nested authority", async () => {
+  const db = await boundedWorkDatabase();
+  const query = pgliteQuery(db);
+  try {
+    await seedHistoricalBulkJobNestedAuthority(db, 314);
+    const reconciliation = await enqueueBoundedSourceWork({
+      work: { kind: "entity_refresh", entityType: "job", entityId: 314 },
+      requestedBy: "metrics-reconciliation-worker",
+      reason: "Repair incomplete nested reconciliation evidence.",
+      origin: "reconciliation",
+    }, { query, requestId: "historical-authority", now });
+
+    assert.equal(reconciliation.status, "superseded");
+    assert.equal(reconciliation.duplicate, true);
+    const suppressed = await db.query<{ queue_jobs: number; audits: number; authority: string }>(`
+      select
+        (select count(*)::integer from metrics.ingestion_jobs) as queue_jobs,
+        (select count(*)::integer from metrics.audit_events
+          where action = 'bounded_source_work_suppressed') as audits,
+        (select after_value->>'authority' from metrics.audit_events
+          where action = 'bounded_source_work_suppressed') as authority
+    `);
+    assert.deepEqual(suppressed.rows[0], {
+      queue_jobs: 0,
+      audits: 1,
+      authority: "checksum_verified_full_universe_artifact_projection",
+    });
+
+    const manual = await enqueueBoundedSourceWork({
+      work: { kind: "entity_refresh", entityType: "job", entityId: 314 },
+      requestedBy: "asad@prostarmechanical.com",
+      reason: "Operator requested a direct source verification.",
+      origin: "manual",
+    }, { query, requestId: "manual-override", now });
+    assert.equal(manual.status, "queued");
+  } finally {
+    await db.close();
+  }
+});
+
 test("manual completed backfill is an audited duplicate without reopening coverage", async () => {
   const db = await boundedWorkDatabase();
   const query = pgliteQuery(db);
@@ -313,6 +353,57 @@ async function seedCompletedBackfill(db: PGlite, months: string[]) {
   }
 }
 
+async function seedHistoricalBulkJobNestedAuthority(db: PGlite, jobId: number) {
+  const ledger = await db.query<{ id: number }>(`
+    insert into metrics.backfill_source_month_ledger (
+      source_family, month_start, month_end_exclusive, status, work_phase,
+      reconciliation_status, completed_at
+    ) values (
+      'job_nested', '2024-03-01', '2024-04-01', 'completed', 'reconcile', 'matched', now()
+    ) returning id
+  `);
+  const workUnitId = ledger.rows[0].id;
+  await db.query(`
+    insert into metrics.backfill_traversal_manifests (
+      work_unit_id, generation, manifest_status, filter_contract, as_of_watermark,
+      observed_boundary, required_target_keys, completed_target_keys, exact_source_ids,
+      listed_source_ids, detailed_source_ids, page_count, record_count, completed_at
+    ) values (
+      $1, 7, 'completed', '{}'::jsonb, now(), '{}'::jsonb,
+      '["jobs:month"]'::jsonb, '["jobs:month"]'::jsonb, jsonb_build_array($2::text),
+      jsonb_build_array($2::text), jsonb_build_array($2::text), 1, 1, now()
+    )
+  `, [workUnitId, jobId]);
+  await db.query(`
+    insert into metrics.backfill_traversal_pages (
+      work_unit_id, generation, source_method, exact_ids, request_query, synthetic
+    ) values (
+      $1, 7, 'checksum_verified_full_universe_artifact_projection:listJobs',
+      jsonb_build_array($2::text),
+      '{"_bulkArtifactEvidence":{"provenance":"checksum_verified_full_universe_artifact_projection","fabricatedApiResponse":false}}'::jsonb,
+      true
+    )
+  `, [workUnitId, jobId]);
+  await db.query(`
+    insert into metrics.raw_simpro_snapshots (
+      entity_type, entity_id, source_version, complete_traversal, source_deleted_at
+    ) values ('jobs', $1::text, 'bulk-bootstrap:test-manifest', true, null)
+  `, [jobId]);
+  await db.query(`
+    insert into metrics.source_period_manifests (
+      source_family, period_start, period_end, coverage_status, reconciliation_status,
+      evidence_json, manifest_generation, reconciliation_generation
+    ) values (
+      'job_nested', '2024-03-01', '2024-03-31', 'partial', 'pending',
+      jsonb_build_object(
+        'authoritativeSource', 'project_nested_traversals',
+        'invalidProjectIds', jsonb_build_array($1::text)
+      ),
+      8, null
+    )
+  `, [jobId]);
+}
+
 async function boundedWorkDatabase() {
   const db = new PGlite();
   await db.exec(`
@@ -367,6 +458,7 @@ async function boundedWorkDatabase() {
       id bigserial primary key,
       source_family text not null,
       month_start date not null,
+      month_end_exclusive date,
       status text not null default 'planned',
       work_phase text not null default 'ingest',
       reconciliation_status text not null default 'pending',
@@ -384,6 +476,35 @@ async function boundedWorkDatabase() {
       completed_at timestamptz,
       updated_at timestamptz not null default now(),
       unique (source_family, month_start)
+    );
+
+    create table metrics.source_period_manifests (
+      source_family text not null,
+      period_start date not null,
+      period_end date not null,
+      coverage_status text not null,
+      reconciliation_status text not null,
+      evidence_json jsonb not null default '{}'::jsonb,
+      manifest_generation integer,
+      reconciliation_generation integer,
+      primary key (source_family, period_start)
+    );
+
+    create table metrics.backfill_traversal_pages (
+      work_unit_id bigint not null references metrics.backfill_source_month_ledger(id),
+      generation integer not null,
+      source_method text not null,
+      exact_ids jsonb not null,
+      request_query jsonb not null,
+      synthetic boolean not null
+    );
+
+    create table metrics.raw_simpro_snapshots (
+      entity_type text not null,
+      entity_id text not null,
+      source_version text not null,
+      complete_traversal boolean not null,
+      source_deleted_at timestamptz
     );
 
     create table metrics.backfill_traversal_manifests (

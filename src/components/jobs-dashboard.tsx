@@ -58,6 +58,7 @@ import {
   type JobDrilldownRow,
   type JobSourceType,
 } from "@/lib/metrics/jobs";
+import { csvCell } from "@/lib/csv";
 import type { JobDashboardReadModel } from "@/lib/store/job-dashboard-read-model";
 
 /* /jobs — implements the owner-approved redesign
@@ -1473,7 +1474,7 @@ export function buildCompletedJobsCsv(rows: JobDrilldownRow[]): string {
     "Net Profit",
     "Net Margin (%)",
   ];
-  const lines = [header.map(csvEscape).join(",")];
+  const lines = [header.map(csvCell).join(",")];
   for (const row of rows) {
     lines.push(
       [
@@ -1493,15 +1494,11 @@ export function buildCompletedJobsCsv(rows: JobDrilldownRow[]): string {
           ? ((row.netProfit / row.sellValue) * 100).toFixed(1)
           : "",
       ]
-        .map((value) => csvEscape(String(value)))
+        .map((value) => csvCell(value))
         .join(","),
     );
   }
   return lines.join("\r\n") + "\r\n";
-}
-
-function csvEscape(value: string): string {
-  return /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
 /** Real pager layout: first pages, a window around the current page, and the
@@ -1735,7 +1732,19 @@ function CompletedJobsCard({
               </tr>
             ) : (
               visible.map((row) => (
-                <tr key={row.jobId} className="rowlink" onClick={() => onOpen(row)}>
+                <tr
+                  key={row.jobId}
+                  className="rowlink"
+                  tabIndex={0}
+                  aria-label={`Open job ${row.jobNo || row.jobId} detail`}
+                  onClick={() => onOpen(row)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onOpen(row);
+                    }
+                  }}
+                >
                   <td>
                     <div className="id1">{row.name}</div>
                     <div className="id2">

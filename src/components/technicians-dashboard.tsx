@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { DevBars, fmt, Histogram, tipHide, tipRow, tipShow, tipTitle, type HistogramBucket } from "@/components/charts";
 import {
   Card,
@@ -449,26 +449,29 @@ function TechniciansContent({
   return (
     <>
       <TechniciansBand facts={facts} payload={payload} historySummary={historySummary} />
-      {drillRow ? (
-        <TechnicianDrill row={drillRow} facts={facts} payload={payload} onBack={() => setDrillId(null)} />
-      ) : (
-        <>
-          <div className="grid12">
-            <CapacityCard rows={rows} onOpen={(row) => setDrillId(row.employeeId)} />
-          </div>
-          {/* Stretch this pair so the row ends flush (gate: multi-card rows within 28px). */}
-          <div className="grid12" style={{ alignItems: "stretch" }}>
-            <EfficiencyCard rows={rows} facts={facts} />
-            <PunctualityCard payload={payload} facts={facts} onOpenDetail={() => setPunctOpen(true)} />
-          </div>
-          <div className="grid12">
-            <ScorecardCard rows={rows} facts={facts} rosterApplied={payload.rosterApplied} onOpen={(row) => setDrillId(row.employeeId)} />
-          </div>
-        </>
-      )}
+      <div className="grid12">
+        <CapacityCard rows={rows} onOpen={(row) => setDrillId(row.employeeId)} />
+      </div>
+      {/* Stretch this pair so the row ends flush (gate: multi-card rows within 28px). */}
+      <div className="grid12" style={{ alignItems: "stretch" }}>
+        <EfficiencyCard rows={rows} facts={facts} />
+        <PunctualityCard payload={payload} facts={facts} onOpenDetail={() => setPunctOpen(true)} />
+      </div>
+      <div className="grid12">
+        <ScorecardCard rows={rows} facts={facts} rosterApplied={payload.rosterApplied} onOpen={(row) => setDrillId(row.employeeId)} />
+      </div>
       <div className="grid12">
         <EconomicsCard payload={payload} rows={rows} archivedRows={archivedRows} facts={facts} />
       </div>
+      <Drawer
+        open={drillRow !== null}
+        onClose={() => setDrillId(null)}
+        ariaLabel="Technician detail"
+        title={drillRow?.name ?? null}
+        sub={drillRow ? `${facts.monthLong} ${facts.year}` : null}
+      >
+        {drillRow ? <TechnicianDrill row={drillRow} facts={facts} payload={payload} onBack={() => setDrillId(null)} /> : null}
+      </Drawer>
       <Drawer
         open={punctOpen}
         onClose={() => setPunctOpen(false)}
@@ -1063,10 +1066,6 @@ export function TechnicianDrill({
   payload: TechnicianPerformanceReadModel;
   onBack: () => void;
 }) {
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [row.employeeId]);
   const first = row.name.split(" ")[0];
   const EFF_DEF = effDef(facts);
   const OT_DEF = otDef(facts);
@@ -1084,7 +1083,7 @@ export function TechnicianDrill({
   );
 
   return (
-    <div ref={cardRef} className="card">
+    <div className="card">
       <div className="hd">
         <div>
           <div className="ti">{row.name}</div>
@@ -1121,7 +1120,7 @@ export function TechnicianDrill({
               row.ot === null ? (
                 "—"
               ) : (
-                <span className="repr" data-def={OT_DEF}>
+                <span className="def" data-def={OT_DEF}>
                   {pctInt(row.ot)}
                 </span>
               )

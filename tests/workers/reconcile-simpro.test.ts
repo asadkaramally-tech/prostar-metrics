@@ -25,6 +25,7 @@ test("--force parses and disables only-if-needed for direct technician reconcili
   });
 
   assert.equal(executed?.onlyIfNeeded, false);
+  assert.equal(executed?.restartDirectTraversal, true);
 });
 
 test("--force reaches all-month cadence execution", async () => {

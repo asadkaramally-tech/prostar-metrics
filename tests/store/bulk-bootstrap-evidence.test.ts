@@ -11,6 +11,10 @@ import {
   type BulkBootstrapEvidenceUnit,
 } from "../../src/lib/store/bulk-bootstrap-evidence";
 import { exactSourceIdHash, sortExactSourceIds } from "../../src/lib/store/exact-source-identities";
+import {
+  buildSourcePeriodManifestEvidence,
+  upsertSourcePeriodManifest,
+} from "../../src/lib/store/source-period-manifests";
 import type { BackfillSourceFamily } from "../../src/lib/backfill/plan";
 import {
   buildEvidenceUnits,
@@ -19,6 +23,10 @@ import {
 } from "../../scripts/publish-bulk-bootstrap-evidence";
 
 const migrationDirectory = new URL("../../infra/db/migrations/", import.meta.url);
+const historicalNestedRepairMigration = new URL(
+  "../../infra/db/migrations/049_cancel_historically_superseded_job_nested_refreshes.sql",
+  import.meta.url,
+);
 
 test("bulk evidence CLI can select only required or optional families", () => {
   assert.deepEqual(resolveBulkEvidenceFamilies(["--required-only"]), REQUIRED_BULK_EVIDENCE_FAMILIES);
@@ -131,6 +139,121 @@ test("publishes nonempty verified artifact evidence into the existing backfill s
       audit_units: 1,
       audit_pages: 1,
     });
+  } finally {
+    await db.close();
+  }
+});
+
+test("historical checksum-backed bulk authority cannot be downgraded by a later partial manifest", async () => {
+  const db = await migratedDatabase();
+  try {
+    await seedLedger(db, "job_nested", "2024-03-01");
+    const unit = evidenceUnit({
+      sourceFamily: "job_nested",
+      periodStart: "2024-03-01",
+      exactIds: [314],
+    });
+    await publishVerifiedBulkBootstrapEvidence([unit], pgliteQuery(db));
+
+    const partial = buildSourcePeriodManifestEvidence({
+      sourceFamily: "job_nested",
+      periodStart: "2024-03-01",
+      periodEnd: "2024-03-31",
+      listedIds: [314],
+      detailIds: [],
+      normalizedIds: [],
+      authoritativeListComplete: true,
+      listRequestCount: 1,
+      manifestGeneration: 2,
+      reconciliationStatus: "pending",
+      evidenceAsOf: "2026-07-21T19:00:00.000Z",
+    });
+    const upsert = await upsertSourcePeriodManifest(partial, pgliteQuery(db));
+    assert.equal(upsert.rowCount, 0);
+
+    const preserved = await db.query<{
+      coverage_status: string;
+      reconciliation_status: string;
+      generation: number;
+      authority: string;
+      exact_source_ids: unknown;
+    }>(`
+      select coverage_status, reconciliation_status, manifest_generation::int as generation,
+             evidence_json->>'authority' as authority,
+             evidence_json->'exactSourceIds' as exact_source_ids
+        from metrics.source_period_manifests
+       where source_family = 'job_nested' and period_start = '2024-03-01'
+    `);
+    assert.deepEqual(preserved.rows[0], {
+      coverage_status: "complete",
+      reconciliation_status: "matched",
+      generation: 1,
+      authority: "checksum_verified_full_universe_artifact_projection",
+      exact_source_ids: ["314"],
+    });
+  } finally {
+    await db.close();
+  }
+});
+
+test("historical authority migration cancels only queued reconciliation job nested refreshes", async () => {
+  const db = await migratedDatabase();
+  try {
+    await seedLedger(db, "job_nested", "2024-03-01");
+    await publishVerifiedBulkBootstrapEvidence([
+      evidenceUnit({ sourceFamily: "job_nested", periodStart: "2024-03-01", exactIds: [314, 315] }),
+    ], pgliteQuery(db));
+    // This is the production failure mode: a later partial reconciliation has
+    // replaced the mutable source-period projection. The immutable traversal
+    // page and active bulk root remain the repair authority.
+    await db.exec(`
+      update metrics.source_period_manifests
+         set coverage_status = 'partial', reconciliation_status = 'pending',
+             evidence_json = '{"authoritativeSource":"project_nested_traversals"}'::jsonb
+       where source_family = 'job_nested' and period_start = '2024-03-01';
+      insert into metrics.raw_simpro_snapshots (
+        entity_type, entity_id, source_path, source_hash, payload, source_version,
+        complete_traversal, parent_identity
+      ) values (
+        'jobs', '314', 'simpro:/jobs/?display=all', 'bulk-root-314', '{}'::jsonb,
+        'bulk-bootstrap:project-manifest', true, '{"projectType":"job","projectId":"314"}'::jsonb
+      );
+    `);
+    await db.exec(`
+      insert into metrics.ingestion_jobs (
+        entity_type, operation, idempotency_key, priority, request_budget, params, status
+      ) values
+        ('job_nested', 'bounded_refresh', 'historical-reconciliation', 50, 100,
+         '{"entityId":314,"boundedWork":{"origin":"reconciliation"}}'::jsonb, 'queued'),
+        ('job_nested', 'bounded_refresh', 'manual-override', 50, 100,
+         '{"entityId":315,"boundedWork":{"origin":"manual"}}'::jsonb, 'queued'),
+        ('job_nested', 'bounded_refresh', 'active-reconciliation', 50, 100,
+         '{"entityId":314,"boundedWork":{"origin":"reconciliation"}}'::jsonb, 'running'),
+        ('job_nested', 'bounded_refresh', 'no-raw-reconciliation', 50, 100,
+         '{"entityId":315,"boundedWork":{"origin":"reconciliation"}}'::jsonb, 'queued'),
+        ('job_nested', 'bounded_refresh', 'uncovered-reconciliation', 50, 100,
+         '{"entityId":999,"boundedWork":{"origin":"reconciliation"}}'::jsonb, 'queued');
+    `);
+
+    await db.exec(await readFile(historicalNestedRepairMigration, "utf8"));
+    const queues = await db.query<{ idempotency_key: string; status: string; last_error: string | null }>(`
+      select idempotency_key, status::text, last_error
+        from metrics.ingestion_jobs
+       order by idempotency_key
+    `);
+    assert.deepEqual(queues.rows, [
+      { idempotency_key: "active-reconciliation", status: "running", last_error: null },
+      { idempotency_key: "historical-reconciliation", status: "cancelled", last_error: "Superseded by completed checksum-verified historical job_nested bulk authority" },
+      { idempotency_key: "manual-override", status: "queued", last_error: null },
+      { idempotency_key: "no-raw-reconciliation", status: "queued", last_error: null },
+      { idempotency_key: "uncovered-reconciliation", status: "queued", last_error: null },
+    ]);
+    const audit = await db.query<{ cancelled_jobs: number }>(`
+      select (after_value->>'cancelledJobs')::integer as cancelled_jobs
+        from metrics.audit_events
+       where action = 'historical_job_nested_refresh_cancelled'
+    `);
+    assert.deepEqual(audit.rows, [{ cancelled_jobs: 1 }]);
   } finally {
     await db.close();
   }

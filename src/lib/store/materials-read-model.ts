@@ -85,7 +85,12 @@ export async function getMaterialsReadModel(
       freshnessPromise,
       getPersistedMaterialsReadModel(normalized, query),
     ]);
-    if (persisted) return { ...persisted, freshness };
+    if (persisted) {
+      return {
+        ...persisted,
+        freshness: materialsFreshnessForSelectedPeriod(freshness, persisted.coverage.selectedMonth, now),
+      };
+    }
   } catch {
     // Fall through to mirror-side reconstruction when the serving model is
     // absent or temporarily unreadable.
@@ -94,7 +99,10 @@ export async function getMaterialsReadModel(
   const freshness = await freshnessPromise;
   try {
     const payload = await buildMaterialsReadModelPayload(normalized, { now, query });
-    return { ...payload, freshness };
+    return {
+      ...payload,
+      freshness: materialsFreshnessForSelectedPeriod(freshness, payload.coverage.selectedMonth, now),
+    };
   } catch (error) {
     return emptyMaterialsReadModel(
       normalized,
@@ -103,6 +111,43 @@ export async function getMaterialsReadModel(
       now,
     );
   }
+}
+
+export function materialsFreshnessForSelectedPeriod(
+  globalFreshness: FreshnessStatus,
+  coverage: MaterialsMonthCoverage,
+  now = new Date(),
+): FreshnessStatus {
+  if (coverage.periodStart >= normalizeMaterialsPeriodStart(undefined, now)) return globalFreshness;
+
+  const common = {
+    pageKey: MATERIALS_FRESHNESS_PAGE_KEY,
+    dataThrough: coverage.status === "complete" ? materialsPeriodEnd(coverage.periodStart) : null,
+    lastSuccessfulRunAt: coverage.status === "complete" ? coverage.walkedAt : null,
+    lastFailedRunAt: coverage.status === "failed" ? coverage.walkedAt : null,
+  };
+  if (coverage.status === "complete") {
+    return {
+      ...common,
+      state: "current",
+      label: "Selected period complete",
+      detail: `The ${coverage.periodStart.slice(0, 7)} materials walk is complete.`,
+    };
+  }
+  if (coverage.status === "failed") {
+    return {
+      ...common,
+      state: "failed",
+      label: "Selected period walk failed",
+      detail: `The ${coverage.periodStart.slice(0, 7)} materials walk failed.`,
+    };
+  }
+  return {
+    ...common,
+    state: "missing",
+    label: "No selected-period data",
+    detail: `No completed materials walk exists for ${coverage.periodStart.slice(0, 7)}.`,
+  };
 }
 
 /**
@@ -276,6 +321,12 @@ function isUsablePersistedMaterialsReadModel(
 
 function missingCoverage(periodStart: string): MaterialsMonthCoverage {
   return { periodStart, status: "missing", walkedAt: null, jobCount: 0, lineCount: 0 };
+}
+
+function materialsPeriodEnd(periodStart: string) {
+  const end = new Date(`${addMonthsToPeriodStart(periodStart, 1)}T00:00:00.000Z`);
+  end.setUTCMilliseconds(-1);
+  return end.toISOString();
 }
 
 function builderFreshness(): FreshnessStatus {

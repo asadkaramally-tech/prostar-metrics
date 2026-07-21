@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { assertRole, getCurrentUser } from "@/lib/auth/roles";
-import { monthParamToPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
+import { boundedDashboardPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
 import { getJobDashboardReadModel } from "@/lib/store/job-dashboard-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -12,14 +12,16 @@ export async function GET(request: Request) {
   }
   const url = new URL(request.url);
   const params = jobDashboardReadModelParams(url.searchParams);
+  if (!params) return NextResponse.json({ error: "month is outside the supported reporting range." }, { status: 400 });
   const model = await cachedPageLoad(`api:jobs:${JSON.stringify(params)}`, 120_000, () =>
     getJobDashboardReadModel(params),
   );
   return NextResponse.json(model, { status: model.loadError ? 503 : 200 });
 }
 
-export function jobDashboardReadModelParams(searchParams: URLSearchParams) {
-  const periodStart = monthParamToPeriodStart(searchParams.get("month"));
+export function jobDashboardReadModelParams(searchParams: URLSearchParams, now = new Date()) {
+  const periodStart = boundedDashboardPeriodStart(searchParams.get("month"), now);
+  if (!periodStart) return null;
   const page = Number(searchParams.get("page"));
   return {
     selectedMonth: periodStartToMonthKey(periodStart),

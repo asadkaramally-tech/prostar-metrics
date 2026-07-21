@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 
 /* Approved detail drawer (tokens.css .scrim/.drawer): right-hand sheet with
    header title/subtitle, ✕ button, scroll body. Scrim click and Escape both
@@ -16,19 +16,48 @@ export type DrawerProps = {
 };
 
 export function Drawer({ open, onClose, title, sub, children, ariaLabel }: DrawerProps) {
+  const drawerRef = useRef<HTMLElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (!open) return;
+    restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => drawerRef.current?.querySelector<HTMLElement>("button")?.focus());
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key !== "Tab" || !drawerRef.current) return;
+      const focusable = [...drawerRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )].filter((element) => !element.hidden);
+      if (focusable.length === 0) {
+        e.preventDefault();
+        drawerRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", onKey);
+      restoreFocusRef.current?.focus();
+    };
   }, [open, onClose]);
+
+  if (!open) return null;
 
   return (
     <>
-      <div className={open ? "scrim open" : "scrim"} onClick={onClose} aria-hidden="true" />
-      <aside className={open ? "drawer open" : "drawer"} role="dialog" aria-modal="true" aria-label={ariaLabel} aria-hidden={!open}>
+      <div className="scrim open" onClick={onClose} aria-hidden="true" />
+      <aside ref={drawerRef} className="drawer open" role="dialog" aria-modal="true" aria-label={ariaLabel} tabIndex={-1}>
         <div className="dh">
           <div>
             <div className="ti">{title}</div>

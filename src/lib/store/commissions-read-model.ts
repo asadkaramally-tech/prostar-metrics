@@ -251,6 +251,8 @@ export type CommissionSummaryMonth = CommissionSummaryPeriod & {
 export type CommissionDashboardReadModel = {
   freshness: FreshnessStatus;
   worksheet: CommissionWorksheetModel;
+  /** Previous calendar month's immutable pool, used for the January cross-year comparison. */
+  priorMonthCommissionPool?: number | null;
   summary: {
     year: number;
     loadedFinalizedMonths: number;
@@ -323,9 +325,10 @@ export async function getCommissionDashboardReadModel(params: {
     Promise.allSettled([
       getWorksheet(year, month, query),
       getSummaryRows(summaryYear, query),
+      month === 1 && year > 2023 ? getPriorMonthCommissionPool(year, month, query) : Promise.resolve(null),
     ]),
   ]);
-  const [worksheetResult, summaryRowsResult] = settledReadResults;
+  const [worksheetResult, summaryRowsResult, priorMonthPoolResult] = settledReadResults;
   const worksheet = worksheetResult.status === "fulfilled"
     ? worksheetResult.value
     : unavailableWorksheet(year, month, {
@@ -341,6 +344,7 @@ export async function getCommissionDashboardReadModel(params: {
   const dashboard = {
     freshness,
     worksheet,
+    priorMonthCommissionPool: priorMonthPoolResult.status === "fulfilled" ? priorMonthPoolResult.value : null,
     summary,
     warnings: buildWarnings(worksheet),
     dataContractGaps: buildDataContractGaps(worksheet),
@@ -397,6 +401,21 @@ async function getSummaryRows(year: number, query: PostgresQuery) {
         and p.period_start < $2::date
       order by p.period_start, p.revision desc`, [`${year}-01-01`, `${year + 1}-01-01`]);
   return result.rows;
+}
+
+async function getPriorMonthCommissionPool(year: number, month: number, query: PostgresQuery): Promise<number | null> {
+  const prior = new Date(Date.UTC(year, month - 2, 1));
+  const priorYear = prior.getUTCFullYear();
+  const priorMonth = prior.getUTCMonth() + 1;
+  const periodStart = `${priorYear}-${String(priorMonth).padStart(2, "0")}-01`;
+  const result = await query<CommissionSummaryRunRow>(`${summaryRunSelect({ slim: true })}
+      where p.period_start = $1::date
+      order by p.revision desc
+      limit 1`, [periodStart]);
+  const row = result.rows[0];
+  if (!row) return null;
+  const serving = summaryWorksheetFromRow(priorYear, priorMonth, row);
+  return serving.ready ? serving.worksheet.commissionPool : null;
 }
 
 function periodRunSelect() {

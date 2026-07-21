@@ -230,7 +230,7 @@ export function evaluatePageFreshness(input: AggregateFreshnessInput): Aggregate
     };
   }
 
-  if (input.pageKey === "jobs" || input.pageKey === "technicians") {
+  if (!input.sealedHistoricalPeriod && (input.pageKey === "jobs" || input.pageKey === "technicians")) {
     const completeness = input.profitCapacityCompleteness;
     if (!completeness) {
       return {

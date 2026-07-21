@@ -34,11 +34,13 @@ import {
 } from "@/components/reset";
 import {
   type QuoteDealTier,
+  type QuoteClassificationRow,
   type QuoteFollowUpQueue,
   type QuoteFollowUpQueueRow,
   type QuoteMetricsReadModel,
   type QuoteMonthlyMetric,
 } from "@/lib/store/quote-dashboard-read-model";
+import { csvCell } from "@/lib/csv";
 
 /* /quotes — implements the owner-approved redesign
    docs/approved-design/mockups/quotes.html exactly, with every figure taken
@@ -133,6 +135,7 @@ type TierSegment = QuoteMetricsReadModel["acceptanceByTier"][number];
 function QuotesContent({ model, initialTrendVolume }: { model: QuoteMetricsReadModel; initialTrendVolume: boolean }) {
   const months = useMemo(() => [...model.monthlyBreakdown].reverse(), [model.monthlyBreakdown]);
   const [tierDrill, setTierDrill] = useState<TierSegment | null>(null);
+  const [quoteDrill, setQuoteDrill] = useState<QuoteClassificationRow | null>(null);
   const cur = model.currentMonth;
   if (!cur) {
     return (
@@ -159,6 +162,9 @@ function QuotesContent({ model, initialTrendVolume }: { model: QuoteMetricsReadM
       <div className="grid12">
         <HistoryCard model={model} months={months} />
       </div>
+      <div className="grid12">
+        <QuoteReviewCard model={model} onOpen={setQuoteDrill} />
+      </div>
       <Drawer
         open={tierDrill !== null}
         onClose={() => setTierDrill(null)}
@@ -168,8 +174,95 @@ function QuotesContent({ model, initialTrendVolume }: { model: QuoteMetricsReadM
       >
         {tierDrill ? <TierDrawerBody tier={tierDrill} /> : null}
       </Drawer>
+      <Drawer
+        open={quoteDrill !== null}
+        onClose={() => setQuoteDrill(null)}
+        ariaLabel="Quote classification detail"
+        title={quoteDrill ? `Quote ${quoteDrill.quoteNo}` : null}
+        sub={quoteDrill?.name ?? null}
+      >
+        {quoteDrill ? <QuoteClassificationDetail row={quoteDrill} /> : null}
+      </Drawer>
     </>
   );
+}
+
+function QuoteReviewCard({ model, onOpen }: { model: QuoteMetricsReadModel; onOpen: (row: QuoteClassificationRow) => void }) {
+  const rows = model.classificationRows ?? [];
+  const { page, classificationPages, classificationTotal } = model.pagination ?? {
+    page: 1,
+    classificationPages: 1,
+    classificationTotal: rows.length,
+  };
+  const movePage = (nextPage: number) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("page", String(nextPage));
+    window.location.assign(url.toString());
+  };
+  return (
+    <Card
+      className="span12"
+      title="Quote Classification Review"
+      subtitle={`${monthLong(model.selectedMonth)} · ${classificationTotal} quotes · select a quote to review or exclude it from metrics`}
+      aside={classificationPages > 1 ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button type="button" className="ctl" disabled={page <= 1} onClick={() => movePage(page - 1)}>Previous</button>
+          <span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{page} / {classificationPages}</span>
+          <button type="button" className="ctl" disabled={page >= classificationPages} onClick={() => movePage(page + 1)}>Next</button>
+        </div>
+      ) : null}
+    >
+      {rows.length === 0 ? (
+        <CardBody><StateEmpty>No quotes match this month and filter selection.</StateEmpty></CardBody>
+      ) : (
+        <div className="tblwrap">
+          <table>
+            <thead><tr><th>Quote</th><th>Status</th><th>Classification</th><th className="num">Value</th><th className="num hide-sm">Issued</th></tr></thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.quoteId}>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => onOpen(row)}
+                      style={{ border: 0, background: "none", color: "var(--acc)", cursor: "pointer", padding: 0, textAlign: "left", font: "inherit" }}
+                    >
+                      <b>{row.quoteNo}</b><br /><span style={{ color: "var(--muted)", fontSize: 12 }}>{row.name}</span>
+                    </button>
+                  </td>
+                  <td>{row.status}</td>
+                  <td>{classificationLabel(row.outcome)}</td>
+                  <td className="num tnum">{fmt.moneyFull(row.value)}</td>
+                  <td className="num tnum hide-sm">{shortDateYear(row.dateIssued)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function QuoteClassificationDetail({ row }: { row: QuoteClassificationRow }) {
+  return (
+    <>
+      <KV>
+        <KVCell label="Value" value={fmt.moneyFull(row.value)} />
+        <KVCell label="Issued" value={shortDateYear(row.dateIssued)} valueStyle={{ fontSize: 14 }} />
+        <KVCell label="Classification" value={classificationLabel(row.outcome)} valueStyle={{ fontSize: 14 }} />
+        <KVCell label="Status" value={row.status} valueStyle={{ fontSize: 14 }} />
+      </KV>
+      <DSec>Evidence</DSec>
+      <DNote>{row.evidence}</DNote>
+      {row.override?.effective ? <DNote>Excluded by {row.override.actorEmail}: {row.override.reason}</DNote> : null}
+      <QuoteOverridePanel quoteId={row.quoteId} />
+    </>
+  );
+}
+
+function classificationLabel(outcome: QuoteClassificationRow["outcome"]) {
+  return outcome === "accepted" ? "Accepted" : outcome === "excluded" ? "Excluded" : "Not Accepted";
 }
 
 /* ── Row 1: KPI band ───────────────────────────────────── */
@@ -894,11 +987,6 @@ function downloadHistoryCsv(model: QuoteMetricsReadModel) {
   link.download = `quote-metrics-${model.selectedMonth}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
-}
-
-function csvCell(value: string | number): string {
-  const text = String(value);
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
 /* ── Shared helpers ────────────────────────────────────── */

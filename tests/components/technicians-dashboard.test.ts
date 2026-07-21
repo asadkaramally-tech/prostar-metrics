@@ -256,12 +256,12 @@ test("activity buckets derive from the real per-tech fields and never invent a t
   );
 });
 
-test("drilldown replaces the scorecard with per-technician facts and the per-activity hours split", () => {
+test("drilldown keeps the full roster visible and opens per-technician facts in a drawer", () => {
   const payload = juneFixture();
   const html = render(dashboardModel(payload), { initialDrillEmployeeId: "1" });
 
-  // Drill card replaces the scorecard.
-  assert.doesNotMatch(html, /Technician Scorecard/);
+  assert.match(html, /Technician Scorecard/);
+  assert.match(html, /role="dialog"/);
   assert.match(html, /← All technicians/);
   assert.match(html, /hired May 2020 · viewing June 2026/);
   // KPIs from the payload: 100h job, 60h unbilled, 160h recorded, 63% util, 3 jobs.
@@ -434,4 +434,5 @@ test("rejected surfaces stay deleted from the dashboard source", () => {
   // The old gross-profit fallback patterns must not return.
   assert.doesNotMatch(source, /allocatedNetProfit\s*\?\?\s*.*allocatedGrossProfit/);
   assert.match(source, /netProfitBasis !== "simpro_job_net_profit_actual"/);
+  assert.doesNotMatch(source, /label="On-time"[\s\S]{0,220}className="repr"/);
 });

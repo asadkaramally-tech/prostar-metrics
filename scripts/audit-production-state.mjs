@@ -8,7 +8,7 @@ import { forbiddenInvoiceArDimensionPaths } from "./lib/api-dimension-policy.mjs
 import { verifiedPostgresClientConfig } from "./postgres-tls.mjs";
 
 const { Client } = pg;
-const DASHBOARD_FAMILIES = ["quotes", "jobs", "technicians", "commissions"];
+const DASHBOARD_FAMILIES = ["quotes", "jobs", "technicians", "commissions", "materials"];
 const SOURCE_RECONCILIATION_FAMILIES = ["quotes", "jobs", "technicians"];
 const REQUIRED_BACKFILL_FAMILIES = [
   "quotes",
@@ -28,6 +28,7 @@ const REQUIRED_SEMANTIC_CONTRACT_CHECKS = [
   "apiDimensions",
   "productionOwners",
   "quoteConversionEvidence",
+  "materials",
 ];
 const PRODUCTION_OWNER_EMAILS = [
   "asad@prostarmechanical.com",

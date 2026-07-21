@@ -468,6 +468,7 @@ test("completed jobs table renders sell-ordered rows, filters with the full rost
   const html = render(buildModel());
   assert.match(html, /All 7 June jobs by sell value · click a row for detail/);
   assert.match(html, /Download CSV/);
+  assert.match(html, /<tr[^>]*class="rowlink"[^>]*tabindex="0"[^>]*aria-label="Open job/);
   assert.match(html, /All categories/);
   assert.match(html, /All sources/);
   for (const source of ["Quote-generated", "Recurring", "Direct service"]) {

@@ -10,13 +10,16 @@ import {
 
 const source = readFileSync(path.join(process.cwd(), "src/lib/store/freshness.ts"), "utf8");
 
-test("page freshness serving uses the stored row instead of aggregate validation", () => {
+test("page freshness uses selected-period evidence for historical pages and the stored row for current pages", () => {
   const pageServingFunction = source.match(
     /export async function getPageFreshness[\s\S]*?export function reconciliationScopeForPage/,
   )?.[0] ?? "";
 
+  assert.match(pageServingFunction, /periodStart < currentPacificMonth\(\)/);
+  assert.match(pageServingFunction, /evaluateStoredPageFreshness\(pageKey, row, periodStart\)/);
   assert.match(pageServingFunction, /return buildStoredFreshnessStatus\(row\)/);
-  assert.doesNotMatch(pageServingFunction, /evaluateStoredPageFreshness/);
+  assert.match(source, /\[sourceFamilies, selectedPeriod, historical\]/);
+  assert.match(source, /when \$3::boolean[\s\S]*manifest\.coverage_status/);
 });
 
 test("freshness accepts a successful no-op rebuild after the latest source change", () => {
@@ -71,6 +74,30 @@ test("historical evidence still accepts complete authoritative legacy manifests"
   });
 
   assert.equal(historical.state, "current");
+});
+
+test("historical jobs and technicians freshness do not inherit current global completeness warnings", () => {
+  for (const pageKey of ["jobs", "technicians"] as const) {
+    const requirements = historicalPageFreshnessRequirements(pageKey);
+    const historical = evaluatePageFreshness({
+      pageKey,
+      requirements,
+      sources: requirements.map((requirement) => ({
+        sourceFamily: requirement.sourceFamily,
+        lastSuccessfulRunAt: "2026-07-01T08:00:00.000Z",
+        lastChangeAt: "2026-07-01T08:00:00.000Z",
+        dataThrough: "2026-06-30T23:59:59.000Z",
+        completeWindow: true,
+      })),
+      reconciliation: { status: "matched", checkedAt: "2026-07-01T09:00:00.000Z" },
+      rollup: { status: "ready", rebuiltAt: "2026-07-01T08:30:00.000Z" },
+      sealedHistoricalPeriod: true,
+      now: new Date("2026-07-13T12:00:00.000Z"),
+    });
+
+    assert.equal(historical.state, "current", pageKey);
+    assert.doesNotMatch(historical.detail, /Migration 026/);
+  }
 });
 
 test("freshness optimistic locking preserves PostgreSQL timestamp precision", () => {

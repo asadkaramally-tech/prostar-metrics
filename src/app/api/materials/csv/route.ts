@@ -1,6 +1,6 @@
 import { assertRole, getCurrentUser } from "@/lib/auth/roles";
 import { buildMaterialsCsv, materialsCsvFilename } from "@/lib/materials/csv";
-import { monthParamToPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
+import { boundedDashboardPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
 import { getMaterialsReadModel } from "@/lib/store/materials-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -11,8 +11,9 @@ export async function GET(request: Request) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const periodStart = monthParamToPeriodStart(new URL(request.url).searchParams.get("month"));
-  const model = await cachedPageLoad(`api:materials:csv:${periodStart ?? "current"}`, 120_000, () =>
+  const periodStart = boundedDashboardPeriodStart(new URL(request.url).searchParams.get("month"));
+  if (!periodStart) return new Response("month is outside the supported reporting range.", { status: 400 });
+  const model = await cachedPageLoad(`api:materials:csv:${periodStart}`, 120_000, () =>
     getMaterialsReadModel(periodStart),
   );
   const monthKey = periodStartToMonthKey(model.periodStart) ?? model.periodStart.slice(0, 7);

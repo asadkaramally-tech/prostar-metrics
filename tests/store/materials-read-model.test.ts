@@ -19,6 +19,7 @@ import {
   buildMaterialsReadModelPayload,
   getPersistedMaterialsReadModel,
   loadMaterialLineInputs,
+  materialsFreshnessForSelectedPeriod,
   materialsPageParam,
   toMaterialsPageReadModel,
   type MaterialsRowsQuery,
@@ -339,4 +340,36 @@ test("materials page transport is bounded and omits job rosters", () => {
     assert.equal(materialsPageParam(value), 1);
   }
   assert.equal(materialsPageParam("3"), 3);
+});
+
+test("historical materials freshness comes from the selected month walk, not the global hot window", () => {
+  const global = {
+    pageKey: "materials",
+    state: "failed" as const,
+    label: "Latest ingestion failed",
+    detail: "The current month refresh failed.",
+    dataThrough: "2026-07-20T00:00:00.000Z",
+    lastSuccessfulRunAt: "2026-07-20T00:00:00.000Z",
+    lastFailedRunAt: "2026-07-21T00:00:00.000Z",
+  };
+  const historical = materialsFreshnessForSelectedPeriod(global, {
+    periodStart: "2026-06-01",
+    status: "complete",
+    walkedAt: "2026-07-01T08:00:00.000Z",
+    jobCount: 12,
+    lineCount: 40,
+  }, new Date("2026-07-21T12:00:00-07:00"));
+
+  assert.equal(historical.state, "current");
+  assert.equal(historical.lastFailedRunAt, null);
+  assert.match(historical.detail, /2026-06 materials walk is complete/);
+
+  const current = materialsFreshnessForSelectedPeriod(global, {
+    periodStart: "2026-07-01",
+    status: "complete",
+    walkedAt: "2026-07-21T08:00:00.000Z",
+    jobCount: 2,
+    lineCount: 3,
+  }, new Date("2026-07-21T12:00:00-07:00"));
+  assert.equal(current, global);
 });

@@ -398,7 +398,19 @@ function MaterialsTableCard({ model, onOpen }: { model: MaterialsDashboardModel;
             {model.items.map((row) => {
               const delta = qtyDelta(row.qty, row.priorMonthQty);
               return (
-                <tr key={row.key} className="rowlink" onClick={() => onOpen(row)}>
+                <tr
+                  key={row.key}
+                  className="rowlink"
+                  tabIndex={0}
+                  aria-label={`Open ${row.name} material detail`}
+                  onClick={() => onOpen(row)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onOpen(row);
+                    }
+                  }}
+                >
                   <td>
                     <div className="id1">{row.name}</div>
                     <div className="id2">{row.partNo ?? "—"}</div>

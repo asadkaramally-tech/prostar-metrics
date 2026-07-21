@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { assertRole, getCurrentUser } from "@/lib/auth/roles";
-import { monthParamToPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
+import { boundedDashboardPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
 import { getJobDrilldownRecords } from "@/lib/store/job-dashboard-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   }
 
   const selectedMonth = jobDrilldownRecordsParams(new URL(request.url).searchParams);
+  if (!selectedMonth) return NextResponse.json({ error: "month is outside the supported reporting range." }, { status: 400 });
   try {
     const records = await cachedPageLoad(`api:jobs:records:${selectedMonth}`, 120_000, () =>
       getJobDrilldownRecords(selectedMonth),
@@ -23,12 +24,6 @@ export async function GET(request: Request) {
   }
 }
 
-export function jobDrilldownRecordsParams(searchParams: URLSearchParams): string {
-  const month = periodStartToMonthKey(monthParamToPeriodStart(searchParams.get("month")));
-  if (month) return month;
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit",
-  }).formatToParts(new Date());
-  const part = (type: "year" | "month") => parts.find((item) => item.type === type)?.value ?? "";
-  return `${part("year")}-${part("month")}`;
+export function jobDrilldownRecordsParams(searchParams: URLSearchParams, now = new Date()): string | null {
+  return periodStartToMonthKey(boundedDashboardPeriodStart(searchParams.get("month"), now) ?? undefined) ?? null;
 }

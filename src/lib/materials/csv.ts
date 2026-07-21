@@ -1,4 +1,5 @@
 import type { MaterialsItemRow } from "@/lib/metrics/materials";
+import { csvCell } from "@/lib/csv";
 
 export function buildMaterialsCsv(items: MaterialsItemRow[], priorShort: string): string {
   const header = [
@@ -13,7 +14,7 @@ export function buildMaterialsCsv(items: MaterialsItemRow[], priorShort: string)
     "Jobs",
     "Job IDs",
   ];
-  const lines = [header.map(csvEscape).join(",")];
+  const lines = [header.map(csvCell).join(",")];
   for (const row of items) {
     lines.push(
       [
@@ -28,7 +29,7 @@ export function buildMaterialsCsv(items: MaterialsItemRow[], priorShort: string)
         row.jobCount,
         row.jobIds.join("; "),
       ]
-        .map((value) => csvEscape(String(value)))
+        .map((value) => csvCell(value))
         .join(","),
     );
   }
@@ -49,8 +50,4 @@ function qtyChangeText(qty: number, priorQty: number | null): string {
 
 function qtyText(value: number): string {
   return String(Math.round(value * 100) / 100);
-}
-
-function csvEscape(value: string): string {
-  return /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }

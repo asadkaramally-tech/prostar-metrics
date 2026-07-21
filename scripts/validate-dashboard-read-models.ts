@@ -14,13 +14,36 @@ import { forbiddenInvoiceArDimensionPaths } from "./lib/api-dimension-policy.mjs
 export { forbiddenInvoiceArDimensionPaths };
 
 export type ReadModelRow = {
-  metric_family: "quotes" | "jobs" | "technicians" | "commissions";
+  metric_family: "quotes" | "jobs" | "technicians" | "commissions" | "materials";
   period_start: string;
   dimensions_json: Record<string, unknown>;
   values_json: Record<string, unknown>;
   status: string;
   source_hash: string | null;
   rebuilt_at: string;
+};
+
+export type MaterialSourceRow = {
+  job_id: string;
+  period_start: string;
+  completed_date: string;
+  line_type: "catalog" | "one_off" | "prebuild";
+  catalog_id: string | null;
+  prebuild_id: string | null;
+  name: string | null;
+  part_no: string | null;
+  qty: string | number;
+  extended_ex_tax: string | number;
+  group_name: string | null;
+  parent_group_name: string | null;
+};
+
+export type MaterialWalkSourceRow = {
+  period_start: string;
+  status: "complete" | "failed";
+  walked_at: string;
+  job_count: string | number;
+  line_count: string | number;
 };
 
 export type ValidationMismatch = Record<string, unknown>;
@@ -314,7 +337,7 @@ async function main() {
     const models = await client.query<ReadModelRow>(
       `select metric_family, period_start::text, dimensions_json, values_json, status, source_hash, rebuilt_at::text
          from metrics.dashboard_read_models
-        where metric_family in ('quotes', 'jobs', 'technicians', 'commissions')
+        where metric_family in ('quotes', 'jobs', 'technicians', 'commissions', 'materials')
           and period_grain = 'month'
           and period_start >= date '2023-01-01'
           and superseded_at is null
@@ -322,29 +345,22 @@ async function main() {
     );
     const currentMonth = currentPacificMonth();
     const expectedMonths = monthStarts("2023-01-01", currentMonth);
-    const [
-      jobs,
-      quoteSourceRows,
-      laborEfficiency,
-      capacityRows,
-      capacityCoverage,
-      utilizationRows,
-      commissionRuns,
-      categoryRows,
-      invoiceRuntime,
-      appRoles,
-    ] = await Promise.all([
-      readJobAggregates(client),
-      readQuoteSourceRows(client),
-      readLaborEfficiencyAggregates(client),
-      readCapacityRows(client),
-      readCapacityCoverage(client),
-      readTechnicianUtilizationRows(client),
-      readCommissionRuns(client),
-      readCostCenterCategoryRows(client),
-      readInvoiceRuntimeEvidence(client),
-      readAppRoles(client),
-    ]);
+    // node-postgres clients execute one statement at a time. Keeping these
+    // reads sequential also guarantees that every check stays on this one
+    // REPEATABLE READ snapshot instead of relying on unsupported concurrent
+    // client.query calls.
+    const jobs = await readJobAggregates(client);
+    const quoteSourceRows = await readQuoteSourceRows(client);
+    const laborEfficiency = await readLaborEfficiencyAggregates(client);
+    const capacityRows = await readCapacityRows(client);
+    const capacityCoverage = await readCapacityCoverage(client);
+    const utilizationRows = await readTechnicianUtilizationRows(client);
+    const commissionRuns = await readCommissionRuns(client);
+    const categoryRows = await readCostCenterCategoryRows(client);
+    const invoiceRuntime = await readInvoiceRuntimeEvidence(client);
+    const appRoles = await readAppRoles(client);
+    const materialRows = await readMaterialSourceRows(client);
+    const materialWalks = await readMaterialWalkRows(client);
     const quotes = aggregateQuoteSources(quoteSourceRows, expectedMonths);
     const mismatches: ValidationMismatch[] = [];
     const technicianUtilizationMismatches: ValidationMismatch[] = [];
@@ -353,10 +369,11 @@ async function main() {
     const apiDimensionMismatches: ValidationMismatch[] = [];
     const productionOwnerMismatches: ValidationMismatch[] = [];
     const quoteConversionMismatches: ValidationMismatch[] = [];
+    const materialMismatches: ValidationMismatch[] = [];
     const byFamily = new Map<string, ReadModelRow[]>();
     for (const row of models.rows) byFamily.set(row.metric_family, [...(byFamily.get(row.metric_family) ?? []), row]);
 
-    for (const family of ["quotes", "jobs", "technicians", "commissions"] as const) {
+    for (const family of ["quotes", "jobs", "technicians", "commissions", "materials"] as const) {
       const rows = byFamily.get(family) ?? [];
       const actualMonths = rows.map((row) => row.period_start);
       if (JSON.stringify(actualMonths) !== JSON.stringify(expectedMonths)) {
@@ -384,6 +401,13 @@ async function main() {
           );
         }
         if (family === "commissions") validateCommissions(row, commissionRuns.get(row.period_start), mismatches);
+        if (family === "materials") validateMaterials(
+          row,
+          materialRows,
+          materialWalks,
+          materialMismatches,
+          currentPacificDate(),
+        );
       }
     }
 
@@ -399,6 +423,7 @@ async function main() {
       ...apiDimensionMismatches,
       ...productionOwnerMismatches,
       ...quoteConversionMismatches,
+      ...materialMismatches,
     );
 
     const contractChecks = {
@@ -418,6 +443,10 @@ async function main() {
       }),
       quoteConversionEvidence: contractCheck(quoteConversionMismatches, {
         sourceRows: quoteSourceRows.length,
+      }),
+      materials: contractCheck(materialMismatches, {
+        sourceRows: materialRows.size,
+        walkMonths: materialWalks.size,
       }),
     };
 
@@ -449,6 +478,11 @@ async function main() {
         laborEfficiency: sourceSummary(laborEfficiency, currentMonth),
         capacity: { months: capacityRows.size, currentRows: capacityRows.get(currentMonth)?.length ?? 0, currentExpected: currentCapacity },
         commissions: sourceSummary(commissionRuns, currentMonth),
+        materials: {
+          months: materialRows.size,
+          lines: sumNumbers([...materialRows.values()].map((rows) => rows.length)),
+          walkMonths: materialWalks.size,
+        },
       },
       currentTechnicianMobileCoverage: currentCoverage ? {
         scheduledVisits: numeric(currentCoverage.scheduledVisits),
@@ -461,9 +495,17 @@ async function main() {
       currentMobileEvidence,
       contractChecks,
       mismatchCount: mismatches.length,
+      mismatchSummary: summarizeMismatches(mismatches),
       mismatches: mismatches.slice(0, 100),
     };
-    console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(process.argv.includes("--summary") ? {
+      status: result.status,
+      expectedMonths: result.expectedMonths,
+      readModels: result.readModels,
+      contractChecks: result.contractChecks,
+      mismatchCount: result.mismatchCount,
+      mismatchSummary: result.mismatchSummary,
+    } : result, null, 2));
     if (mismatches.length > 0) process.exitCode = 1;
     await client.query("commit");
     transactionOpen = false;
@@ -656,6 +698,33 @@ export async function readQuoteSourceRows(client: pg.Client) {
   });
 }
 
+async function readMaterialSourceRows(client: pg.Client) {
+  const result = await client.query<MaterialSourceRow>(
+    `select line.job_id::text, line.period_start::text, line.completed_date::text,
+            line.line_type, line.catalog_id::text, line.prebuild_id::text,
+            coalesce(line.name, groups.name) as name,
+            coalesce(line.part_no, groups.part_no) as part_no,
+            line.qty::text, line.extended_ex_tax::text,
+            groups.group_name, groups.parent_group_name
+       from metrics.metrics_material_lines line
+       left join metrics.catalog_groups groups on groups.catalog_id = line.catalog_id
+      where line.period_start >= date '2022-01-01'
+      order by line.period_start, line.job_id, line.line_type, line.line_id`,
+  );
+  return groupedMap(result.rows);
+}
+
+async function readMaterialWalkRows(client: pg.Client) {
+  const result = await client.query<MaterialWalkSourceRow>(
+    `select period_start::text, status, walked_at::text,
+            job_count::text, line_count::text
+       from metrics.materials_month_walks
+      where period_start >= date '2022-01-01'
+      order by period_start`,
+  );
+  return rowMap(result.rows);
+}
+
 export function aggregateQuoteSources(rows: QuoteSourceRow[], periods?: string[]) {
   const periodStarts = periods ?? [...new Set(rows.flatMap((row) => row.date_issued ? [`${row.date_issued.slice(0, 7)}-01`] : []))].sort();
   const missingIssuedDate = rows.filter((row) => !row.date_issued).length;
@@ -711,7 +780,7 @@ export function aggregateQuoteSources(rows: QuoteSourceRow[], periods?: string[]
 
 function classifyQuoteSourceRow(row: QuoteSourceRow, totalValue: number) {
   const excluded = row.override_outcome?.trim().toLowerCase() === "excluded";
-  const acceptedOnline = row.status_name?.trim().toLowerCase() === "quote accepted online";
+  const acceptedOnline = independentlyAcceptedOnlineStatus(row.status_name);
   const converted = positiveIntegerString(row.direct_conversion_job_id) !== null
     || positiveIntegerString(row.inverse_conversion_job_id) !== null;
   const acceptanceOutcome = excluded ? "excluded" : acceptedOnline || converted ? "accepted" : "not_accepted";
@@ -730,6 +799,14 @@ function classifyQuoteSourceRow(row: QuoteSourceRow, totalValue: number) {
     path,
     dealTier: independentDealTier(totalValue),
   } as const;
+}
+
+function independentlyAcceptedOnlineStatus(value: string | null | undefined): boolean {
+  const normalized = value?.trim().toLowerCase() ?? "";
+  const withoutNamespace = normalized.startsWith("quote:")
+    ? normalized.slice("quote:".length).trim()
+    : normalized;
+  return withoutNamespace === "quote accepted online";
 }
 
 function independentDealTier(totalValue: number): QuoteTier {
@@ -994,13 +1071,6 @@ async function readTechnicianUtilizationRows(client: pg.Client) {
               -- Owner rule: month roster = whoever recorded work in the month.
               select 1 from metrics.effective_technician_roster er
                where er.simpro_employee_id = t.employee_id
-                 and exists (
-                   select 1 from metrics.metrics_employee_timesheets tx
-                    where tx.employee_id = t.employee_id
-                      and tx.source_deleted_at is null
-                      and tx.total_hours > 0
-                      and date_trunc('month', tx.work_date) = date_trunc('month', t.work_date)
-                 )
             ) roster_member,
             coalesce(sum(t.total_hours) filter (
               where t.total_hours > 0
@@ -1275,6 +1345,19 @@ export function laborEfficiencyServedTotals(values: Record<string, unknown>) {
       target.quotedHours += job.quotedHours;
       target.actualHours += job.actualHours;
       target.jobs += 1;
+    }
+    // The employee-facing allocation list intentionally omits people outside
+    // the selected month's recorded-work roster. The top-level coverage keeps
+    // the complete job actual-hour denominator, including those disclosed
+    // outside-roster allocations, so validate that durable aggregate against
+    // the independent source instead of treating an intentional UI omission
+    // as missing time.
+    const coverage = record(values.coverage);
+    if (coverage && Object.hasOwn(coverage, "quoteGeneratedActualHours")) {
+      totals.quoteGenerated.actualHours = numeric(coverage.quoteGeneratedActualHours);
+    }
+    if (coverage && Object.hasOwn(coverage, "recurringActualHours")) {
+      totals.recurring.actualHours = numeric(coverage.recurringActualHours);
     }
     return totals;
   }
@@ -1756,6 +1839,242 @@ export function validateCommissions(
   }
 }
 
+export function validateMaterials(
+  row: ReadModelRow,
+  linesByPeriod: Map<string, MaterialSourceRow[]>,
+  walksByPeriod: Map<string, MaterialWalkSourceRow>,
+  mismatches: ValidationMismatch[],
+  today = currentPacificDate(),
+) {
+  const periodStart = row.period_start;
+  const priorMonthStart = shiftMonth(periodStart, -1);
+  const priorYearStart = shiftMonth(periodStart, -12);
+  const selectedSource = linesByPeriod.get(periodStart) ?? [];
+  const selected = selectedSource.filter(independentMaterialIncluded);
+  const priorMonth = (linesByPeriod.get(priorMonthStart) ?? []).filter(independentMaterialIncluded);
+  const priorYear = (linesByPeriod.get(priorYearStart) ?? []).filter(independentMaterialIncluded);
+  const daysInMonth = periodMonthDays(periodStart);
+  const elapsedDays = periodStart.slice(0, 7) === today.slice(0, 7)
+    ? Math.min(Number(today.slice(8, 10)), daysInMonth)
+    : daysInMonth;
+  const priorYearSameDay = priorYear.filter((line) => Number(line.completed_date.slice(8, 10)) <= elapsedDays);
+  const currentTotal = roundMaterialMoney(sumNumbers(selected.map((line) => numeric(line.extended_ex_tax))));
+  const priorMonthTotal = roundMaterialMoney(sumNumbers(priorMonth.map((line) => numeric(line.extended_ex_tax))));
+  const priorYearTotal = roundMaterialMoney(sumNumbers(priorYearSameDay.map((line) => numeric(line.extended_ex_tax))));
+  const paceProjection = periodStart.slice(0, 7) === today.slice(0, 7) && elapsedDays > 0
+    ? roundMaterialMoney(currentTotal / elapsedDays * daysInMonth)
+    : currentTotal;
+
+  for (const [field, expected] of [
+    ["current", currentTotal],
+    ["priorMonth", priorMonthTotal],
+    ["priorYearSameDay", priorYearTotal],
+    ["paceProjection", paceProjection],
+    ["elapsedDays", elapsedDays],
+    ["daysInMonth", daysInMonth],
+  ] as const) compareValue(row, `totals.${field}`, record(row.values_json.totals)?.[field], expected, mismatches);
+
+  validateMaterialCategories(row, selected, mismatches);
+  validateMaterialItems(
+    row,
+    selected,
+    priorMonth,
+    walksByPeriod.get(priorMonthStart)?.status === "complete",
+    mismatches,
+  );
+
+  const coverage = record(row.values_json.coverage);
+  validateMaterialCoverage(row, "selectedMonth", periodStart, walksByPeriod.get(periodStart), coverage, mismatches);
+  validateMaterialCoverage(row, "priorMonth", priorMonthStart, walksByPeriod.get(priorMonthStart), coverage, mismatches);
+  validateMaterialCoverage(row, "priorYearMonth", priorYearStart, walksByPeriod.get(priorYearStart), coverage, mismatches);
+  compareValue(row, "coverage.includedLineCount", coverage?.includedLineCount, selected.length, mismatches);
+  compareValue(
+    row,
+    "coverage.excludedServiceContractLineCount",
+    coverage?.excludedServiceContractLineCount,
+    selectedSource.length - selected.length,
+    mismatches,
+  );
+}
+
+function validateMaterialCategories(row: ReadModelRow, lines: MaterialSourceRow[], mismatches: ValidationMismatch[]) {
+  const expected = new Map<string, { value: number; qty: number; lines: number }>();
+  for (const line of lines) {
+    const name = independentMaterialCategory(line);
+    const value = expected.get(name) ?? { value: 0, qty: 0, lines: 0 };
+    value.value += numeric(line.extended_ex_tax);
+    value.qty += numeric(line.qty);
+    value.lines += 1;
+    expected.set(name, value);
+  }
+  const servedNames: string[] = [];
+  const served = new Map(array(row.values_json.categories).flatMap((value) => {
+    const category = record(value);
+    const name = String(category?.name ?? "");
+    if (name) servedNames.push(name);
+    return name ? [[name, category] as const] : [];
+  }));
+  compareMaterialInventory(row, "categories", servedNames, [...expected.keys()], mismatches);
+  for (const [name, source] of expected) {
+    const actual = served.get(name);
+    compareValue(row, `categories.${name}.value`, actual?.value, roundMaterialMoney(source.value), mismatches);
+    compareValue(row, `categories.${name}.qty`, actual?.qty, roundMaterialQty(source.qty), mismatches);
+    compareValue(row, `categories.${name}.lines`, actual?.lines, source.lines, mismatches);
+  }
+}
+
+function validateMaterialItems(
+  row: ReadModelRow,
+  selected: MaterialSourceRow[],
+  priorMonth: MaterialSourceRow[],
+  priorMonthComplete: boolean,
+  mismatches: ValidationMismatch[],
+) {
+  const priorQty = new Map<string, number>();
+  for (const line of priorMonth) {
+    const key = independentMaterialItemKey(line);
+    priorQty.set(key, (priorQty.get(key) ?? 0) + numeric(line.qty));
+  }
+  const expected = new Map<string, {
+    name: string; partNo: string | null; category: string; qty: number; extended: number; jobIds: Set<number>;
+  }>();
+  for (const line of selected) {
+    const key = independentMaterialItemKey(line);
+    const item = expected.get(key) ?? {
+      name: cleanMaterialText(line.name) ?? "Unnamed material",
+      partNo: cleanMaterialText(line.part_no),
+      category: independentMaterialCategory(line),
+      qty: 0,
+      extended: 0,
+      jobIds: new Set<number>(),
+    };
+    item.qty += numeric(line.qty);
+    item.extended += numeric(line.extended_ex_tax);
+    item.jobIds.add(Number(line.job_id));
+    if (item.partNo === null) item.partNo = cleanMaterialText(line.part_no);
+    expected.set(key, item);
+  }
+  const servedKeys: string[] = [];
+  const served = new Map(array(row.values_json.items).flatMap((value) => {
+    const item = record(value);
+    const key = String(item?.key ?? "");
+    if (key) servedKeys.push(key);
+    return key ? [[key, item] as const] : [];
+  }));
+  compareMaterialInventory(row, "items", servedKeys, [...expected.keys()], mismatches);
+  for (const [key, source] of expected) {
+    const actual = served.get(key);
+    const qty = roundMaterialQty(source.qty);
+    const extended = roundMaterialMoney(source.extended);
+    compareMaterialText(row, `items.${key}.name`, actual?.name, source.name, mismatches);
+    compareMaterialText(row, `items.${key}.partNo`, actual?.partNo, source.partNo, mismatches);
+    compareMaterialText(row, `items.${key}.category`, actual?.category, source.category, mismatches);
+    compareValue(row, `items.${key}.qty`, actual?.qty, qty, mismatches);
+    compareValue(
+      row,
+      `items.${key}.priorMonthQty`,
+      actual?.priorMonthQty,
+      priorMonthComplete ? roundMaterialQty(priorQty.get(key) ?? 0) : null,
+      mismatches,
+    );
+    compareValue(row, `items.${key}.extended`, actual?.extended, extended, mismatches);
+    compareValue(row, `items.${key}.unitSell`, actual?.unitSell, qty > 0 ? roundMaterialMoney(extended / qty) : null, mismatches);
+    compareValue(row, `items.${key}.jobCount`, actual?.jobCount, source.jobIds.size, mismatches);
+    const actualJobs = array(actual?.jobIds).map(Number).filter(Number.isFinite).sort((left, right) => left - right);
+    const expectedJobs = [...source.jobIds].sort((left, right) => left - right);
+    if (JSON.stringify(actualJobs) !== JSON.stringify(expectedJobs)) {
+      mismatches.push({ family: "materials", periodStart: row.period_start, type: "material_job_ids", key, expected: expectedJobs, actual: actualJobs });
+    }
+  }
+}
+
+function validateMaterialCoverage(
+  row: ReadModelRow,
+  field: string,
+  periodStart: string,
+  walk: MaterialWalkSourceRow | undefined,
+  coverage: Record<string, unknown> | null,
+  mismatches: ValidationMismatch[],
+) {
+  const actual = record(coverage?.[field]);
+  compareMaterialText(row, `coverage.${field}.periodStart`, actual?.periodStart, periodStart, mismatches);
+  compareMaterialText(row, `coverage.${field}.status`, actual?.status, walk?.status ?? "missing", mismatches);
+  compareValue(row, `coverage.${field}.jobCount`, actual?.jobCount, walk?.job_count ?? 0, mismatches);
+  compareValue(row, `coverage.${field}.lineCount`, actual?.lineCount, walk?.line_count ?? 0, mismatches);
+}
+
+function independentMaterialIncluded(line: MaterialSourceRow) {
+  if (line.line_type !== "catalog") return true;
+  return normalizedMaterialText(line.group_name) !== "service contract"
+    && normalizedMaterialText(line.parent_group_name) !== "service contract";
+}
+
+function independentMaterialCategory(line: MaterialSourceRow) {
+  if (line.line_type === "one_off") return "Special order / non-stock";
+  if (line.line_type === "prebuild") return "Prebuild assemblies";
+  const category = cleanMaterialText(line.parent_group_name) ?? cleanMaterialText(line.group_name) ?? "Ungrouped";
+  return normalizedMaterialText(category) === "raypak cheat sheet" ? "Raypak Parts" : category;
+}
+
+function independentMaterialItemKey(line: MaterialSourceRow) {
+  if (line.line_type === "catalog" && line.catalog_id !== null) return `catalog:${line.catalog_id}`;
+  if (line.line_type === "prebuild" && line.prebuild_id !== null) return `prebuild:${line.prebuild_id}`;
+  return `${line.line_type === "prebuild" ? "prebuild" : "one-off"}:${normalizedMaterialText(line.name) || "unnamed"}`;
+}
+
+function compareMaterialInventory(
+  row: ReadModelRow,
+  field: string,
+  actual: string[],
+  expected: string[],
+  mismatches: ValidationMismatch[],
+) {
+  if (!sameStringSet(actual, expected) || actual.length !== expected.length) {
+    mismatches.push({ family: "materials", periodStart: row.period_start, type: "material_inventory", field, expected: uniqueSorted(expected), actual: uniqueSorted(actual) });
+  }
+}
+
+function compareMaterialText(
+  row: ReadModelRow,
+  field: string,
+  actual: unknown,
+  expected: string | null,
+  mismatches: ValidationMismatch[],
+) {
+  const normalizedActual = actual === null || actual === undefined ? null : String(actual);
+  if (normalizedActual !== expected) {
+    mismatches.push({ family: "materials", periodStart: row.period_start, type: "material_text", field, expected, actual: normalizedActual });
+  }
+}
+
+function normalizedMaterialText(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function cleanMaterialText(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function roundMaterialMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function roundMaterialQty(value: number) {
+  return Math.round((value + Number.EPSILON) * 1_000) / 1_000;
+}
+
+function shiftMonth(periodStart: string, amount: number) {
+  const date = new Date(`${periodStart}T00:00:00.000Z`);
+  date.setUTCMonth(date.getUTCMonth() + amount);
+  return date.toISOString().slice(0, 10);
+}
+
+function periodMonthDays(periodStart: string) {
+  const [year, month] = periodStart.split("-").map(Number);
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
 export function recomputeCommissionInvariants(run: Pick<CommissionRun,
   "pool_amount" | "inputs" | "employee_results" | "job_allocations"
 >) {
@@ -1906,6 +2225,35 @@ function contractCheck(mismatches: ValidationMismatch[], evidence: unknown) {
   };
 }
 
+function summarizeMismatches(mismatches: ValidationMismatch[]) {
+  const counts = new Map<string, number>();
+  const fields = new Map<string, number>();
+  const periods = new Map<string, Set<string>>();
+  for (const mismatch of mismatches) {
+    const family = String(mismatch.family ?? "unknown");
+    const type = String(mismatch.type ?? "unknown");
+    const key = `${family}:${type}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    if (typeof mismatch.field === "string") {
+      const fieldKey = `${family}:${mismatch.field}`;
+      fields.set(fieldKey, (fields.get(fieldKey) ?? 0) + 1);
+    }
+    if (typeof mismatch.periodStart === "string") {
+      const familyPeriods = periods.get(family) ?? new Set<string>();
+      familyPeriods.add(mismatch.periodStart);
+      periods.set(family, familyPeriods);
+    }
+  }
+  return {
+    counts: Object.fromEntries([...counts].sort(([left], [right]) => left.localeCompare(right))),
+    fields: Object.fromEntries([...fields].sort(([left], [right]) => left.localeCompare(right))),
+    affectedPeriods: Object.fromEntries(
+      [...periods].sort(([left], [right]) => left.localeCompare(right))
+        .map(([family, values]) => [family, [...values].sort()]),
+    ),
+  };
+}
+
 export function productionEnvironmentOwnerEmails(env: Readonly<Record<string, string | undefined>>) {
   return uniqueSorted([
     ...csvEmails(env.METRICS_ADMIN_EMAILS),
@@ -1968,6 +2316,17 @@ function endOfMonth(periodStart: string) {
 function currentPacificMonth() {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit" }).formatToParts(new Date());
   return `${parts.find((part) => part.type === "year")?.value}-${parts.find((part) => part.type === "month")?.value}-01`;
+}
+
+function currentPacificDate() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = (type: string) => parts.find((part) => part.type === type)?.value;
+  return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
 function emptyQuoteSource(periodStart: string): QuoteSourceAggregate {

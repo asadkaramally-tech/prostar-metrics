@@ -23,8 +23,9 @@ export default async function QuotesPage({
   const periodStart = boundedDashboardPeriodStart(firstParam(params?.month));
   if (!periodStart) notFound();
   const selectedMonth = periodStartToMonthKey(periodStart);
-  const model = await cachedPageLoad(`quotes:${selectedMonth}`, 120_000, () =>
-    getQuoteMetricsReadModel({ selectedMonth }),
+  const page = firstParam(params?.page);
+  const model = await cachedPageLoad(`quotes:${selectedMonth}:page:${page ?? "1"}`, 120_000, () =>
+    getQuoteMetricsReadModel({ selectedMonth, page }),
   );
 
   return (

@@ -67,6 +67,7 @@ export type ReconciliationOptions = {
   endpoints?: SimproEndpoints;
   leaseOwner?: string;
   onlyIfNeeded?: boolean;
+  restartDirectTraversal?: boolean;
   dependencies?: ReconciliationRuntimeDependencies;
 };
 
@@ -155,7 +156,15 @@ export async function runSimproReconciliation(options: ReconciliationOptions = {
         results.push(incompleteResult(scope, period, budget.used, "Current-run jobs reconciliation is incomplete."));
         continue;
       }
-      results.push(await reconcileScope(scope, period, endpoints, budget, leaseOwner, dependencies));
+      results.push(await reconcileScope(
+        scope,
+        period,
+        endpoints,
+        budget,
+        leaseOwner,
+        dependencies,
+        options.restartDirectTraversal === true,
+      ));
     } catch (error) {
       results.push(incompleteResult(
         scope,
@@ -176,12 +185,13 @@ async function reconcileScope(
   budget: RequestBudget,
   leaseOwner: string,
   dependencies: ResolvedReconciliationDependencies,
+  restartDirectTraversal: boolean,
 ): Promise<ReconciliationResult> {
   switch (scope) {
     case "quotes":
-      return reconcileQuotes(period, endpoints, budget, leaseOwner, dependencies);
+      return reconcileQuotes(period, endpoints, budget, leaseOwner, dependencies, restartDirectTraversal);
     case "jobs":
-      return reconcileJobs(period, endpoints, budget, leaseOwner, dependencies);
+      return reconcileJobs(period, endpoints, budget, leaseOwner, dependencies, restartDirectTraversal);
     case "technicians":
       return reconcileTechnicians(period, dependencies);
     case "commissions":
@@ -389,6 +399,7 @@ async function reconcileQuotes(
   budget: RequestBudget,
   leaseOwner: string,
   dependencies: ResolvedReconciliationDependencies,
+  restartDirectTraversal = false,
 ) {
   const traversal = await collectDirectSourceMonth({
     scope: "quotes",
@@ -397,6 +408,7 @@ async function reconcileQuotes(
     budget,
     leaseOwner,
     store: dependencies.continuationStore,
+    restart: restartDirectTraversal,
   });
   if (!traversal.complete || !traversal.source || !traversal.claim) {
     return incompleteResult("quotes", period, budget.used, traversal.reason ?? "Quote traversal is incomplete.", {
@@ -472,6 +484,7 @@ async function reconcileJobs(
   budget: RequestBudget,
   leaseOwner: string,
   dependencies: ResolvedReconciliationDependencies,
+  restartDirectTraversal = false,
 ) {
   const traversal = await collectDirectSourceMonth({
     scope: "jobs",
@@ -480,6 +493,7 @@ async function reconcileJobs(
     budget,
     leaseOwner,
     store: dependencies.continuationStore,
+    restart: restartDirectTraversal,
   });
   if (!traversal.complete || !traversal.source || !traversal.claim) {
     return incompleteResult("jobs", period, budget.used, traversal.reason ?? "Job traversal is incomplete.", {
@@ -682,6 +696,7 @@ export async function collectDirectSourceMonth(params: {
   budget: RequestBudget;
   leaseOwner: string;
   store: ReconciliationContinuationStore;
+  restart?: boolean;
 }): Promise<{
   complete: boolean;
   reason?: string;
@@ -689,12 +704,15 @@ export async function collectDirectSourceMonth(params: {
   source?: SourceSummary;
   totalRequestsUsed: number;
 }> {
-  const claimed = await params.store.claim({
+  const claimParams = {
     scope: params.scope,
     periodStart: params.period.start,
     periodEnd: params.period.end,
     leaseOwner: params.leaseOwner,
-  });
+  };
+  const claimed = params.restart
+    ? { acquired: true as const, claim: await params.store.restartGeneration(claimParams) }
+    : await params.store.claim(claimParams);
   if (!claimed.acquired) {
     return { complete: false, reason: "Another worker owns the active reconciliation generation.", totalRequestsUsed: 0 };
   }

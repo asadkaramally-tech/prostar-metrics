@@ -388,6 +388,15 @@ export function summaryQuarters(vm: CommissionSummaryVM): Array<{ label: string;
   });
 }
 
+export function priorCommissionPool(
+  worksheetMonth: number,
+  vm: CommissionSummaryVM,
+  crossYearPool: number | null,
+): number | null {
+  if (worksheetMonth === 1) return crossYearPool;
+  return vm.months.find((month) => month.month === worksheetMonth - 1)?.pool ?? null;
+}
+
 export function buildSummaryCsv(vm: CommissionSummaryVM, mode: CommissionSummaryMode): string {
   const csvPool = (pool: number | null) => (pool === null ? "N/A" : pool.toFixed(2));
   if (mode === "monthly") {
@@ -501,7 +510,13 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
   return (
     <>
       {worksheet.servingStatus === "ready" && computed ? (
-        <CommissionsBand worksheet={worksheet} computed={computed} controls={controls} vm={vm} />
+        <CommissionsBand
+          worksheet={worksheet}
+          computed={computed}
+          controls={controls}
+          vm={vm}
+          priorMonthCommissionPool={model.priorMonthCommissionPool ?? null}
+        />
       ) : null}
       <div className="tabs" id="pageTabs">
         <button type="button" className={tab === "monthly" ? "on" : undefined} data-tab="monthly" onClick={() => setTab("monthly")}>
@@ -575,11 +590,13 @@ function CommissionsBand({
   computed,
   controls,
   vm,
+  priorMonthCommissionPool,
 }: {
   worksheet: CommissionReadyWorksheetModel;
   computed: { pool: number; rows: CommissionComputedRow[] };
   controls: CommissionSessionControls;
   vm: CommissionSummaryVM;
+  priorMonthCommissionPool: number | null;
 }) {
   const { pool, rows } = computed;
   const monthLong = monthLongName(worksheet.periodLabel);
@@ -591,7 +608,7 @@ function CommissionsBand({
   const top = rows[0];
   const primaryDef = `Pool = completed-cohort work value × pool percent (${monthShortName(worksheet.periodLabel)}: ${controls.poolPercent.toFixed(2)}% × ${fmt.cents(worksheet.totalWorkValue)} = ${fmt.cents(pool)}), distributed by each technician’s allocated share (${basis.label}) with rank boosts, normalized so payouts always sum exactly to the pool. Calculated — not proof of payment.`;
 
-  const priorMonth = vm.months.find((month) => month.month === worksheet.month - 1);
+  const priorPool = priorCommissionPool(worksheet.month, vm, priorMonthCommissionPool);
   const priorName = shiftedSeriesName(worksheet.periodStart, -1);
   const lyName = shiftedSeriesName(worksheet.periodStart, -12);
   const loaded = vm.months.filter((month) => month.pool !== null);
@@ -605,7 +622,7 @@ function CommissionsBand({
     <>
       <KpiBand ariaLabel={`${monthLong} key metrics`}>
         <PrimaryStatCard
-          label="Calculated commission due"
+          label="What-if commission preview"
           labelDef={primaryDef}
           value={
             <>
@@ -613,14 +630,14 @@ function CommissionsBand({
               <span className="cents">{poolText.slice(dot)}</span>
             </>
           }
-          sub={`${controls.poolPercent.toFixed(2)}% pool of completed work value`}
+          sub={`${controls.poolPercent.toFixed(2)}% pool of completed work value · not saved or approved`}
           bullet={{
             value: pool,
             m1: { label: lyName, value: null, ghost: "· no run" },
-            m2: priorMonth && priorMonth.pool !== null ? { label: `${priorName} · full`, value: priorMonth.pool } : { label: priorName, value: null, ghost: "· no run" },
+            m2: priorPool !== null ? { label: `${priorName} · full`, value: priorPool } : { label: priorName, value: null, ghost: "· no run" },
             fmt: fmt.cents,
             ariaLabel: `Commission pool ${fmt.cents(pool)}${
-              priorMonth && priorMonth.pool !== null ? `; tick marks ${priorName} ${fmt.cents(priorMonth.pool)}` : ""
+              priorPool !== null ? `; tick marks ${priorName} ${fmt.cents(priorPool)}` : ""
             }; ${lyName} had no run`,
           }}
         />
@@ -702,6 +719,11 @@ function WorksheetTab({
 
   return (
     <>
+      <div className="callout" style={{ marginBottom: 12 }}>
+        <span className="diam">◆</span>
+        <b>What-if preview.</b> Pool, efficiency, and technician checkboxes on this screen are temporary and are not saved,
+        approved, or exported. Reloading restores the persisted calculation.
+      </div>
       <div className="toolbar">
         <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, fontWeight: 600, color: "var(--ink-2)" }}>
           Commission pool

@@ -78,12 +78,16 @@ const statusLabels: Record<Exclude<FreshnessState, "missing">, string> = {
   failed: "Latest ingestion failed",
 };
 
-export async function getPageFreshness(pageKey: string, _periodStart?: string): Promise<FreshnessStatus> {
+export async function getPageFreshness(pageKey: string, periodStart?: string): Promise<FreshnessStatus> {
   try {
-    void _periodStart;
     const row = await getFreshnessRow(pageKey);
     if (!row) {
       return buildFreshnessStatus({ pageKey, maxAgeHours: 24 });
+    }
+
+    if (isAggregateFreshnessPageKey(pageKey) && periodStart && periodStart < currentPacificMonth()) {
+      const evaluation = await evaluateStoredPageFreshness(pageKey, row, periodStart);
+      return freshnessStatusFromEvaluation(pageKey, row, evaluation, false);
     }
 
     return buildStoredFreshnessStatus(row);
@@ -287,26 +291,42 @@ async function evaluateStoredPageFreshness(
         order by coalesce(source_family, entity), updated_at desc
      )
      select requested.source_family,
-            coalesce(watermark.last_success_at, runs.last_successful_run_at,
-                     case when manifest.coverage_status = 'complete' then manifest.completed_at end) as last_successful_run_at,
-            greatest(runs.last_failed_run_at,
-                     case when watermark.status = 'failed' then watermark.updated_at end,
-                     case when manifest.coverage_status = 'failed' then manifest.updated_at end) as last_failed_run_at,
+            case when $3::boolean
+              then case when manifest.coverage_status = 'complete' then manifest.completed_at end
+              else coalesce(watermark.last_success_at, runs.last_successful_run_at,
+                            case when manifest.coverage_status = 'complete' then manifest.completed_at end)
+            end as last_successful_run_at,
+            case when $3::boolean
+              then case when manifest.coverage_status = 'failed' then manifest.updated_at end
+              else greatest(runs.last_failed_run_at,
+                            case when watermark.status = 'failed' then watermark.updated_at end,
+                            case when manifest.coverage_status = 'failed' then manifest.updated_at end)
+            end as last_failed_run_at,
             coalesce(manifest.completed_at, manifest.evidence_as_of) as last_change_at,
-            coalesce(
-              case when watermark.complete_window then
-                coalesce(watermark.expected_through, watermark.committed_date_logged, watermark.last_success_at)
-              end,
-              runs.last_successful_run_at,
-              case when manifest.coverage_status = 'complete' then manifest.evidence_as_of end
-            ) as data_through,
-            (coalesce(queue.pending_count, 0)
-              + case when manifest.source_family is not null and manifest.coverage_status <> 'complete' then 1 else 0 end
-              + case when watermark.status = 'running' then 1 else 0 end)::integer as pending_count,
-            (coalesce(queue.failed_count, 0)
-              + case when manifest.coverage_status = 'failed' then 1 else 0 end
-              + case when watermark.status = 'failed' then 1 else 0 end)::integer as failed_count,
+            case when $3::boolean
+              then case when manifest.coverage_status = 'complete' then manifest.evidence_as_of end
+              else coalesce(
+                case when watermark.complete_window then
+                  coalesce(watermark.expected_through, watermark.committed_date_logged, watermark.last_success_at)
+                end,
+                runs.last_successful_run_at,
+                case when manifest.coverage_status = 'complete' then manifest.evidence_as_of end
+              )
+            end as data_through,
+            case when $3::boolean
+              then case when manifest.source_family is not null and manifest.coverage_status <> 'complete' then 1 else 0 end
+              else coalesce(queue.pending_count, 0)
+                + case when manifest.source_family is not null and manifest.coverage_status <> 'complete' then 1 else 0 end
+                + case when watermark.status = 'running' then 1 else 0 end
+            end::integer as pending_count,
+            case when $3::boolean
+              then case when manifest.coverage_status = 'failed' then 1 else 0 end
+              else coalesce(queue.failed_count, 0)
+                + case when manifest.coverage_status = 'failed' then 1 else 0 end
+                + case when watermark.status = 'failed' then 1 else 0 end
+            end::integer as failed_count,
             case
+              when $3::boolean then manifest.coverage_status = 'complete' and manifest.continuation_token is null
               when watermark.source_family is not null and manifest.source_family is not null then
                 watermark.complete_window
                 and not watermark.gap_detected
@@ -322,6 +342,11 @@ async function evaluateStoredPageFreshness(
             manifest.completed_at as manifest_completed_at,
             manifest.reconciled_at as manifest_reconciled_at,
             case
+              when $3::boolean and manifest.coverage_status = 'suspect'
+                then coalesce(manifest.evidence_json ->> 'reason', 'Source-period manifest is suspect.')
+              when $3::boolean and manifest.reconciliation_status = 'mismatch'
+                then coalesce(manifest.evidence_json ->> 'reason', 'Source-period reconciliation mismatched.')
+              when $3::boolean then null
               when watermark.gap_detected then 'The incremental source watermark reports a gap.'
               when manifest.coverage_status = 'suspect' then coalesce(manifest.evidence_json ->> 'reason', 'Source-period manifest is suspect.')
               when manifest.reconciliation_status = 'mismatch' then coalesce(manifest.evidence_json ->> 'reason', 'Source-period reconciliation mismatched.')
@@ -335,7 +360,7 @@ async function evaluateStoredPageFreshness(
        left join queue_state queue on queue.source_family = requested.source_family
        left join watermark_state watermark on watermark.source_family = requested.source_family
       order by requested.source_family`,
-    [sourceFamilies, selectedPeriod],
+    [sourceFamilies, selectedPeriod, historical],
   );
   const [sourceRows, reconciliationResult, rollupResult, completenessResult] = await Promise.all([
     sourceEvidencePromise,
@@ -379,7 +404,7 @@ async function evaluateStoredPageFreshness(
          left join latest_successful_rebuild on true`,
       [pageKey, selectedPeriod],
     ),
-    pageKey === "jobs" || pageKey === "technicians"
+    !historical && (pageKey === "jobs" || pageKey === "technicians")
       ? queryPostgres<ProfitCapacityCompletenessRow>(
           `select completed_jobs_missing, active_completed_cost_centers_missing, people_missing
              from metrics.simpro_profit_capacity_completeness`,
@@ -471,6 +496,7 @@ function freshnessStatusFromEvaluation(
   pageKey: AggregateFreshnessPageKey,
   row: FreshnessRow,
   evaluation: AggregateFreshnessEvaluation,
+  useStoredFallback = true,
 ): FreshnessStatus {
   const servingDetail = evaluation.coverage.rollup.status === "ready" && evaluation.coverage.rollup.detail
     ? `${evaluation.detail} ${evaluation.coverage.rollup.detail}`
@@ -480,11 +506,13 @@ function freshnessStatusFromEvaluation(
     state: evaluation.state,
     label: statusLabels[evaluation.state],
     detail: servingDetail,
-    dataThrough: evaluation.dataThrough ?? toIso(row.data_through),
+    dataThrough: evaluation.dataThrough ?? (useStoredFallback ? toIso(row.data_through) : null),
     lastSuccessfulRunAt: evaluation.state === "current" || evaluation.state === "partial"
       ? evaluation.lastSuccessfulRunAt
-      : toIso(row.last_successful_run_at),
-    lastFailedRunAt: latestIso(evaluation.lastFailedRunAt, row.last_failed_run_at),
+      : useStoredFallback ? toIso(row.last_successful_run_at) : evaluation.lastSuccessfulRunAt,
+    lastFailedRunAt: useStoredFallback
+      ? latestIso(evaluation.lastFailedRunAt, row.last_failed_run_at)
+      : evaluation.lastFailedRunAt,
   };
 }
 

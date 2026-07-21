@@ -17,6 +17,7 @@ import {
   validateCostCenterCategories,
   validateInvoiceRuntime,
   validateJobs,
+  validateMaterials,
   validateNoInvoiceArApiDimensions,
   validatePayloadSourceHash,
   validateProductionOwnerAuthorization,
@@ -33,6 +34,8 @@ import {
   type JobSourceAggregate,
   type LaborEfficiencySourceAggregate,
   type LaborEfficiencySourceRow,
+  type MaterialSourceRow,
+  type MaterialWalkSourceRow,
   type QuoteSourceRow,
   type ReadModelRow,
   type TechnicianUtilizationSourceRow,
@@ -55,7 +58,7 @@ function readModel(family: ReadModelRow["metric_family"], values: Record<string,
 function quoteFixture() {
   const rows: QuoteSourceRow[] = [
     quoteRow("1", 500, { status_name: " Quote Accepted Online ", direct_linked_job_id: "91", direct_conversion_job_id: "91" }),
-    quoteRow("2", 1_000, { status_name: "Quote Accepted Online" }),
+    quoteRow("2", 1_000, { status_name: "Quote: Quote Accepted Online" }),
     quoteRow("3", 3_000, { inverse_conversion_job_id: "93" }),
     quoteRow("4", 12_000),
     quoteRow("5", 600, { override_outcome: "excluded" }),
@@ -788,6 +791,95 @@ test("payload source hash is recomputed from payload semantics", () => {
   validatePayloadSourceHash(row, mismatches);
   assert.equal(mismatches[0]?.type, "payload_source_hash");
 });
+
+test("materials validation independently recomputes mirror totals, exclusions, categories, items, and walk coverage", () => {
+  const selected = [
+    materialRow({ job_id: "7001", catalog_id: "42", name: "Raypak valve", qty: 2, extended_ex_tax: 100, parent_group_name: "Raypak Cheat Sheet" }),
+    materialRow({ job_id: "7002", catalog_id: "99", name: "Service plan", qty: 1, extended_ex_tax: 999, parent_group_name: "Service Contract" }),
+    materialRow({ job_id: "7003", line_type: "one_off", name: " Special Widget ", qty: 1, extended_ex_tax: 50 }),
+  ];
+  const prior = [materialRow({
+    period_start: "2026-06-01", completed_date: "2026-06-10", job_id: "6001",
+    catalog_id: "42", name: "Raypak valve", qty: 1, extended_ex_tax: 40, parent_group_name: "Raypak Cheat Sheet",
+  })];
+  const priorYear = [
+    materialRow({ period_start: "2025-07-01", completed_date: "2025-07-10", job_id: "5001", catalog_id: "7", qty: 1, extended_ex_tax: 25 }),
+    materialRow({ period_start: "2025-07-01", completed_date: "2025-07-20", job_id: "5002", catalog_id: "8", qty: 1, extended_ex_tax: 75 }),
+  ];
+  const lines = new Map([
+    ["2026-07-01", selected],
+    ["2026-06-01", prior],
+    ["2025-07-01", priorYear],
+  ]);
+  const walks = new Map<string, MaterialWalkSourceRow>([
+    ["2026-07-01", materialWalk("2026-07-01", 3, 3)],
+    ["2026-06-01", materialWalk("2026-06-01", 1, 1)],
+    ["2025-07-01", materialWalk("2025-07-01", 2, 2)],
+  ]);
+  const values = {
+    periodStart: "2026-07-01",
+    totals: { current: 150, priorMonth: 40, priorYearSameDay: 25, paceProjection: 258.33, elapsedDays: 18, daysInMonth: 31 },
+    categories: [
+      { name: "Raypak Parts", value: 100, qty: 2, lines: 1 },
+      { name: "Special order / non-stock", value: 50, qty: 1, lines: 1 },
+    ],
+    items: [
+      { key: "catalog:42", name: "Raypak valve", partNo: null, category: "Raypak Parts", qty: 2, priorMonthQty: 1, unitSell: 50, extended: 100, jobCount: 1, jobIds: [7001] },
+      { key: "one-off:special widget", name: "Special Widget", partNo: null, category: "Special order / non-stock", qty: 1, priorMonthQty: 0, unitSell: 50, extended: 50, jobCount: 1, jobIds: [7003] },
+    ],
+    coverage: {
+      selectedMonth: { periodStart: "2026-07-01", status: "complete", jobCount: 3, lineCount: 3 },
+      priorMonth: { periodStart: "2026-06-01", status: "complete", jobCount: 1, lineCount: 1 },
+      priorYearMonth: { periodStart: "2025-07-01", status: "complete", jobCount: 2, lineCount: 2 },
+      includedLineCount: 2,
+      excludedServiceContractLineCount: 1,
+    },
+  };
+  const row = { ...readModel("materials", values), period_start: "2026-07-01" };
+  const mismatches: ValidationMismatch[] = [];
+  validateMaterials(row, lines, walks, mismatches, "2026-07-18");
+  assert.deepEqual(mismatches, []);
+
+  const corrupted = structuredClone(values);
+  corrupted.totals.current = 151;
+  corrupted.categories[0]!.qty = 3;
+  corrupted.items[0]!.jobIds = [7001, 7009];
+  corrupted.coverage.selectedMonth.status = "failed";
+  const failures: ValidationMismatch[] = [];
+  validateMaterials({ ...readModel("materials", corrupted), period_start: "2026-07-01" }, lines, walks, failures, "2026-07-18");
+  assert.ok(failures.some((failure) => failure.field === "totals.current"));
+  assert.ok(failures.some((failure) => failure.field === "categories.Raypak Parts.qty"));
+  assert.ok(failures.some((failure) => failure.type === "material_job_ids"));
+  assert.ok(failures.some((failure) => failure.field === "coverage.selectedMonth.status"));
+});
+
+function materialRow(overrides: Partial<MaterialSourceRow> = {}): MaterialSourceRow {
+  return {
+    job_id: "7000",
+    period_start: "2026-07-01",
+    completed_date: "2026-07-10",
+    line_type: "catalog",
+    catalog_id: null,
+    prebuild_id: null,
+    name: "Material",
+    part_no: null,
+    qty: 1,
+    extended_ex_tax: 10,
+    group_name: null,
+    parent_group_name: null,
+    ...overrides,
+  };
+}
+
+function materialWalk(periodStart: string, jobCount: number, lineCount: number): MaterialWalkSourceRow {
+  return {
+    period_start: periodStart,
+    status: "complete",
+    walked_at: "2026-07-21T00:00:00.000Z",
+    job_count: jobCount,
+    line_count: lineCount,
+  };
+}
 
 test("database validation uses a read-only REPEATABLE READ transaction", async () => {
   const source = await readFile(new URL("../../scripts/validate-dashboard-read-models.ts", import.meta.url), "utf8");

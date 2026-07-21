@@ -24,7 +24,7 @@ export default async function MaterialsPage({
       title="Material Sales"
       description="Materials billed on completed jobs — volume, value and category mix."
       freshness={model.freshness}
-      controls={<PeriodSelector action="/materials" value={model.periodStart.slice(0, 7)} hiddenFields={{ page: String(page) }} />}
+      controls={<PeriodSelector action="/materials" value={model.periodStart.slice(0, 7)} />}
     >
       <MaterialsDashboard model={model} />
     </DashboardPage>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { assertRole, getCurrentUser } from "@/lib/auth/roles";
-import { monthParamToPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
+import { boundedDashboardPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
 import { getQuoteMetricsReadModel, type QuoteMetricsReadModelOptions } from "@/lib/store/quote-dashboard-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -12,13 +12,15 @@ export async function GET(request: Request) {
   }
   const url = new URL(request.url);
   const options = quoteDashboardReadModelOptions(url.searchParams);
+  if (!options) return NextResponse.json({ error: "month is outside the supported reporting range." }, { status: 400 });
   return NextResponse.json(await cachedPageLoad(`api:quotes:${JSON.stringify(options)}`, 120_000, () =>
     getQuoteMetricsReadModel(options),
   ));
 }
 
-export function quoteDashboardReadModelOptions(searchParams: URLSearchParams): QuoteMetricsReadModelOptions {
-  const periodStart = monthParamToPeriodStart(searchParams.get("month"));
+export function quoteDashboardReadModelOptions(searchParams: URLSearchParams, now = new Date()): QuoteMetricsReadModelOptions | null {
+  const periodStart = boundedDashboardPeriodStart(searchParams.get("month"), now);
+  if (!periodStart) return null;
   return {
     selectedMonth: periodStartToMonthKey(periodStart),
     search: searchParams.get("search") ?? undefined,

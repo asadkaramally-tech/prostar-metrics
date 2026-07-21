@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { assertRole, getCurrentUser } from "@/lib/auth/roles";
-import { monthParamToPeriodStart } from "@/lib/metrics/periods";
+import { boundedDashboardPeriodStart } from "@/lib/metrics/periods";
 import { getMaterialsReadModel } from "@/lib/store/materials-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -17,8 +17,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "A material item key is required." }, { status: 400 });
   }
 
-  const periodStart = monthParamToPeriodStart(searchParams.get("month"));
-  const model = await cachedPageLoad(`api:materials:item-jobs:${periodStart ?? "current"}`, 120_000, () =>
+  const periodStart = boundedDashboardPeriodStart(searchParams.get("month"));
+  if (!periodStart) return NextResponse.json({ error: "month is outside the supported reporting range." }, { status: 400 });
+  const model = await cachedPageLoad(`api:materials:item-jobs:${periodStart}`, 120_000, () =>
     getMaterialsReadModel(periodStart),
   );
   const item = model.items.find((candidate) => candidate.key === key);

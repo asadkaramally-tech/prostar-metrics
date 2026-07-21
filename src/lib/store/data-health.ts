@@ -395,10 +395,21 @@ export async function getOperationalDataHealth(
   const result = await query<DataHealthAggregateRow>(dataHealthAggregateQuery, [
     BACKFILL_START_MONTH,
     requiredBackfillSourceCount,
-    businessCurrentMonth(now),
+    previousBusinessMonth(now),
   ]);
 
   return buildDataHealthModel(result.rows[0], now);
+}
+
+/**
+ * Data Health reports sealed historical coverage. The open business month is
+ * intentionally provisional and belongs in freshness/queue telemetry instead
+ * of being presented to operators as an incomplete historical backfill.
+ */
+function previousBusinessMonth(now: Date) {
+  const current = businessCurrentMonth(now);
+  const [year, month] = current.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 2, 1)).toISOString().slice(0, 10);
 }
 
 function buildDataHealthModel(row: DataHealthAggregateRow | undefined, now: Date): DataHealthModel {

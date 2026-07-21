@@ -29,6 +29,7 @@ export default async function TodayPage({
       controls={
         <MonthStepper
           label="Live month"
+          prevHref={`/jobs?month=${priorMonthKey}`}
           prevTitle={`${formatMonthKey(priorMonthKey)} — see the monthly dashboards`}
           nextTitle={`${monthLong} is the live month`}
         >

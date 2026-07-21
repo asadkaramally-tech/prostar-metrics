@@ -13,6 +13,7 @@ import {
   compositeAdjustment,
   controlsMatchSaved,
   persistedWorksheetRows,
+  priorCommissionPool,
   runCommissionSessionEngine,
   savedControls,
   savedExcludedIds,
@@ -30,6 +31,7 @@ import {
 import {
   buildCommissionServingRow,
   commissionFreshness,
+  commissionPayoutServingRow,
   commissionQuery,
   commissionServingRow,
 } from "../helpers/commission-serving";
@@ -371,7 +373,7 @@ test("the default render is the approved band + worksheet with the persisted num
   const html = renderToStaticMarkup(createElement(CommissionsDashboard, { model }));
 
   // KPI band: primary card + tiles per the mockup.
-  assert.match(html, /Calculated commission due/);
+  assert.match(html, /What-if commission preview/);
   assert.match(html, /0\.50% pool of completed work value/);
   assert.match(html, /Completed revenue/);
   assert.match(html, /\$88,000/);
@@ -486,6 +488,28 @@ test("summary CSV export is client-buildable for every mode and preserves N/A mo
   assert.ok(quarterly.includes("Q3 2026,N/A,0 of 3"));
   const annual = buildSummaryCsv(vm, "annual");
   assert.ok(annual.includes(`2026,${pool},N/A,${pool},Jun ${pool}`));
+});
+
+test("January prior-month comparison uses the supplied previous-year December pool", () => {
+  const vm = buildSummaryVM({
+    year: 2026,
+    months: [],
+  } as unknown as CommissionDashboardReadModel["summary"]);
+  assert.equal(priorCommissionPool(1, vm, 4321.09), 4321.09);
+  assert.equal(priorCommissionPool(1, vm, null), null);
+});
+
+test("January read model loads the prior December immutable pool", async () => {
+  const january = commissionPayoutServingRow({ period_start: "2026-01-01", period_end: "2026-01-31" });
+  const december = commissionPayoutServingRow({ period_start: "2025-12-01", period_end: "2025-12-31" });
+  const model = await getCommissionDashboardReadModel(
+    { year: 2026, month: 1, summaryYear: 2026 },
+    {
+      query: commissionQuery({ selectedRows: [january], summaryRows: [january], priorMonthRows: [december] }),
+      getFreshness: async () => commissionFreshness,
+    },
+  );
+  assert.equal(model.priorMonthCommissionPool, (december.read_model as { poolAmount: number }).poolAmount);
 });
 
 test("draft months are marked draft between loaded history and the current month", () => {

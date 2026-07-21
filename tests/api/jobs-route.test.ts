@@ -25,6 +25,13 @@ test("jobs API falls back to page 1 for invalid page values", () => {
     const searchParams = new URLSearchParams({ month: "2026-06" });
     if (page !== undefined) searchParams.set("page", page);
 
-    assert.equal(jobDashboardReadModelParams(searchParams).page, 1, `expected ${String(page)} to use page 1`);
+    assert.equal(jobDashboardReadModelParams(searchParams)?.page, 1, `expected ${String(page)} to use page 1`);
   }
+});
+
+test("jobs API rejects unsupported reporting months", () => {
+  const now = new Date("2026-07-15T19:00:00.000Z");
+  assert.equal(jobDashboardReadModelParams(new URLSearchParams({ month: "2022-12" }), now), null);
+  assert.equal(jobDashboardReadModelParams(new URLSearchParams({ month: "2026-08" }), now), null);
+  assert.equal(jobDashboardReadModelParams(new URLSearchParams({ month: "2026-13" }), now), null);
 });

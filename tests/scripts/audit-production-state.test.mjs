@@ -9,7 +9,7 @@ import {
   summarize,
 } from "../../scripts/audit-production-state.mjs";
 
-const families = ["quotes", "jobs", "technicians", "commissions"];
+const families = ["quotes", "jobs", "technicians", "commissions", "materials"];
 const reconciliationFamilies = ["quotes", "jobs", "technicians"];
 const backfillFamilies = [
   "quotes",
@@ -173,6 +173,7 @@ function healthyReport() {
         "apiDimensions",
         "productionOwners",
         "quoteConversionEvidence",
+        "materials",
       ].map((check) => [check, { status: "matched", mismatchCount: 0 }])),
     },
   };
@@ -524,6 +525,7 @@ test("strict production audit requires the semantic validator and every named co
     "apiDimensions",
     "productionOwners",
     "quoteConversionEvidence",
+    "materials",
   ]) {
     const corrupted = healthyReport();
     corrupted.semanticValidation.contractChecks[check] = { status: "mismatch", mismatchCount: 1 };
