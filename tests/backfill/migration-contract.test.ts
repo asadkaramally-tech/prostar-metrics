@@ -5,6 +5,10 @@ import test from "node:test";
 const migrationPath = new URL("../../infra/db/migrations/007_historical_backfill_ledger.sql", import.meta.url);
 const authoritativeMigrationPath = new URL("../../infra/db/migrations/016_authoritative_backfill_manifest.sql", import.meta.url);
 const nestedTraversalGenerationMigrationPath = new URL("../../infra/db/migrations/029_nested_traversal_generation.sql", import.meta.url);
+const sourcePeriodAuthorityMigrationPath = new URL(
+  "../../infra/db/migrations/051_complete_backfill_ledger_from_source_period_authority.sql",
+  import.meta.url,
+);
 
 test("migration 007 defines capacity, source/month, run, and reconciliation ledgers", async () => {
   const sql = await readFile(migrationPath, "utf8");
@@ -69,4 +73,20 @@ test("migration 029 gives every project child row a monotonic traversal generati
     assert.match(sql, new RegExp(`alter table metrics\\.${relation}[\\s\\S]*?traversal_generation bigint`));
   }
   assert.match(sql, /status in \('active', 'completed', 'source_deleted'\)/);
+});
+
+test("migration 051 accepts fenced source-period authority and narrowly repairs July ledger rows", async () => {
+  const sql = await readFile(sourcePeriodAuthorityMigrationPath, "utf8");
+
+  assert.match(sql, /create or replace function metrics\.enforce_authoritative_backfill_manifest/);
+  assert.match(sql, /source_manifest\.coverage_status = 'complete'/);
+  assert.match(sql, /source_manifest\.reconciliation_status = 'matched'/);
+  assert.match(sql, /source_manifest\.reconciliation_generation = source_manifest\.manifest_generation/);
+  assert.match(sql, /source_manifest\.expected_page_count > 0/);
+  assert.match(sql, /source_manifest\.completed_page_count = source_manifest\.expected_page_count/);
+  assert.match(sql, /ledger\.month_start = date '2026-07-01'/);
+  assert.match(sql, /ledger\.source_family <> 'invoices'/);
+  assert.match(sql, /ledger\.status = 'queued'/);
+  assert.match(sql, /'system:migration-051'/);
+  assert.match(sql, /'backfill_source_month_ledger'/);
 });
