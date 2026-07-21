@@ -36,6 +36,7 @@ import {
 import {
   backwardCompatibilityViolations,
   classifyStrictlyAdditiveMigration,
+  parseMigrationCompatibilityMode,
   priorImageProbeDockerArgs,
   priorImageProbeEnvironment,
   runExecutableMigrationCompatibility,
@@ -533,7 +534,18 @@ test("pending migration compatibility gate rejects contract/destructive SQL", ()
     "create or replace view metrics.current_jobs as select * from metrics.jobs;",
     "create table metrics.copy as select * from metrics.jobs;",
   ]) assert.equal(classifyStrictlyAdditiveMigration("030_full.sql", sql).additive, false);
-  assert.match(source, /runMigrationCompatibilityGate\(connectionString, previousImage, certification\.mode\)/);
+  assert.match(source, /runMigrationCompatibilityGate\(connectionString, previousImage\)/);
+  assert.match(compatibilitySource, /MIGRATION_COMPATIBILITY_MODE \?\? "static"/);
+  assert.match(compatibilitySource, /full-data clone probing is manual only/);
+  assert.equal(packageJson.scripts["migration:compatibility:clone"], "node scripts/check-migration-compatibility.mjs --clone");
+});
+
+test("full-data migration compatibility cloning is opt-in and static mode is the release default", () => {
+  assert.equal(parseMigrationCompatibilityMode(), "static");
+  assert.equal(parseMigrationCompatibilityMode(["--clone"]), "clone");
+  assert.equal(parseMigrationCompatibilityMode([], "clone"), "clone");
+  assert.throws(() => parseMigrationCompatibilityMode(["--full"]), /only --clone/);
+  assert.throws(() => parseMigrationCompatibilityMode([], "routine"), /static or clone/);
 });
 
 test("actual migrations 029 through 036 pass static defense for a migration-028 baseline", async () => {
@@ -1552,7 +1564,7 @@ test("routine deploy remains lean while --full retains exhaustive preflight and 
   const keyVaultGate = releaseSource.indexOf("verifyProductionKeyVaultPreflight(keyVaultContract);");
   const buildCall = releaseSource.indexOf('"acr",\n      "build"');
   const postgresGate = releaseSource.indexOf("runPostgresPredeployGate(connectionString, previousImage)");
-  const compatibilityCall = releaseSource.indexOf("runMigrationCompatibilityGate(connectionString, previousImage, certification.mode)");
+  const compatibilityCall = releaseSource.indexOf("runMigrationCompatibilityGate(connectionString, previousImage)");
   const migrationCall = releaseSource.indexOf("applyTrackedMigrations(connectionString, previousImage)");
   const deploymentCall = releaseSource.indexOf("finalizeCandidateDeployment({");
   assert.ok(keyVaultGate < buildCall && keyVaultGate < migrationCall);
@@ -1592,6 +1604,9 @@ test("routine deploy remains lean while --full retains exhaustive preflight and 
   assert.ok(postgresGate >= 0 && postgresGate < migrationCall);
   assert.ok(compatibilityCall >= 0 && compatibilityCall < postgresGate);
   assert.ok(migrationCall < deploymentCall);
+  assert.match(source, /MIGRATION_COMPATIBILITY_MODE = "static"/);
+  assert.match(releaseSource, /static prior-image compatibility classification \(no production data clone\)/);
+  assert.match(releaseSource, /dedicated empty database/);
   assert.match(source, /PostgreSQL migration and two-session concurrency predeploy gate failed/);
   assert.match(source, /re-verifying reusable certified ACR image/);
   assert.match(source, /computeDependencyTreeSha256/);

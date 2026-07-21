@@ -64,6 +64,7 @@
     "test:migrations": "node scripts/test-migrations.mjs",
     "test:predeploy:postgres": "npm run test:migrations",
     "migration:compatibility:check": "node scripts/check-migration-compatibility.mjs",
+    "migration:compatibility:clone": "node scripts/check-migration-compatibility.mjs --clone",
     "migration:compatibility:probe": "tsx scripts/migration-compatibility-entrypoint.ts",
     "migrations:apply": "node scripts/apply-migrations.mjs"
   },

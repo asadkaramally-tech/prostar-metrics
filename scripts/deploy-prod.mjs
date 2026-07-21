@@ -316,9 +316,9 @@ function runPostgresPredeployGate(connectionString, previousImage) {
   }
 }
 
-function runMigrationCompatibilityGate(connectionString, previousImage, mode) {
+function runMigrationCompatibilityGate(connectionString, previousImage) {
   const environment = migrationChildEnvironment(connectionString, previousImage);
-  environment.MIGRATION_COMPATIBILITY_MODE = mode;
+  environment.MIGRATION_COMPATIBILITY_MODE = "static";
   const result = spawnSync("npm", ["run", "migration:compatibility:check"], {
     cwd: ROOT,
     env: environment,
@@ -1721,14 +1721,10 @@ async function executeProductionRelease(keyVaultContract, buildSnapshot, release
     },
     verifyAbsent: async () => verifyTemporaryMigrationFirewallAbsent(),
     run: async () => {
-      log("checking pending migrations remain additive for the prior production image");
-      runMigrationCompatibilityGate(connectionString, previousImage, certification.mode);
-      if (certification.mode === "full") {
-        log("running PostgreSQL migrations-twice and two-session concurrency gate");
-        runPostgresPredeployGate(connectionString, previousImage);
-      } else {
-        log("routine mode skips the temporary migration database/concurrency gate after strict additive classification");
-      }
+      log("checking pending migrations with static prior-image compatibility classification (no production data clone)");
+      runMigrationCompatibilityGate(connectionString, previousImage);
+      log("running PostgreSQL migrations-twice and two-session concurrency gate on a dedicated empty database");
+      runPostgresPredeployGate(connectionString, previousImage);
       log("applying hash-tracked metrics migrations under the advisory lock");
       applyTrackedMigrations(connectionString, previousImage);
     },

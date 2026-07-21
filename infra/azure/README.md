@@ -39,7 +39,7 @@ One-time security, Key Vault migration, and restore-drill prerequisites are docu
 
 ## Database Migrations
 
-Production migrations are part of `npm run deploy:prod`. Do not apply migration files manually as part of a routine release. The orchestrator runs the PostgreSQL migration suite, executable prior-image compatibility check, and ordered migration application before changing the application image.
+Production migrations are part of `npm run deploy:prod`. Do not apply migration files manually as part of a routine release. The orchestrator runs static prior-image SQL compatibility, the disposable empty-database migration/concurrency suite, and ordered migration application before changing the application image. The expensive production-data clone/probe is not part of deployment; it is an explicit diagnostic command, `npm run migration:compatibility:clone`.
 
 ## Monitoring
 

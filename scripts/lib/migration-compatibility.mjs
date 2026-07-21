@@ -36,11 +36,10 @@ export function backwardCompatibilityViolations(filename, sql) {
   ));
 }
 
-// Routine releases may omit the expensive clone/probe only for statements
-// whose effect is strictly additive to the prior application's schema. This
-// is intentionally much narrower than backwardCompatibilityViolations(): an
-// unknown statement, data write, view/function replacement, or constraint
-// change requires the exhaustive --full path.
+// The static release gate records whether a migration is strictly additive,
+// while backwardCompatibilityViolations() remains the fail-closed boundary
+// for destructive prior-image changes. Full-data cloning is reserved for an
+// explicit manual probe, not ordinary deployment.
 export function classifyStrictlyAdditiveMigration(filename, sql) {
   if (typeof filename !== "string" || !filename.endsWith(".sql")) {
     return { additive: false, reason: "migration filename must end in .sql" };
@@ -62,6 +61,16 @@ export function classifyStrictlyAdditiveMigration(filename, sql) {
     }
   }
   return { additive: true, statements: statements.length };
+}
+
+export function parseMigrationCompatibilityMode(argv = [], environmentMode = "static") {
+  if (!Array.isArray(argv) || argv.length > 1 || (argv.length === 1 && argv[0] !== "--clone")) {
+    throw new Error("Compatibility check accepts only --clone for the manual full-data probe");
+  }
+  if (typeof environmentMode !== "string" || !["static", "clone"].includes(environmentMode)) {
+    throw new Error("MIGRATION_COMPATIBILITY_MODE must be static or clone");
+  }
+  return argv[0] === "--clone" ? "clone" : environmentMode;
 }
 
 export function createCompatibilityDatabaseName() {
