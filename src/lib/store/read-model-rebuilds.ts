@@ -18,6 +18,7 @@ import {
   buildPersistedQuoteDashboardRecords,
   loadQuoteDashboardRows,
   type PersistedQuoteDashboardRecord,
+  type QuoteCanonicalRow,
   type QuoteMetricsReadModel,
 } from "@/lib/store/quote-dashboard-read-model";
 import {
@@ -64,6 +65,17 @@ type JobDashboardSourceInputs = {
 };
 
 let jobDashboardSourceInputs: Promise<JobDashboardSourceInputs> | null = null;
+
+type QuoteDashboardSourceInputs = {
+  rows: QuoteCanonicalRow[];
+  snapshots: NormalizedQuoteSnapshot[];
+  overrideSummary: Awaited<ReturnType<typeof getQuoteOverrideSummary>>;
+};
+
+// A historical drain rebuilds many selected months from one canonical corpus.
+// Keep the expensive 2023-current SQL read process-local, just like Jobs does,
+// so --limit 100 pays for it once rather than once per queued month.
+let quoteDashboardSourceInputs: Promise<QuoteDashboardSourceInputs> | null = null;
 
 export type RollupRebuildQuery = <T = Record<string, unknown>>(
   text: string,
@@ -564,16 +576,44 @@ function getJobDashboardSourceInputs(): Promise<JobDashboardSourceInputs> {
 }
 
 async function buildQuoteDashboardPayload(periodStart: string, periodEnd: string): Promise<QuoteDashboardReadModelPayload> {
-  // Rollup jobs deliberately use a one-connection pool. Keep these reads serial so a
-  // long monthly query cannot make sibling pool requests hit the acquisition timeout.
-  const monthly = await buildQuoteMonthlyRollup(periodStart, periodEnd);
-  const snapshots = await loadQuoteDashboardRows();
-  const overrideSummary = await getQuoteOverrideSummary();
-  const dashboard = buildQuoteMetricsReadModel(rollupFreshness("quotes"), snapshots, overrideSummary, { selectedMonth: periodStart.slice(0, 7) });
+  const source = await getQuoteDashboardSourceInputs();
+  const monthly = buildQuoteMonthlyReadModel({ quotes: source.snapshots, periodStart, periodEnd });
+  const dashboard = buildQuoteMetricsReadModel(rollupFreshness("quotes"), source.rows, source.overrideSummary, { selectedMonth: periodStart.slice(0, 7) });
   return {
     ...monthly,
     dashboard,
-    quoteRecords: buildPersistedQuoteDashboardRecords(snapshots, periodStart),
+    quoteRecords: buildPersistedQuoteDashboardRecords(source.rows, periodStart),
+  };
+}
+
+function getQuoteDashboardSourceInputs(): Promise<QuoteDashboardSourceInputs> {
+  if (!quoteDashboardSourceInputs) {
+    quoteDashboardSourceInputs = (async () => {
+      // The rollup worker intentionally uses a one-connection pool.
+      const rows = await loadQuoteDashboardRows();
+      const overrideSummary = await getQuoteOverrideSummary();
+      return { rows, snapshots: rows.map(quoteSnapshotFromDashboardRow), overrideSummary };
+    })().catch((error) => {
+      quoteDashboardSourceInputs = null;
+      throw error;
+    });
+  }
+  return quoteDashboardSourceInputs;
+}
+
+/** Exact monthly-rollup projection of the canonical dashboard row. */
+export function quoteSnapshotFromDashboardRow(row: QuoteCanonicalRow): NormalizedQuoteSnapshot {
+  return {
+    quoteId: String(row.quote_id),
+    quoteNo: row.quote_no,
+    totalValue: Number(row.total_value ?? 0),
+    dateIssued: row.date_issued,
+    dateApproved: row.date_approved,
+    statusName: row.status_name,
+    linkedJobId: row.linked_job_match === true && row.linked_job_id != null ? String(row.linked_job_id) : null,
+    convertedFromJobId: row.inverse_conversion_match === true ? "matched" : null,
+    outcomeOverride: row.override_outcome === "excluded" ? "excluded" : null,
+    sourceDeletedAt: null,
   };
 }
 
@@ -639,8 +679,10 @@ export async function getQuoteSnapshots(
       and linked_job.source_deleted_at is null
      left join lateral (
        select relationship.job_id
-         from metrics.job_source_quotes relationship
-        where relationship.source_quote_id = q.quote_id
+         from metrics.metrics_jobs relationship
+        where relationship.converted_from_type = 'Quote'
+          and relationship.converted_from_id = q.quote_id
+          and relationship.source_deleted_at is null
         order by relationship.job_id
         limit 1
      ) inverse_job on true

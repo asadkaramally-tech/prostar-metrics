@@ -6,6 +6,7 @@ import { PGlite } from "@electric-sql/pglite";
 import {
   buildQuoteMonthlyRollup,
   getQuoteSnapshots,
+  quoteSnapshotFromDashboardRow,
   type RollupRebuildQuery,
 } from "../../src/lib/store/read-model-rebuilds";
 
@@ -98,7 +99,7 @@ test("quote rollup accepts only exact status and direct/inverse relationships", 
       ) values
         (200, 'J-200', null, null, null),
         (300, '300', null, null, null),
-        (400, 'J-400', ' Quote ', 4, null),
+        (400, 'J-400', 'Quote', 4, null),
         (700, 'J-700', null, null, timestamptz '2026-06-09 00:00:00+00');
 
       insert into metrics.quote_classification_overrides (quote_id, outcome, active)
@@ -147,15 +148,42 @@ test("quote rollup accepts only exact status and direct/inverse relationships", 
   }
 });
 
-test("quote rollup serving path uses persisted relationships instead of raw snapshot traversal", () => {
+test("quote rollup serving path uses direct indexed relationships instead of the non-pushdown view", () => {
   const getQuoteSnapshotsSource = readModelRebuildsSource.slice(
     readModelRebuildsSource.indexOf("export async function getQuoteSnapshots"),
     readModelRebuildsSource.indexOf("function monthWindow"),
   );
-  assert.match(getQuoteSnapshotsSource, /metrics\.job_source_quotes/);
+  assert.match(getQuoteSnapshotsSource, /metrics\.metrics_jobs relationship/);
+  assert.match(getQuoteSnapshotsSource, /relationship\.converted_from_id = q\.quote_id/);
   assert.match(getQuoteSnapshotsSource, /linked_job\.job_id = q\.linked_job_id/);
+  assert.doesNotMatch(getQuoteSnapshotsSource, /metrics\.job_source_quotes/);
   assert.doesNotMatch(getQuoteSnapshotsSource, /raw_simpro_snapshots/);
   assert.doesNotMatch(getQuoteSnapshotsSource, /authoritative_job_source_quote_id|authoritative_quote_linked_job_id/);
+});
+
+test("historical quote drains reuse one canonical corpus and project monthly facts without another SQL read", () => {
+  assert.match(readModelRebuildsSource, /let quoteDashboardSourceInputs: Promise<QuoteDashboardSourceInputs> \| null = null/);
+  const builder = readModelRebuildsSource.slice(
+    readModelRebuildsSource.indexOf("async function buildQuoteDashboardPayload"),
+    readModelRebuildsSource.indexOf("async function getQuoteOverrideSummary"),
+  );
+  assert.match(builder, /getQuoteDashboardSourceInputs\(\)/);
+  assert.match(builder, /buildQuoteMonthlyReadModel\(\{ quotes: source\.snapshots/);
+  assert.doesNotMatch(builder, /buildQuoteMonthlyRollup\(/);
+
+  const snapshot = quoteSnapshotFromDashboardRow({
+    quote_id: 42, quote_no: "Q42", name: "Test", status_name: "Pending",
+    linked_job_id: 99, linked_job_match: true, inverse_conversion_match: false,
+    date_issued: "2026-06-10", date_approved: null, total_value: "123.45",
+    deal_tier: null, category: null, category_basis: null, outcome: null,
+    outcome_reason: null, updated_at: "2026-06-10", override_id: null,
+    override_outcome: null, legacy_won_override: null, override_reason: null,
+    override_evidence_url: null, override_actor_email: null, override_revision: null,
+    override_created_at: null,
+  });
+  assert.equal(snapshot.dateIssued, "2026-06-10");
+  assert.equal(snapshot.linkedJobId, "99");
+  assert.equal(snapshot.totalValue, 123.45);
 });
 
 function pgliteQuery(db: PGlite): RollupRebuildQuery {
