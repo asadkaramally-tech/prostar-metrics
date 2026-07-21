@@ -35,6 +35,7 @@ type SourceEvidenceRow = {
   pending_count: number | string;
   failed_count: number | string;
   complete_window: boolean | null;
+  serving_window_complete: boolean | null;
   manifest_generation: number | string | null;
   reconciliation_generation: number | string | null;
   expected_page_count: number | string | null;
@@ -49,7 +50,7 @@ type ReconciliationRow = {
   checked_at: Date | string;
 };
 
-type RollupRow = {
+export type RollupFreshnessRow = {
   rebuilt_at: Date | string | null;
   suspect_reason: string | null;
   pending_count: number | string;
@@ -306,8 +307,8 @@ async function evaluateStoredPageFreshness(
             case when $3::boolean
               then case when manifest.coverage_status = 'complete' then manifest.evidence_as_of end
               else coalesce(
-                case when watermark.complete_window then
-                  coalesce(watermark.expected_through, watermark.committed_date_logged, watermark.last_success_at)
+                case when watermark.last_success_at is not null and not watermark.gap_detected then
+                  coalesce(watermark.committed_date_logged, watermark.last_success_at)
                 end,
                 runs.last_successful_run_at,
                 case when manifest.coverage_status = 'complete' then manifest.evidence_as_of end
@@ -335,6 +336,11 @@ async function evaluateStoredPageFreshness(
               when watermark.source_family is not null then watermark.complete_window and not watermark.gap_detected
               else manifest.coverage_status = 'complete' and manifest.continuation_token is null
             end as complete_window,
+            case
+              when $3::boolean then manifest.coverage_status = 'complete' and manifest.continuation_token is null
+              when watermark.source_family is not null then watermark.last_success_at is not null and not watermark.gap_detected
+              else manifest.coverage_status = 'complete' and manifest.continuation_token is null
+            end as serving_window_complete,
             manifest.manifest_generation,
             manifest.reconciliation_generation,
             manifest.expected_page_count,
@@ -373,7 +379,7 @@ async function evaluateStoredPageFreshness(
         limit 1`,
       [reconciliationScopeForPage(pageKey), selectedPeriod],
     ),
-    queryPostgres<RollupRow>(
+    queryPostgres<RollupFreshnessRow>(
       `with queue_state as (
          select count(*) filter (where status in ('queued', 'running'))::integer as pending_count,
                 count(*) filter (where status = 'failed')::integer as failed_count
@@ -461,6 +467,7 @@ function sourceEvidence(row: SourceEvidenceRow): SourceFreshnessEvidence {
     pendingCount: numericCount(row.pending_count),
     failedCount: numericCount(row.failed_count),
     completeWindow: row.complete_window,
+    servingWindowComplete: row.serving_window_complete,
     manifestGeneration: nullableNumericCount(row.manifest_generation),
     reconciliationGeneration: nullableNumericCount(row.reconciliation_generation),
     expectedPageCount: nullableNumericCount(row.expected_page_count),
@@ -477,19 +484,50 @@ function reconciliationEvidence(row: ReconciliationRow | undefined): Reconciliat
     : { status: "missing", checkedAt: null };
 }
 
-function rollupEvidence(row: RollupRow | undefined): RollupFreshnessEvidence {
+export function rollupEvidence(row: RollupFreshnessRow | undefined): RollupFreshnessEvidence {
   if (!row) return { status: "missing", detail: "No current-period rollup state is recorded." };
   if (numericCount(row.failed_count) > 0) {
-    return row.rebuilt_at
-      ? { status: "ready", rebuiltAt: row.rebuilt_at, detail: "Serving the latest ready read model; a later rebuild attempt is dead-lettered." }
-      : { status: "failed", rebuiltAt: row.rebuilt_at, detail: "A current-period rollup rebuild is dead-lettered." };
+    return {
+      status: "failed",
+      rebuiltAt: row.rebuilt_at,
+      pendingCount: numericCount(row.pending_count),
+      failedCount: numericCount(row.failed_count),
+      detail: row.rebuilt_at
+        ? "A later rollup rebuild attempt is dead-lettered; the prior ready read model remains available."
+        : "A current-period rollup rebuild is dead-lettered.",
+    };
   }
-  if (row.suspect_reason) return { status: "suspect", rebuiltAt: row.rebuilt_at, detail: row.suspect_reason };
+  if (row.suspect_reason) return {
+    status: "suspect",
+    rebuiltAt: row.rebuilt_at,
+    pendingCount: numericCount(row.pending_count),
+    failedCount: numericCount(row.failed_count),
+    detail: row.suspect_reason,
+  };
   if (numericCount(row.pending_count) > 0) {
-    return { status: "building", rebuiltAt: row.rebuilt_at, detail: "A current-period rollup rebuild is queued or running." };
+    return row.rebuilt_at
+      ? {
+          status: "ready",
+          rebuiltAt: row.rebuilt_at,
+          pendingCount: numericCount(row.pending_count),
+          failedCount: numericCount(row.failed_count),
+          detail: `Serving the latest ready read model while ${numericCount(row.pending_count)} rollup rebuild ${numericCount(row.pending_count) === 1 ? "is" : "jobs are"} queued or running.`,
+        }
+      : {
+          status: "building",
+          rebuiltAt: row.rebuilt_at,
+          pendingCount: numericCount(row.pending_count),
+          failedCount: numericCount(row.failed_count),
+          detail: "A current-period rollup rebuild is queued or running, with no ready read model.",
+        };
   }
   if (!row.rebuilt_at) return { status: "missing", detail: "No current-period read model has been built." };
-  return { status: "ready", rebuiltAt: row.rebuilt_at };
+  return {
+    status: "ready",
+    rebuiltAt: row.rebuilt_at,
+    pendingCount: numericCount(row.pending_count),
+    failedCount: numericCount(row.failed_count),
+  };
 }
 
 function freshnessStatusFromEvaluation(

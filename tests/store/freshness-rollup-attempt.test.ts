@@ -7,6 +7,7 @@ import {
   historicalPageFreshnessRequirements,
   pageFreshnessRequirements,
 } from "../../src/lib/store/freshness-evaluator";
+import { rollupEvidence } from "../../src/lib/store/freshness";
 
 const source = readFileSync(path.join(process.cwd(), "src/lib/store/freshness.ts"), "utf8");
 
@@ -32,9 +33,33 @@ test("freshness accepts a successful no-op rebuild after the latest source chang
   assert.match(source, /and status = 'succeeded'/);
 });
 
-test("freshness serves a ready read model even when a later rebuild attempt is dead-lettered", () => {
-  assert.match(source, /Serving the latest ready read model; a later rebuild attempt is dead-lettered/);
-  assert.match(source, /row\.rebuilt_at/);
+test("queued rollups retain a ready model, while failed rollups remain warnings", () => {
+  const serving = rollupEvidence({
+    rebuilt_at: "2026-07-13T11:40:00.000Z",
+    suspect_reason: null,
+    pending_count: 2,
+    failed_count: 0,
+  });
+  assert.equal(serving.status, "ready");
+  assert.equal(serving.pendingCount, 2);
+  assert.match(serving.detail ?? "", /Serving the latest ready read model/);
+
+  const noPriorModel = rollupEvidence({
+    rebuilt_at: null,
+    suspect_reason: null,
+    pending_count: 1,
+    failed_count: 0,
+  });
+  assert.equal(noPriorModel.status, "building");
+
+  const failed = rollupEvidence({
+    rebuilt_at: "2026-07-13T11:40:00.000Z",
+    suspect_reason: null,
+    pending_count: 0,
+    failed_count: 1,
+  });
+  assert.equal(failed.status, "failed");
+  assert.match(failed.detail ?? "", /prior ready read model remains available/);
 });
 
 test("current source evidence requires authoritative page and generation proof", () => {

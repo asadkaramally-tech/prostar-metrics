@@ -21,6 +21,8 @@ export type SourceFreshnessEvidence = {
   pendingCount?: number;
   failedCount?: number;
   completeWindow?: boolean | null;
+  /** Last completed source window that remains safe to serve during new work. */
+  servingWindowComplete?: boolean | null;
   manifestGeneration?: number | null;
   reconciliationGeneration?: number | null;
   expectedPageCount?: number | null;
@@ -39,6 +41,8 @@ export type RollupFreshnessEvidence = {
   status: "ready" | "building" | "failed" | "suspect" | "missing";
   rebuiltAt?: Date | string | null;
   detail?: string | null;
+  pendingCount?: number;
+  failedCount?: number;
 };
 
 export type ProfitCapacityCompletenessEvidence = {
@@ -93,6 +97,8 @@ export type AggregateFreshnessEvaluation = {
       status: RollupFreshnessEvidence["status"];
       rebuiltAt: string | null;
       detail: string | null;
+      pendingCount: number;
+      failedCount: number;
     };
     reconciliation: {
       status: ReconciliationFreshnessEvidence["status"];
@@ -375,13 +381,13 @@ function evaluateSource(requirement: SourceRequirement, evidence: SourceFreshnes
   let state: EvaluatedSourceState;
   let detail: string;
 
+  const servingWindowComplete = evidence?.servingWindowComplete ?? (evidence?.completeWindow === true);
   const hasCompleteServingEvidence = requirement.requiresCurrentManifest
     ? completeCurrentManifest
-    : Boolean(lastSuccessfulRunAt && evidence?.completeWindow === true);
+    : Boolean(lastSuccessfulRunAt && servingWindowComplete);
 
   if (
-    (failedCount > 0 || (lastFailedRunAt && (!lastSuccessfulRunAt || lastFailedRunAt > lastSuccessfulRunAt)))
-    && !hasCompleteServingEvidence
+    failedCount > 0 || (lastFailedRunAt && (!lastSuccessfulRunAt || lastFailedRunAt > lastSuccessfulRunAt))
   ) {
     state = "failed";
     detail = failedCount > 0
@@ -408,6 +414,12 @@ function evaluateSource(requirement: SourceRequirement, evidence: SourceFreshnes
   } else if (!lastSuccessfulRunAt) {
     state = "missing";
     detail = "No successful complete source run is recorded.";
+  } else if (
+    pendingCount > 0
+    && hasCompleteServingEvidence
+  ) {
+    state = "successful";
+    detail = `Serving the last complete source window while ${pendingCount} source job${pendingCount === 1 ? " is" : "s are"} queued or running.`;
   } else if (pendingCount > 0 || (requirement.requiresCompleteWindow && evidence?.completeWindow !== true)) {
     state = "building";
     detail = pendingCount > 0
@@ -471,6 +483,8 @@ function buildCoverage(
       status: rollup.status,
       rebuiltAt: toIso(toDate(rollup.rebuiltAt)),
       detail: rollup.detail ?? null,
+      pendingCount: nonNegativeInteger(rollup.pendingCount),
+      failedCount: nonNegativeInteger(rollup.failedCount),
     },
     reconciliation: {
       status: reconciliation.status,
