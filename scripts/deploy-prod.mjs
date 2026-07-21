@@ -22,6 +22,11 @@ import {
   withImmutableDockerBuildContext,
   writeDeploymentManifestAtomic,
 } from "./lib/deployment-provenance.mjs";
+import {
+  computeDependencyTreeSha256,
+  readReusableDeploymentCertificate,
+  writeDeploymentCertificate,
+} from "./lib/deployment-resume.mjs";
 import { PLAN_REVISION, PLAN_SHA256 } from "./lib/feature-status-sync.mjs";
 import {
   assertExactProductionJobNames,
@@ -53,6 +58,7 @@ const EVIDENCE_SIGNING_KEY_NAMES = Object.freeze({
 });
 const MAX_CONTAINER_APP_JOB_NAME_LENGTH = 32;
 const AZURE_CONFIG_DIR = process.env.AZURE_CONFIG_DIR || path.join(path.dirname(ROOT), ".work", "azure");
+const DEPLOYMENT_RESUME_DIRECTORY = path.join(ROOT, ".work", "deploy-prod-resume");
 const migrationEnvironmentNames = new Set([
   "MIGRATION_COMPATIBILITY_COMMAND_TIMEOUT_MS", "MIGRATION_COMPATIBILITY_QUERY_TIMEOUT_MS",
   "AZURE_POSTGRES_CA_CERT", "AZURE_POSTGRES_CA_CERT_PATH", "NODE_TLS_REJECT_UNAUTHORIZED",
@@ -344,8 +350,10 @@ function runDeploymentPreflight(snapshotRoot) {
 }
 
 export function parseDeployArgs(argv) {
-  if (argv.length > 0) throw new Error(`Unknown deploy argument: ${argv.join(", ")}`);
-  return Object.freeze({});
+  const resume = argv.filter((argument) => argument === "--resume");
+  const unknown = argv.filter((argument) => argument !== "--resume");
+  if (unknown.length > 0 || resume.length > 1) throw new Error(`Unknown deploy argument: ${argv.join(", ")}`);
+  return Object.freeze({ resume: resume.length === 1 });
 }
 
 export function validateProductionParameterContract(document) {
@@ -570,8 +578,10 @@ function reviewMonitoringWhatIfAndTarget() {
     "--parameters", MONITORING_PARAMETERS_PATH, "--result-format", "ResourceIdOnly",
     "--no-pretty-print", "--output", "json",
   ], { capture: true }));
-  validateMonitoringWhatIf(whatIf, server.id);
-  return server;
+  const review = validateMonitoringWhatIf(whatIf, server.id);
+  const changes = Array.isArray(whatIf?.changes) ? whatIf.changes : whatIf?.properties?.changes;
+  const deploymentRequired = changes.some((change) => change?.changeType !== "NoChange");
+  return Object.freeze({ postgresTarget: server, deploymentRequired, reviewedResourceCount: review.changes });
 }
 
 export function validateLongestQueryCollector(parameter, expectedValue = null) {
@@ -835,17 +845,21 @@ function writeMonitoringEvidenceAtomic({ evidence, prefix, timestamp }) {
   return { path: evidencePath, sha256: createHash("sha256").update(bytes).digest("hex") };
 }
 
-async function deployAndVerifyMonitoringReceivers(postgresTarget) {
+async function deployAndVerifyMonitoringReceivers(postgresTarget, { deploymentRequired = true } = {}) {
   const parameters = JSON.parse(fs.readFileSync(path.join(ROOT, MONITORING_PARAMETERS_PATH), "utf8")).parameters;
   const actionGroupName = parameters.ownerActionGroupName?.value;
   const expected = { asad: parameters.asadOwnerEmail?.value, laila: parameters.lailaOwnerEmail?.value };
   if (!actionGroupName || !expected.asad || !expected.laila) throw new Error("Monitoring owner receiver parameters are incomplete.");
-  log("deploying authoritative monitoring configuration and enabling owner receivers");
-  az([
-    "deployment", "group", "create", "--resource-group", RESOURCE_GROUP,
-    "--name", "prostar-metrics-monitoring-release", "--template-file", "infra/azure/monitoring.bicep",
-    "--parameters", MONITORING_PARAMETERS_PATH, "--output", "none",
-  ]);
+  if (deploymentRequired) {
+    log("deploying authoritative monitoring configuration and enabling owner receivers");
+    az([
+      "deployment", "group", "create", "--resource-group", RESOURCE_GROUP,
+      "--name", "prostar-metrics-monitoring-release", "--template-file", "infra/azure/monitoring.bicep",
+      "--parameters", MONITORING_PARAMETERS_PATH, "--output", "none",
+    ]);
+  } else {
+    log("monitoring what-if proved all managed resources unchanged; skipping the no-op monitoring ARM deployment");
+  }
   const metricResult = await verifyLongestQueryMetricAvailability({
     resourceGroup: RESOURCE_GROUP,
     serverName: POSTGRES_SERVER,
@@ -1570,19 +1584,46 @@ async function verifyLiveProduction(fqdn) {
   });
 }
 
-async function executeProductionRelease(keyVaultContract, postgresTarget, buildSnapshot, releaseIdentity) {
-  const monitoring = await deployAndVerifyMonitoringReceivers(postgresTarget);
+function acrRunFromCertifiedBuild(acrBuild) {
+  return {
+    status: "Succeeded",
+    runId: acrBuild.runId,
+    createdAt: acrBuild.createdAt,
+    outputImages: [{
+      registry: ACR_NAME,
+      repository: PRODUCTION_REPOSITORY,
+      tag: acrBuild.imageTag,
+      digest: acrBuild.digest,
+    }],
+  };
+}
+
+async function executeProductionRelease(keyVaultContract, monitoringPreflight, buildSnapshot, releaseIdentity, certification) {
+  const monitoring = await deployAndVerifyMonitoringReceivers(
+    monitoringPreflight.postgresTarget,
+    { deploymentRequired: monitoringPreflight.deploymentRequired },
+  );
   verifyProductionKeyVaultPreflight(keyVaultContract);
   const evidenceSigningKeyIds = resolveEvidenceSigningKeyIds(keyVaultContract.keyVaultName);
   const baseline = captureDeploymentState();
   assertRollbackCompatibleBaseline(baseline);
   const connectionString = getMigrationConnectionString();
   const previousImage = baseline.webImage;
-  const imageTag = createImmutableImageTag(buildSnapshot.sha256, releaseIdentity.deploymentNonce);
-  const taggedImage = `${PRODUCTION_REPOSITORY}:${imageTag}`;
-
-  log("building and pushing metrics image in ACR");
-  const buildResult = JSON.parse(az([
+  let imageTag;
+  let buildResult;
+  let acrBuild;
+  if (certification.reusable?.acrBuild) {
+    imageTag = certification.reusable.acrBuild.imageTag;
+    buildResult = acrRunFromCertifiedBuild(certification.reusable.acrBuild);
+    log(`re-verifying reusable certified ACR image ${imageTag}`);
+    // The local certificate is only a pointer. This queries ACR again and
+    // rejects tag movement, changed run output, or a digest mismatch.
+    acrBuild = readAndVerifyAcrBuild(buildResult, imageTag);
+  } else {
+    imageTag = createImmutableImageTag(buildSnapshot.sha256, releaseIdentity.deploymentNonce);
+    const taggedImage = `${PRODUCTION_REPOSITORY}:${imageTag}`;
+    log("building and pushing metrics image in ACR");
+    buildResult = JSON.parse(az([
       "acr",
       "build",
       "--resource-group",
@@ -1596,7 +1637,16 @@ async function executeProductionRelease(keyVaultContract, postgresTarget, buildS
       "json",
       buildSnapshot.path,
     ], { capture: true }));
-  const acrBuild = readAndVerifyAcrBuild(buildResult, imageTag);
+    acrBuild = readAndVerifyAcrBuild(buildResult, imageTag);
+    await writeDeploymentCertificate({
+      stateDirectory: DEPLOYMENT_RESUME_DIRECTORY,
+      sourceSha256: certification.sourceSha256,
+      dependencySha256: certification.dependencySha256,
+      preflightSucceededAt: certification.preflightSucceededAt,
+      acrBuild,
+    });
+    log("recorded content-addressed preflight and ACR certification for a safe --resume retry");
+  }
   log(`canonical immutable Docker build context SHA-256 ${buildSnapshot.sha256} (${buildSnapshot.entries} entries)`);
   const pinnedImage = `${ACR_NAME}.azurecr.io/${PRODUCTION_REPOSITORY}@${acrBuild.digest}`;
 
@@ -1693,7 +1743,7 @@ async function executeProductionRelease(keyVaultContract, postgresTarget, buildS
 }
 
 async function main() {
-  parseDeployArgs(process.argv.slice(2));
+  const args = parseDeployArgs(process.argv.slice(2));
   const keyVaultContract = validateDeploymentInputs();
   const deploymentNonce = randomUUID();
   const releaseIdentity = Object.freeze({
@@ -1706,7 +1756,21 @@ async function main() {
       materializeSnapshotDependencies(snapshotPath);
     },
     build: async ({ path: snapshotPath, sha256, entries }) => {
-      runDeploymentPreflight(snapshotPath);
+      const dependencySha256 = await computeDependencyTreeSha256(path.join(snapshotPath, "node_modules"));
+      const reusable = args.resume
+        ? await readReusableDeploymentCertificate({
+          stateDirectory: DEPLOYMENT_RESUME_DIRECTORY,
+          sourceSha256: sha256,
+          dependencySha256,
+        })
+        : null;
+      let preflightSucceededAt = reusable?.preflightSucceededAt;
+      if (reusable) {
+        log("exact source and materialized dependency certificate found; reusing immutable preflight and ACR checkpoints");
+      } else {
+        runDeploymentPreflight(snapshotPath);
+        preflightSucceededAt = new Date().toISOString();
+      }
       return withLongestQueryCollectorEnabled({
         operations: {
           preflight: () => reviewMonitoringWhatIfAndTarget(),
@@ -1717,7 +1781,12 @@ async function main() {
           path: snapshotPath,
           sha256,
           entries,
-        }, releaseIdentity),
+        }, releaseIdentity, {
+          sourceSha256: sha256,
+          dependencySha256,
+          preflightSucceededAt,
+          reusable,
+        }),
       });
     },
   });

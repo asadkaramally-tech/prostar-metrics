@@ -18,7 +18,7 @@ test("production image binds Next.js to every container interface", () => {
 test("Container Apps web container explicitly binds to every interface", () => {
   assert.match(
     metricsBicep,
-    /var webEnv = concat\(sharedEnv, \[\s*{\s*name: 'POSTGRES_POOL_MAX'\s*value: '10'\s*}\s*{\s*name: 'HOSTNAME'\s*value: '0\.0\.0\.0'\s*}\s*]\)/,
+    /var webEnv = concat\(sharedEnv, \[\s*{\s*name: 'POSTGRES_POOL_MAX'\s*value: '4'\s*}\s*{\s*name: 'HOSTNAME'\s*value: '0\.0\.0\.0'\s*}\s*]\)/,
     "metrics.bicep must append HOSTNAME=0.0.0.0 to the web environment",
   );
 
@@ -61,7 +61,7 @@ test("web and worker database pools use explicit bounded limits", () => {
   );
   assert.match(
     metricsBicep,
-    /var webEnv = concat\(sharedEnv, \[\s*{\s*name: 'POSTGRES_POOL_MAX'\s*value: '10'/,
-    "the web container must use the locked ten-connection ceiling",
+    /var webEnv = concat\(sharedEnv, \[\s*{\s*name: 'POSTGRES_POOL_MAX'\s*value: '4'/,
+    "the web container must use the connection-safe four-connection ceiling",
   );
 });

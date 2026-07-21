@@ -7,19 +7,33 @@ const emptyEnv = {};
 // 2026-07-18 13:00 America/Los_Angeles.
 const JULY_18 = new Date("2026-07-18T20:00:00Z");
 
-test("scheduled default walks the current Pacific month plus the prior month", () => {
+test("scheduled default uses bounded incremental mode and a seven-day hot window", () => {
   const args = parseArgs([], emptyEnv);
+  assert.equal(args.mode, "incremental");
+  assert.equal(args.hotWindowDays, 7);
   assert.equal(args.monthsBack, 1);
   assert.equal(args.rebuild, true);
+  // The helper remains the explicit full-month plan; default main no longer
+  // calls it during a scheduled incremental pass.
   assert.deepEqual(resolveMonths(args, JULY_18), ["2026-06-01", "2026-07-01"]);
 });
 
 test("single-month and backfill range modes resolve inclusive month lists", () => {
-  assert.deepEqual(resolveMonths(parseArgs(["--month", "2026-06"], emptyEnv), JULY_18), ["2026-06-01"]);
+  const month = parseArgs(["--month", "2026-06"], emptyEnv);
+  assert.equal(month.mode, "full-month");
+  assert.deepEqual(resolveMonths(month, JULY_18), ["2026-06-01"]);
   assert.deepEqual(
     resolveMonths(parseArgs(["--from", "2025-11", "--to", "2026-02"], emptyEnv), JULY_18),
     ["2025-11-01", "2025-12-01", "2026-01-01", "2026-02-01"],
   );
+});
+
+test("explicit full-month mode is retained for month sealing and backfills", () => {
+  const args = parseArgs(["--mode", "full-month", "--months-back", "2"], emptyEnv);
+  assert.equal(args.mode, "full-month");
+  assert.deepEqual(resolveMonths(args, JULY_18), ["2026-05-01", "2026-06-01", "2026-07-01"]);
+  assert.throws(() => parseArgs(["--mode", "unsafe"], emptyEnv), /--mode must be/);
+  assert.throws(() => parseArgs(["--hot-window-days", "32"], emptyEnv), /--hot-window-days/);
 });
 
 test("invalid month arguments fail closed", () => {

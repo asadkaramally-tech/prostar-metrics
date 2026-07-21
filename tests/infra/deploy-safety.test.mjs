@@ -1530,7 +1530,7 @@ test("production deploy completes monitoring and Key Vault preflight before buil
     source.indexOf("async function executeProductionRelease"),
     source.indexOf("async function main()"),
   );
-  const monitoringGate = releaseSource.indexOf("await deployAndVerifyMonitoringReceivers(postgresTarget);");
+  const monitoringGate = releaseSource.indexOf("await deployAndVerifyMonitoringReceivers(");
   const keyVaultGate = releaseSource.indexOf("verifyProductionKeyVaultPreflight(keyVaultContract);");
   const buildCall = releaseSource.indexOf('"acr",\n      "build"');
   const postgresGate = releaseSource.indexOf("runPostgresPredeployGate(connectionString, previousImage)");
@@ -1551,7 +1551,9 @@ test("production deploy completes monitoring and Key Vault preflight before buil
   assert.ok(monitoringDeploy < metricQuery && metricQuery < receiverVerification);
   assert.match(monitoringSource, /"test-notifications", "create"[\s\S]*"--no-wait"[\s\S]*"--output", "none"/);
   assert.doesNotMatch(source, /already-verified/);
-  assert.deepEqual(parseDeployArgs([]), {});
+  assert.deepEqual(parseDeployArgs([]), { resume: false });
+  assert.deepEqual(parseDeployArgs(["--resume"]), { resume: true });
+  assert.throws(() => parseDeployArgs(["--resume", "--resume"]), /Unknown deploy argument/);
   assert.throws(() => parseDeployArgs(["--already-verified"]), /Unknown deploy argument/);
   assert.throws(() => parseDeployArgs(["--anything"]), /Unknown deploy argument/);
   for (const contract of [
@@ -1570,6 +1572,9 @@ test("production deploy completes monitoring and Key Vault preflight before buil
   assert.ok(compatibilityCall >= 0 && compatibilityCall < postgresGate);
   assert.ok(migrationCall < deploymentCall);
   assert.match(source, /PostgreSQL migration and two-session concurrency predeploy gate failed/);
+  assert.match(source, /re-verifying reusable certified ACR image/);
+  assert.match(source, /computeDependencyTreeSha256/);
+  assert.match(source, /skipping the no-op monitoring ARM deployment/);
 });
 
 const TEST_SUBSCRIPTION_ID = "11111111-1111-4111-8111-111111111111";

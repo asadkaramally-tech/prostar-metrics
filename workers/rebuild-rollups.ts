@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   claimNextRollupRebuild,
   enqueueRollupRebuild,
@@ -7,6 +8,11 @@ import {
 } from "@/lib/store/read-model-rebuilds";
 import type { RollupScope } from "@/lib/store/rollups";
 import { enqueueCurrentPacificCommissionRebuild as enqueueNightlyCommission } from "@/lib/store/commission-cadence";
+import {
+  acquireWorkerExecutionLease,
+  heartbeatWorkerExecutionLease,
+  releaseWorkerExecutionLease,
+} from "@/lib/store/worker-execution-leases";
 
 type Args = {
   scope?: RollupScope;
@@ -17,10 +23,27 @@ type Args = {
   localHour: number;
 };
 
-const workerId = `metrics-rollup-${process.pid}`;
+const workerId = `metrics-rollup-${process.pid}-${randomUUID()}`;
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+
+  const lease = {
+    lockKey: args.nightlyCommissions ? "rollups:nightly-commissions" : `rollups:${args.scope ?? "drain"}`,
+    owner: workerId,
+  };
+  if (!await acquireWorkerExecutionLease(lease)) {
+    console.log(JSON.stringify({ workerId, skipped: true, reason: "prior execution is still active", lease: lease.lockKey }, null, 2));
+    return;
+  }
+  let leaseHeartbeatError: unknown;
+  const leaseHeartbeat = setInterval(() => {
+    void heartbeatWorkerExecutionLease(lease).catch((error) => {
+      leaseHeartbeatError = error;
+    });
+  }, 60_000);
+
+  try {
 
   let commissionCadence = null;
   if (args.nightlyCommissions) {
@@ -43,6 +66,7 @@ async function main() {
   const failures: Array<{ jobId: number; metricFamily: RollupScope; periodStart: string; error: string }> = [];
   const attemptedJobIds: number[] = [];
   for (let index = 0; index < args.limit; index += 1) {
+    if (leaseHeartbeatError) throw leaseHeartbeatError;
     const job = await claimNextRollupRebuild(
       workerId,
       args.nightlyCommissions ? "commissions" : args.scope,
@@ -87,6 +111,12 @@ async function main() {
   }, null, 2));
   if (failures.length > 0) {
     process.exitCode = 1;
+  }
+  } finally {
+    clearInterval(leaseHeartbeat);
+    await releaseWorkerExecutionLease(lease).catch((error) => {
+      console.error(JSON.stringify({ workerId, lease: lease.lockKey, releaseError: error instanceof Error ? error.message : String(error) }));
+    });
   }
 }
 

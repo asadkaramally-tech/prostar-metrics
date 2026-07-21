@@ -495,27 +495,25 @@ test("CSV export covers the filtered cohort with the drilldown fields", () => {
   assert.equal(first[12], "54.3");
 });
 
-test("fetchAllCompletedJobs walks every real page of the paginated payload", async () => {
+test("fetchAllCompletedJobs uses one narrow full-roster request", async () => {
   const model = buildModel();
   const allRows = model.selected.records;
   model.selected.records = allRows.slice(0, 3);
   model.drilldownPagination = { page: 1, pageSize: 3, total: 7, totalPages: 3 };
 
-  const requested: number[] = [];
+  const requested: string[] = [];
   const rows = await fetchAllCompletedJobs(model, async (input: string, init?: RequestInit) => {
     const url = new URL(input, "https://dashboard.test");
-    assert.equal(url.pathname, "/api/jobs");
+    assert.equal(url.pathname, "/api/jobs/records");
     assert.equal(url.searchParams.get("month"), "2026-06");
     assert.equal(init?.cache, "no-store");
-    const page = Number(url.searchParams.get("page"));
-    requested.push(page);
+    requested.push(url.pathname);
     return Response.json({
-      ...model,
-      selected: { ...model.selected, records: allRows.slice((page - 1) * 3, page * 3) },
-      drilldownPagination: { page, pageSize: 3, total: 7, totalPages: 3 },
+      records: allRows,
+      total: 7,
     });
   });
-  assert.deepEqual(requested, [1, 2, 3]);
+  assert.deepEqual(requested, ["/api/jobs/records"]);
   assert.equal(rows.length, 7);
 
   await assert.rejects(

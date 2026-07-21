@@ -1398,28 +1398,23 @@ function ProfDrawerBody({
 export type JobsFetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
 /**
- * Assembles the full month cohort by walking the real paginated /api/jobs
- * payload (unfiltered — table filters are applied client-side so they change
- * only the drilldown cohort, never the page's read model). Throws instead of
- * returning a partial cohort.
+ * Loads the full month roster through the narrow records endpoint. Table
+ * filters remain client-side so they never alter the dashboard read model.
  */
 export async function fetchAllCompletedJobs(
   model: JobDashboardReadModel,
   fetcher: JobsFetcher = fetch,
 ): Promise<JobDrilldownRow[]> {
-  const { total, totalPages } = model.drilldownPagination;
+  const { total } = model.drilldownPagination;
   if (model.selected.records.length >= total) return model.selected.records;
-  const rows: JobDrilldownRow[] = [];
-  for (let page = 1; page <= totalPages; page += 1) {
-    const search = new URLSearchParams({ month: model.selectedMonth, page: String(page) });
-    const response = await fetcher(`/api/jobs?${search.toString()}`, { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`The complete job list could not be loaded (page ${page} failed).`);
-    }
-    const data = (await response.json()) as JobDashboardReadModel;
-    rows.push(...data.selected.records);
+  const search = new URLSearchParams({ month: model.selectedMonth });
+  const response = await fetcher(`/api/jobs/records?${search.toString()}`, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("The complete job list could not be loaded.");
   }
-  if (rows.length !== total) {
+  const data = (await response.json()) as { records?: JobDrilldownRow[]; total?: number };
+  const rows = data.records;
+  if (!Array.isArray(rows) || rows.length !== total || data.total !== total) {
     throw new Error("The complete job list could not be loaded. No file was downloaded.");
   }
   return rows;
@@ -1522,33 +1517,40 @@ export function pageList(totalPages: number, page: number): Array<number | "gap"
 
 export type FullCohort = { rows: JobDrilldownRow[]; complete: boolean; error: string | null };
 
-/** Full-cohort loader shared by the drilldown table and the recurring labor
- *  mode. Kicks off the paginated walk once, on the client. */
+/** Full-cohort loader shared by the drilldown table and recurring labor.
+ * It makes one narrow request instead of re-fetching the dashboard per page. */
 function useFullCohort(model: JobDashboardReadModel): FullCohort {
   const initialComplete = model.selected.records.length >= model.drilldownPagination.total;
-  const [state, setState] = useState<{ rows: JobDrilldownRow[] | null; error: string | null }>(() => ({
+  const [state, setState] = useState<{ month: string; rows: JobDrilldownRow[] | null; error: string | null }>(() => ({
+    month: model.selectedMonth,
     rows: initialComplete ? model.selected.records : null,
     error: null,
   }));
   useEffect(() => {
-    if (initialComplete) return;
+    if (model.selected.records.length >= model.drilldownPagination.total) {
+      return;
+    }
     let cancelled = false;
     fetchAllCompletedJobs(model)
       .then((rows) => {
-        if (!cancelled) setState({ rows, error: null });
+        if (!cancelled) setState({ month: model.selectedMonth, rows, error: null });
       })
       .catch((error: unknown) => {
-        if (!cancelled) setState({ rows: null, error: error instanceof Error ? error.message : "Load failed." });
+        if (!cancelled) setState({
+          month: model.selectedMonth,
+          rows: null,
+          error: error instanceof Error ? error.message : "Load failed.",
+        });
       });
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model.selectedMonth]);
+  }, [model, model.drilldownPagination.total, model.selected.records]);
+  const currentState = state.month === model.selectedMonth ? state : { rows: null, error: null };
   return {
-    rows: state.rows ?? model.selected.records,
-    complete: state.rows !== null,
-    error: state.error,
+    rows: currentState.rows ?? model.selected.records,
+    complete: currentState.rows !== null || initialComplete,
+    error: currentState.error,
   };
 }
 

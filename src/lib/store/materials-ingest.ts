@@ -16,6 +16,64 @@ export type MaterialsIngestTransaction = <T>(
 
 export type CatalogGroupCacheRow = CatalogGroupLookup & { fetchedAt: string };
 
+export type SourceChangeCursor = {
+  dateLogged: string;
+  logId: number;
+};
+
+/**
+ * Jobs from the durable job-log mirror that can affect an already-mirrored,
+ * older materials job.  We deliberately require an existing materials row:
+ * a job-log event alone cannot prove that an older job was completed and in
+ * scope for materials.  The periodic full-month walk owns that discovery.
+ */
+export async function listChangedOlderMaterialJobs(
+  params: {
+    after: SourceChangeCursor | null;
+    through: SourceChangeCursor;
+    olderThan: string;
+  },
+  query: MaterialsIngestQuery = queryPostgres,
+): Promise<Array<{ jobId: number; previousPeriodStarts: string[] }>> {
+  const result = await query<{
+    job_id: string;
+    previous_period_starts: string[] | null;
+  }>(
+    `select min(lines.job_id)::text as job_id,
+            array_agg(distinct lines.period_start::text order by lines.period_start::text) as previous_period_starts
+       from metrics.source_change_events event
+       join metrics.metrics_material_lines lines
+         on event.source_entity_id = lines.job_id::text
+      where event.source_family = 'job_logs'
+        and event.source_entity_type = 'job'
+        and event.source_entity_id ~ '^[1-9][0-9]*$'
+        and lines.completed_date < $1::date
+        and (event.date_logged, event.log_id) <= ($2::timestamptz, $3::bigint)
+        and ($4::timestamptz is null or (event.date_logged, event.log_id) > ($4::timestamptz, $5::bigint))
+      group by event.source_entity_id
+      order by min(lines.job_id)`,
+    [
+      params.olderThan,
+      params.through.dateLogged,
+      params.through.logId,
+      params.after?.dateLogged ?? null,
+      params.after?.logId ?? null,
+    ],
+  );
+  return result.rows.map((row) => ({
+    jobId: Number(row.job_id),
+    previousPeriodStarts: row.previous_period_starts ?? [],
+  })).filter((row) => Number.isSafeInteger(row.jobId) && row.jobId > 0);
+}
+
+/** Remove an older job which is no longer completed at source. */
+export async function removeJobMaterialLines(
+  jobId: number,
+  query: MaterialsIngestQuery = queryPostgres,
+): Promise<void> {
+  await query(`delete from metrics.metrics_material_lines where job_id = $1`, [jobId]);
+}
+
 /**
  * Replace one completed job's material lines atomically. A job carries exactly
  * one CompletedDate, so all of its previous lines (any period) are superseded

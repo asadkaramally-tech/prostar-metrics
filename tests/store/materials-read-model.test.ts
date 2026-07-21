@@ -5,6 +5,8 @@ import { PGlite } from "@electric-sql/pglite";
 import type { PostgresQuery } from "../../src/lib/store/postgres";
 import {
   finishMaterialsMonthWalk,
+  listChangedOlderMaterialJobs,
+  removeJobMaterialLines,
   recordMaterialsMonthWalkFailure,
   replaceJobMaterialLines,
   upsertCatalogGroups,
@@ -180,6 +182,59 @@ test("sealing a month walk removes lines the walk did not observe", async () => 
       `select status, job_count from metrics.materials_month_walks where period_start = '2026-07-01'`,
     );
     assert.equal(walk.rows[0]?.status, "complete");
+  } finally {
+    await db.close();
+  }
+});
+
+test("incremental materials selects only durable job-log changes for already-mirrored older jobs", async () => {
+  const db = await migratedDatabase();
+  const query = pgliteQuery(db);
+  const transaction = pgliteTransaction(db);
+  try {
+    await replaceJobMaterialLines({
+      jobId: 8101,
+      periodStart: "2026-05-01",
+      completedDate: "2026-05-20",
+      lines: [walkedLine()],
+      fetchedAt: new Date(),
+    }, transaction);
+    await replaceJobMaterialLines({
+      jobId: 8102,
+      periodStart: "2026-07-01",
+      completedDate: "2026-07-17",
+      lines: [walkedLine({ lineId: 502 })],
+      fetchedAt: new Date(),
+    }, transaction);
+    await query(
+      `insert into metrics.source_change_events (
+         source_family, log_id, date_logged, source_entity_type, source_entity_id, payload, payload_hash
+       ) values
+         ('job_logs', 14, '2026-07-18T01:00:00Z', 'job', '8101', '{}'::jsonb, 'older'),
+         ('job_logs', 15, '2026-07-18T01:01:00Z', 'job', '8102', '{}'::jsonb, 'hot'),
+         ('job_logs', 16, '2026-07-18T01:02:00Z', 'job', null, '{}'::jsonb, 'unmapped')`,
+    );
+
+    const changed = await listChangedOlderMaterialJobs({
+      after: { dateLogged: "2026-07-18T00:00:00Z", logId: 13 },
+      through: { dateLogged: "2026-07-18T01:02:00Z", logId: 16 },
+      olderThan: "2026-07-12",
+    }, query);
+    assert.deepEqual(changed, [{ jobId: 8101, previousPeriodStarts: ["2026-05-01"] }]);
+
+    // The strict tuple cursor prevents a successful run from refreshing the
+    // same older job again on the next bounded scheduled pass.
+    assert.deepEqual(await listChangedOlderMaterialJobs({
+      after: { dateLogged: "2026-07-18T01:00:00Z", logId: 14 },
+      through: { dateLogged: "2026-07-18T01:02:00Z", logId: 16 },
+      olderThan: "2026-07-12",
+    }, query), []);
+
+    await removeJobMaterialLines(8101, query);
+    const retained = await query<{ job_id: string }>(
+      `select job_id::text from metrics.metrics_material_lines order by job_id`,
+    );
+    assert.deepEqual(retained.rows.map((row) => row.job_id), ["8102"]);
   } finally {
     await db.close();
   }

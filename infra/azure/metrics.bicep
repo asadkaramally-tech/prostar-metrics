@@ -475,7 +475,7 @@ var commonEnv = concat(sharedEnv, [
 var webEnv = concat(sharedEnv, [
   {
     name: 'POSTGRES_POOL_MAX'
-    value: '10'
+    value: '4'
   }
   {
     name: 'HOSTNAME'
@@ -534,8 +534,8 @@ var scheduledSourceJobs = [
   }
   {
     name: 'job-psm-candidate-drain'
-    cron: '2,17,32,47 * * * *'
-    args: ['run', 'ingest:worker', '--', '--request-budget', '250', '--drain-limit', '100']
+    cron: '2,32 * * * *'
+    args: ['run', 'ingest:worker', '--', '--request-budget', '250', '--drain-limit', '50']
   }
   {
     name: 'job-psm-timesheets-hourly'
@@ -549,13 +549,13 @@ var scheduledSourceJobs = [
   }
   {
     name: 'job-psm-employees-daily'
-    cron: '0 * * * *'
+    cron: '0 9,10 * * *'
     args: ['run', 'ingest:worker', '--', '--entity', 'employees', '--local-hour', '2', '--request-budget', '250', '--drain-limit', '20']
   }
   {
     name: 'job-psm-rollup-drain'
-    cron: '7,22,37,52 * * * *'
-    args: ['run', 'rollups:worker', '--', '--limit', '50']
+    cron: '12,42 * * * *'
+    args: ['run', 'rollups:worker', '--', '--limit', '30']
   }
   {
     name: 'job-psm-backfill-hourly'
@@ -579,13 +579,13 @@ var scheduledSourceJobs = [
   }
   {
     name: 'job-psm-commissions-nightly'
-    cron: '0 * * * *'
+    cron: '0 10,11 * * *'
     args: ['run', 'rollups:worker', '--', '--nightly-commissions', '--local-hour', '3', '--limit', '1']
   }
   {
     name: 'job-psm-materials'
     cron: '40 1,7,13,19 * * *'
-    args: ['run', 'materials:worker', '--', '--months-back', '1', '--request-limit', '8000']
+    args: ['run', 'materials:worker', '--', '--mode', 'incremental', '--hot-window-days', '7', '--request-limit', '8000']
   }
 ]
 
@@ -778,7 +778,7 @@ resource ingestionJob 'Microsoft.App/jobs@2023-05-01' = {
             '--request-budget'
             '250'
             '--lookback-days'
-            '90'
+            '7'
             '--drain-limit'
             '100'
           ]
@@ -839,7 +839,7 @@ resource jobsIngestionJob 'Microsoft.App/jobs@2023-05-01' = {
             '--request-budget'
             '250'
             '--lookback-days'
-            '90'
+            '7'
             '--drain-limit'
             '100'
           ]

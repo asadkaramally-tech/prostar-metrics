@@ -58,6 +58,30 @@ npm run deploy:prod
 unset AZURE_POSTGRES_MIGRATION_CONNECTION_STRING
 ```
 
+If a release fails after its local gates and ACR build have completed, retry the
+same checkout with:
+
+```bash
+npm run deploy:prod -- --resume
+```
+
+`--resume` is deliberately narrow. It may reuse only the successful local
+preflight and an ACR build record stored under `.work/deploy-prod-resume/`.
+The record is content-addressed by the immutable Docker context and a complete
+hash of the materialized `node_modules` tree. Any source, lockfile, installed
+dependency bytes, modes, or symlink-target change is a cache miss and runs the
+full certification and a fresh ACR build. The cached ACR run, immutable tag,
+and digest are queried and verified again before use; a malformed, moved, or
+missing record fails closed rather than falling back to it.
+
+Every mutable operation still runs on a resumed release: production Key Vault
+and target checks, monitoring what-if and live notification/metric evidence,
+deployment what-if, migration compatibility and application, temporary
+firewall cleanup, deploy/rollback, health, traffic, and final live provenance.
+When monitoring what-if proves every managed resource is already `NoChange`,
+the no-op monitoring ARM create is skipped, but its live metric and owner
+notification checks still run.
+
 For a fresh clone, run the same commands from the clone root and point `AZURE_CONFIG_DIR` at a writable, authenticated Azure CLI profile. The production migration connection string is the only secret the release script requires directly from the workstation environment. Runtime database, Simpro, and Microsoft provider secrets remain in `kv-prostar-metrics-prod` and are referenced by managed identity; they are not copied into the repository or image.
 
 ## What The Command Does
