@@ -80,6 +80,12 @@ After the job exists once, this ordering issue never recurs.
    on macOS, then prepend `/opt/homebrew/opt/postgresql@17/bin` to PATH; on
    Linux install the PostgreSQL 17 client). The compatibility gate intentionally
    rejects other major versions.
+5. **A running Docker engine with `linux/amd64` support and ACR authentication**
+   for the prior-production-image compatibility gate. On an Apple Silicon Mac,
+   one lightweight option is `brew install docker colima`, then
+   `colima start --vm-type vz --vz-rosetta`. Before deploying, run
+   `az acr login --name acrprostardispatchprod` and verify `docker version`
+   reports both a client and server.
 
 ## The deploy command
 
