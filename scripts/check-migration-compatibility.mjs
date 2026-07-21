@@ -8,6 +8,7 @@ import pg from "pg";
 import {
   assertCompatibilityDatabaseName,
   backwardCompatibilityViolations,
+  classifyStrictlyAdditiveMigration,
   cleanupNamedContainerUntilStable,
   createActiveChildRegistry,
   createProbeContainerName,
@@ -29,6 +30,7 @@ const ROOT = resolve(import.meta.dirname, "..");
 const migrationDirectory = resolve(ROOT, "infra/db/migrations");
 const connectionString = process.env.AZURE_POSTGRES_CONNECTION_STRING;
 const previousImage = process.env.PRIOR_PRODUCTION_IMAGE;
+const compatibilityMode = process.env.MIGRATION_COMPATIBILITY_MODE ?? "routine";
 const commandTimeoutMs = boundedTimeoutFromEnv("MIGRATION_COMPATIBILITY_COMMAND_TIMEOUT_MS", 180_000, {
   min: 30_000,
   max: 30 * 60_000,
@@ -43,6 +45,9 @@ const childRegistry = createActiveChildRegistry();
 
 if (!connectionString) throw new Error("AZURE_POSTGRES_CONNECTION_STRING is required");
 if (!previousImage) throw new Error("PRIOR_PRODUCTION_IMAGE is required");
+if (!["routine", "full"].includes(compatibilityMode)) {
+  throw new Error("MIGRATION_COMPATIBILITY_MODE must be routine or full");
+}
 
 let sourceUrl;
 let sourceDatabase;
@@ -61,10 +66,6 @@ const dumpDirectory = await mkdtemp(resolve(tmpdir(), "metrics-compatibility-"))
 const dumpPath = resolve(dumpDirectory, "baseline.dump");
 
 try {
-  await assertRequiredTool("pg_dump", ["--version"], /pg_dump \(PostgreSQL\) 17\./);
-  await assertRequiredTool("pg_restore", ["--version"], /pg_restore \(PostgreSQL\) 17\./);
-  await assertRequiredTool("docker", ["version", "--format", "{{.Client.Version}}"], /\d+\.\d+/);
-
   const files = (await readdir(migrationDirectory)).filter((file) => file.endsWith(".sql")).sort();
   const applied = await loadAppliedMigrationBaseline();
   const pending = files.filter((file) => !applied.has(file));
@@ -79,16 +80,26 @@ try {
     throw new Error(`Pending migrations are not additive/backward-compatible:\n- ${violations.join("\n- ")}`);
   }
 
-  // This gate exists to prove that PENDING migrations stay additive for the
-  // prior production image. With an empty pending set there is no claim to
-  // test: materializing a full database clone would apply zero migrations and
-  // assert nothing. Skip the clone instead of dumping the whole database to
-  // verify an empty list. Any pending migration still takes the full probe.
+  const classifications = pendingSql.map(({ filename, sql }) => classifyStrictlyAdditiveMigration(filename, sql));
+  const routineAdditive = classifications.every(({ additive }) => additive);
+  // A routine release avoids the clone only for a deliberately tiny allowlist
+  // of schema additions. Static compatibility alone is not sufficient: every
+  // non-additive or unknown statement remains on the full executable path.
   if (pending.length === 0) {
     console.log(
       `No pending migrations against the live baseline; prior-image compatibility for ${previousImage} is vacuously satisfied.`,
     );
+  } else if (compatibilityMode === "routine" && routineAdditive) {
+    console.log(`Accepted ${pending.length} strictly additive pending migration(s) without a compatibility clone.`);
+  } else if (compatibilityMode === "routine") {
+    const reasons = classifications
+      .map((classification, index) => classification.additive ? null : `${pendingSql[index].filename}: ${classification.reason}`)
+      .filter(Boolean);
+    throw new Error(`Routine release requires --full for non-additive or unknown pending migration SQL:\n- ${reasons.join("\n- ")}`);
   } else {
+    await assertRequiredTool("pg_dump", ["--version"], /pg_dump \(PostgreSQL\) 17\./);
+    await assertRequiredTool("pg_restore", ["--version"], /pg_restore \(PostgreSQL\) 17\./);
+    await assertRequiredTool("docker", ["version", "--format", "{{.Client.Version}}"], /\d+\.\d+/);
     const adminUrl = databaseUrl("postgres");
     const databaseOperations = createDatabaseOperations(adminUrl);
     const result = await runExecutableMigrationCompatibility({
@@ -101,9 +112,7 @@ try {
         cleanupArtifacts,
       },
     });
-    console.log(
-      `Accepted ${result.appliedMigrations.length} pending migration(s) after actual prior-image application and worker probes for ${previousImage}.`,
-    );
+    console.log(`Accepted ${result.appliedMigrations.length} pending migration(s) after actual prior-image application and worker probes for ${previousImage}.`);
   }
 } catch (error) {
   let artifactCleanupError;

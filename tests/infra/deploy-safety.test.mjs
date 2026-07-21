@@ -35,6 +35,7 @@ import {
 } from "../../scripts/deploy-prod.mjs";
 import {
   backwardCompatibilityViolations,
+  classifyStrictlyAdditiveMigration,
   priorImageProbeDockerArgs,
   priorImageProbeEnvironment,
   runExecutableMigrationCompatibility,
@@ -522,7 +523,17 @@ test("pending migration compatibility gate rejects contract/destructive SQL", ()
     "031_guarded_constraint.sql",
     "update metrics.jobs set total = 0 where total is null; alter table metrics.jobs alter column total set not null;",
   ), []);
-  assert.match(source, /runMigrationCompatibilityGate\(connectionString, previousImage\)/);
+  assert.equal(classifyStrictlyAdditiveMigration(
+    "030_additive.sql",
+    "create schema if not exists metrics; create table if not exists metrics.new_evidence (id bigint primary key); create index if not exists new_evidence_idx on metrics.new_evidence (id); comment on table metrics.new_evidence is 'semicolon; remains inside this SQL string';",
+  ).additive, true);
+  for (const sql of [
+    "alter table metrics.jobs add column if not exists extra text;",
+    "update metrics.jobs set total = 0;",
+    "create or replace view metrics.current_jobs as select * from metrics.jobs;",
+    "create table metrics.copy as select * from metrics.jobs;",
+  ]) assert.equal(classifyStrictlyAdditiveMigration("030_full.sql", sql).additive, false);
+  assert.match(source, /runMigrationCompatibilityGate\(connectionString, previousImage, certification\.mode\)/);
 });
 
 test("actual migrations 029 through 036 pass static defense for a migration-028 baseline", async () => {
@@ -534,6 +545,14 @@ test("actual migrations 029 through 036 pass static defense for a migration-028 
     const sql = await readFile(new URL(filename, directory), "utf8");
     assert.deepEqual(backwardCompatibilityViolations(filename, sql), [], filename);
   }
+});
+
+test("worker lease migration is strictly additive despite a semicolon in its COMMENT string", async () => {
+  const sql = await readFile(new URL("../../infra/db/migrations/046_worker_execution_leases.sql", import.meta.url), "utf8");
+  assert.deepEqual(classifyStrictlyAdditiveMigration("046_worker_execution_leases.sql", sql), {
+    additive: true,
+    statements: 2,
+  });
 });
 
 test("executable prior-image compatibility validates all probes and always removes its clone", async () => {
@@ -1525,22 +1544,22 @@ test("release health requires the candidate revision itself at 100 percent traff
   }
 });
 
-test("production deploy completes monitoring and Key Vault preflight before build or migration", () => {
+test("routine deploy remains lean while --full retains exhaustive preflight and monitoring", () => {
   const releaseSource = source.slice(
     source.indexOf("async function executeProductionRelease"),
     source.indexOf("async function main()"),
   );
-  const monitoringGate = releaseSource.indexOf("await deployAndVerifyMonitoringReceivers(");
   const keyVaultGate = releaseSource.indexOf("verifyProductionKeyVaultPreflight(keyVaultContract);");
   const buildCall = releaseSource.indexOf('"acr",\n      "build"');
   const postgresGate = releaseSource.indexOf("runPostgresPredeployGate(connectionString, previousImage)");
-  const compatibilityCall = releaseSource.indexOf("runMigrationCompatibilityGate(connectionString, previousImage)");
+  const compatibilityCall = releaseSource.indexOf("runMigrationCompatibilityGate(connectionString, previousImage, certification.mode)");
   const migrationCall = releaseSource.indexOf("applyTrackedMigrations(connectionString, previousImage)");
   const deploymentCall = releaseSource.indexOf("finalizeCandidateDeployment({");
-  assert.ok(monitoringGate >= 0 && monitoringGate < keyVaultGate);
   assert.ok(keyVaultGate < buildCall && keyVaultGate < migrationCall);
   assert.match(source, /preflight: \(\) => reviewMonitoringWhatIfAndTarget\(\)/);
-  assert.match(source, /run: \(\{ preflight \}\) => executeProductionRelease\(keyVaultContract, preflight, \{/);
+  assert.match(source, /if \(args\.mode === "routine"\)/);
+  assert.match(source, /readRoutineMonitoringEvidence\(\)/);
+  assert.match(source, /else if \(args\.mode === "full"\) \{\s*runDeploymentPreflight/s);
   const monitoringSource = source.slice(
     source.indexOf("async function deployAndVerifyMonitoringReceivers"),
     source.indexOf("function versionlessSecretUrl"),
@@ -1551,8 +1570,10 @@ test("production deploy completes monitoring and Key Vault preflight before buil
   assert.ok(monitoringDeploy < metricQuery && metricQuery < receiverVerification);
   assert.match(monitoringSource, /"test-notifications", "create"[\s\S]*"--no-wait"[\s\S]*"--output", "none"/);
   assert.doesNotMatch(source, /already-verified/);
-  assert.deepEqual(parseDeployArgs([]), { resume: false });
-  assert.deepEqual(parseDeployArgs(["--resume"]), { resume: true });
+  assert.deepEqual(parseDeployArgs([]), { mode: "routine" });
+  assert.deepEqual(parseDeployArgs(["--resume"]), { mode: "routine" });
+  assert.deepEqual(parseDeployArgs(["--full"]), { mode: "full" });
+  assert.throws(() => parseDeployArgs(["--full", "--resume"]), /Unknown deploy argument/);
   assert.throws(() => parseDeployArgs(["--resume", "--resume"]), /Unknown deploy argument/);
   assert.throws(() => parseDeployArgs(["--already-verified"]), /Unknown deploy argument/);
   assert.throws(() => parseDeployArgs(["--anything"]), /Unknown deploy argument/);
@@ -1574,7 +1595,7 @@ test("production deploy completes monitoring and Key Vault preflight before buil
   assert.match(source, /PostgreSQL migration and two-session concurrency predeploy gate failed/);
   assert.match(source, /re-verifying reusable certified ACR image/);
   assert.match(source, /computeDependencyTreeSha256/);
-  assert.match(source, /skipping the no-op monitoring ARM deployment/);
+  assert.match(source, /Routine deployment requires existing full-release monitoring evidence/);
 });
 
 const TEST_SUBSCRIPTION_ID = "11111111-1111-4111-8111-111111111111";

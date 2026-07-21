@@ -31,10 +31,11 @@ test("deployment resume certificates are content-addressed by source and materia
 
 test("deployment resume rejects malformed, mismatched, and unbound ACR certificates", () => {
   const valid = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     certificationKey: createDeploymentCertificationKey({ sourceSha256, dependencySha256 }),
     sourceSha256,
     dependencySha256,
+    certificationMode: "routine",
     preflightSucceededAt: "2026-07-20T11:00:00.000Z",
     acrBuild,
   };
@@ -51,6 +52,7 @@ test("deployment resume persists only an exact certificate and ignores corrupted
       stateDirectory: root,
       sourceSha256,
       dependencySha256,
+      certificationMode: "routine",
       preflightSucceededAt: "2026-07-20T11:00:00.000Z",
       acrBuild,
     });

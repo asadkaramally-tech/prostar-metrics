@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { chmod, lstat, mkdir, readFile, readdir, readlink, rename, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve, sep } from "node:path";
 
-export const DEPLOYMENT_RESUME_SCHEMA_VERSION = 1;
+export const DEPLOYMENT_RESUME_SCHEMA_VERSION = 2;
 const sha256Pattern = /^[a-f0-9]{64}$/;
 const imageDigestPattern = /^sha256:[a-f0-9]{64}$/;
 const imageTagPattern = /^deploy-[a-f0-9]{16}-[0-9a-f-]{36}$/;
@@ -72,13 +72,14 @@ export async function computeDependencyTreeSha256(dependencyRoot) {
 
 export function validateDeploymentResumeRecord(record, { sourceSha256, dependencySha256 }) {
   const certificationKey = createDeploymentCertificationKey({ sourceSha256, dependencySha256 });
-  const keys = ["schemaVersion", "certificationKey", "sourceSha256", "dependencySha256", "preflightSucceededAt", "acrBuild"];
+  const keys = ["schemaVersion", "certificationKey", "sourceSha256", "dependencySha256", "certificationMode", "preflightSucceededAt", "acrBuild"];
   if (!record || typeof record !== "object" || Array.isArray(record)
     || Object.keys(record).some((key) => !keys.includes(key))) return null;
   if (record.schemaVersion !== DEPLOYMENT_RESUME_SCHEMA_VERSION
     || record.certificationKey !== certificationKey
     || record.sourceSha256 !== sourceSha256
     || record.dependencySha256 !== dependencySha256
+    || !["routine", "full"].includes(record.certificationMode)
     || !Number.isFinite(Date.parse(record.preflightSucceededAt ?? ""))) return null;
   const build = record.acrBuild;
   if (!build || typeof build !== "object" || Array.isArray(build)
@@ -93,6 +94,7 @@ export function validateDeploymentResumeRecord(record, { sourceSha256, dependenc
     certificationKey,
     sourceSha256,
     dependencySha256,
+    certificationMode: record.certificationMode,
     preflightSucceededAt: new Date(buildTimestamp(record.preflightSucceededAt)).toISOString(),
     acrBuild: Object.freeze({
       runId: build.runId,
@@ -121,13 +123,14 @@ export async function readReusableDeploymentCertificate({ stateDirectory, source
   return validateDeploymentResumeRecord(document, { sourceSha256, dependencySha256 });
 }
 
-export async function writeDeploymentCertificate({ stateDirectory, sourceSha256, dependencySha256, preflightSucceededAt, acrBuild }) {
+export async function writeDeploymentCertificate({ stateDirectory, sourceSha256, dependencySha256, certificationMode, preflightSucceededAt, acrBuild }) {
   const certificationKey = createDeploymentCertificationKey({ sourceSha256, dependencySha256 });
   const record = validateDeploymentResumeRecord({
     schemaVersion: DEPLOYMENT_RESUME_SCHEMA_VERSION,
     certificationKey,
     sourceSha256,
     dependencySha256,
+    certificationMode,
     preflightSucceededAt,
     acrBuild,
   }, { sourceSha256, dependencySha256 });

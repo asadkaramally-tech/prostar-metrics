@@ -58,29 +58,45 @@ npm run deploy:prod
 unset AZURE_POSTGRES_MIGRATION_CONNECTION_STRING
 ```
 
-If a release fails after its local gates and ACR build have completed, retry the
-same checkout with:
+Routine releases use the proportional default:
 
 ```bash
-npm run deploy:prod -- --resume
+npm run deploy:prod
 ```
 
-`--resume` is deliberately narrow. It may reuse only the successful local
-preflight and an ACR build record stored under `.work/deploy-prod-resume/`.
-The record is content-addressed by the immutable Docker context and a complete
-hash of the materialized `node_modules` tree. Any source, lockfile, installed
-dependency bytes, modes, or symlink-target change is a cache miss and runs the
-full certification and a fresh ACR build. The cached ACR run, immutable tag,
-and digest are queried and verified again before use; a malformed, moved, or
-missing record fails closed rather than falling back to it.
+It does not repeat the workstation test/lint/build suite, monitoring ARM
+deployment, or monitoring metric/notification exercise. It retains the exact
+production app-and-jobs what-if, Key Vault and target checks, ACR digest/run
+provenance, strictly-classified hash-tracked migrations, firewall reconciliation, rollback,
+database health, Easy Auth, and page/API smoke verification. Routine mode uses
+the prior full-release monitoring evidence unchanged and refuses to proceed if
+that evidence is absent or its hash no longer verifies.
 
-Every mutable operation still runs on a resumed release: production Key Vault
-and target checks, monitoring what-if and live notification/metric evidence,
-deployment what-if, migration compatibility and application, temporary
-firewall cleanup, deploy/rollback, health, traffic, and final live provenance.
-When monitoring what-if proves every managed resource is already `NoChange`,
-the no-op monitoring ARM create is skipped, but its live metric and owner
-notification checks still run.
+Use the exhaustive release path when changing monitoring/infra, before a new
+release train, or when routine mode asks for it:
+
+```bash
+npm run deploy:prod -- --full
+```
+
+`--full` runs the workstation test/lint/build suite, monitoring what-if and
+ARM deployment, live metric sampling, owner notification exercise, and the
+prior-image compatibility clone plus migrations-twice/two-session concurrency
+gate for every non-empty migration set.
+
+Routine migration compatibility is intentionally strict: it skips the costly
+prior-image clone only for a small allowlist of create-schema, create-table,
+create-index, and comment-only SQL. Any data write, view/function replacement,
+constraint or column alteration, unknown SQL, or malformed classification
+requires an explicit `--full` clone/probe. The optional legacy `--resume`
+spelling is accepted as routine mode.
+
+A full release records a content-addressed local preflight/ACR certificate
+under `.work/deploy-prod-resume/`. It is keyed by the immutable Docker context
+and a complete hash of the materialized `node_modules` tree. Routine mode may
+reuse that image only after querying ACR again and verifying the run, immutable
+tag, and digest; source, lockfile, dependency bytes, modes, or symlink-target
+drift is a cache miss.
 
 For a fresh clone, run the same commands from the clone root and point `AZURE_CONFIG_DIR` at a writable, authenticated Azure CLI profile. The production migration connection string is the only secret the release script requires directly from the workstation environment. Runtime database, Simpro, and Microsoft provider secrets remain in `kv-prostar-metrics-prod` and are referenced by managed identity; they are not copied into the repository or image.
 
