@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MonthlySalesColumns, type MonthlySalesPoint } from "@/components/charts/monthly-sales-columns";
 import { fmt } from "@/components/charts";
 import { monthLongName, monthShortName, pageList, seriesLabel, shiftMonthKey } from "@/components/jobs-dashboard";
-import { Card, CardBody, DefTooltipProvider, Drawer, DSec, KV, KVCell, Seg, StateEmpty } from "@/components/reset";
+import { DefTooltipProvider, Drawer, DSec, KV, KVCell, Seg, StateEmpty } from "@/components/reset";
 import type { MaterialsCategorySlice, MaterialsReadModel } from "@/lib/metrics/materials";
 import type { MaterialsItemJobDetail, MaterialsItemPagination, MaterialsItemSummary, MaterialsTrendPoint } from "@/lib/store/materials-read-model";
 
@@ -84,19 +84,21 @@ export function MaterialsDashboard({ model, trend = [] }: MaterialsDashboardProp
 
   return (
     <DefTooltipProvider>
-      <CoverageWarning model={model} />
-      <SalesPerformance
-        model={model}
-        comparison={comparison}
-        range={range}
-        onRange={(value) => setRange(value as "12" | "24" | "all")}
-        points={shownTrend}
-      />
-      <div className="materials-analysis-grid">
-        <ChangeDrivers model={model} comparison={comparison} />
-        <CategoryMix model={model} comparison={comparison} />
+      <div className="materials-canvas">
+        <CoverageWarning model={model} />
+        <SalesPerformance
+          model={model}
+          comparison={comparison}
+          range={range}
+          onRange={(value) => setRange(value as "12" | "24" | "all")}
+          points={shownTrend}
+        />
+        <div className="materials-analysis-grid">
+          <ChangeDrivers model={model} comparison={comparison} />
+          <CategoryMix model={model} comparison={comparison} />
+        </div>
+        <MaterialsReview model={model} comparison={comparison} onOpen={openDrawer} />
       </div>
-      <MaterialsReview model={model} comparison={comparison} onOpen={openDrawer} />
       <Drawer
         open={drawerItem !== null}
         onClose={() => setDrawerItem(null)}
@@ -136,55 +138,45 @@ function SalesPerformance({ model, comparison, range, onRange, points }: {
     comparatorSales: point.sameMonthLastYearSales,
   }));
 
-  return (
-    <Card
-      className="materials-performance"
-      title="Sales performance"
-      subtitle={`${monthLongName(monthKey)} ${monthKey.slice(0, 4)} · extended sell, ex-tax · ${partial ? `month to date through day ${totals.elapsedDays}` : "closed month"}`}
-      aside={range === "responsive" ? <><Seg className="materials-range-desktop" options={[{ val: "12", label: "12M" }, { val: "24", label: "24M" }, { val: "all", label: "All history" }]} value="all" onChange={onRange} ariaLabel="Material sales history range" /><Seg className="materials-range-mobile" options={[{ val: "12", label: "12M" }, { val: "24", label: "24M" }, { val: "all", label: "All history" }]} value="12" onChange={onRange} ariaLabel="Material sales history range" /></> : <Seg options={[{ val: "12", label: "12M" }, { val: "24", label: "24M" }, { val: "all", label: "All history" }]} value={range} onChange={onRange} ariaLabel="Material sales history range" />}
-    >
-      <CardBody>
-        <div className="materials-performance-layout">
-          <section className="materials-summary" aria-label="Selected-period summary">
-            <div className="materials-primary-stat">
-              <span>{partial ? "Material sales · MTD" : "Material sales"}</span>
-              <strong className="tnum">{selectedAvailable ? fmt.moneyFull(totals.current) : "Unavailable"}</strong>
-              <small>{selectedAvailable ? partial ? `Day ${totals.elapsedDays} of ${totals.daysInMonth}` : "Full month" : "No completed selected-period walk"}</small>
-            </div>
-            <div className="materials-comparison-grid">
-              <SummaryMetric
-                label={comparison.label}
-                value={comparator == null ? "—" : fmt.moneyFull(comparator)}
-                delta={delta}
-              />
-              <SummaryMetric
-                label={`${seriesLabel(shiftMonthKey(monthKey, -1))} closed`}
-                value={!selectedAvailable || priorMonth == null ? "—" : fmt.moneyFull(priorMonth)}
-              />
-              {selectedAvailable && partial ? <SummaryMetric label="Calendar-day run-rate pace" value={fmt.moneyFull(totals.paceProjection)} /> : null}
-            </div>
-            <div className="materials-exposure-list" aria-label="Material exposure facts">
-              <Exposure label="Special order / non-stock" value={selectedAvailable ? exposure?.specialOrder : null} />
-              <Exposure label="Largest material" value={selectedAvailable ? exposure?.largestItem : null} name={selectedAvailable ? exposure?.largestItem?.name : null} />
-              <Exposure label="Ungrouped" value={selectedAvailable ? exposure?.ungrouped : null} />
-            </div>
-          </section>
-          <section className="materials-history" aria-label="Monthly material sales history">
-            {chartPoints.length ? range === "responsive" ? <>
-              <div className="materials-chart-desktop"><MonthlySalesColumns points={chartPoints} selectedPeriodStart={model.periodStart} onSelectPeriod={(periodStart) => { window.location.href = `/materials?month=${periodStart.slice(0, 7)}`; }} /></div>
-              <div className="materials-chart-mobile"><MonthlySalesColumns points={chartPoints.slice(-12)} selectedPeriodStart={model.periodStart} onSelectPeriod={(periodStart) => { window.location.href = `/materials?month=${periodStart.slice(0, 7)}`; }} /></div>
-            </> : (
-              <MonthlySalesColumns
-                points={chartPoints}
-                selectedPeriodStart={model.periodStart}
-                onSelectPeriod={(periodStart) => { window.location.href = `/materials?month=${periodStart.slice(0, 7)}`; }}
-              />
-            ) : <StateEmpty>No completed monthly material history is available.</StateEmpty>}
-          </section>
-        </div>
-      </CardBody>
-    </Card>
-  );
+  const rangeControl = range === "responsive" ? <><Seg className="materials-range-desktop" options={[{ val: "12", label: "12M" }, { val: "24", label: "24M" }, { val: "all", label: "All history" }]} value="all" onChange={onRange} ariaLabel="Material sales history range" /><Seg className="materials-range-mobile" options={[{ val: "12", label: "12M" }, { val: "24", label: "24M" }, { val: "all", label: "All history" }]} value="12" onChange={onRange} ariaLabel="Material sales history range" /></> : <Seg options={[{ val: "12", label: "12M" }, { val: "24", label: "24M" }, { val: "all", label: "All history" }]} value={range} onChange={onRange} ariaLabel="Material sales history range" />;
+
+  return <section className="materials-briefing" aria-label="Materials performance briefing">
+    <section className="materials-condition" aria-label="Selected-period condition">
+      <p className="materials-kicker">Selected period</p>
+      <h2>{monthLongName(monthKey)} {monthKey.slice(0, 4)}</h2>
+      <p className="materials-context">Extended sell, ex-tax · {partial ? `month to date through day ${totals.elapsedDays}` : "closed month"}</p>
+      <div className="materials-primary-stat">
+        <span>{partial ? "Material sales · MTD" : "Material sales"}</span>
+        <strong className="tnum">{selectedAvailable ? fmt.moneyFull(totals.current) : "Unavailable"}</strong>
+        <small>{selectedAvailable ? partial ? `Day ${totals.elapsedDays} of ${totals.daysInMonth}` : "Full month" : "No completed selected-period walk"}</small>
+      </div>
+      <div className="materials-comparison-grid">
+        <SummaryMetric label={comparison.label} value={comparator == null ? "—" : fmt.moneyFull(comparator)} delta={delta} />
+        <SummaryMetric label={`${seriesLabel(shiftMonthKey(monthKey, -1))} closed`} value={!selectedAvailable || priorMonth == null ? "—" : fmt.moneyFull(priorMonth)} />
+        {selectedAvailable && partial ? <SummaryMetric label="Calendar-day run-rate pace" value={fmt.moneyFull(totals.paceProjection)} /> : null}
+      </div>
+    </section>
+    <section className="materials-history" aria-label="Monthly material sales history">
+      <header className="materials-panel-head materials-history-head">
+        <div><p className="materials-kicker">Sales history</p><h2>Monthly material sales</h2><p>Click a month to investigate it.</p></div>
+        <div className="materials-range-control">{rangeControl}</div>
+      </header>
+      <div className="materials-history-chart">
+        {chartPoints.length ? range === "responsive" ? <>
+          <div className="materials-chart-desktop"><MonthlySalesColumns points={chartPoints} selectedPeriodStart={model.periodStart} onSelectPeriod={(periodStart) => { window.location.href = `/materials?month=${periodStart.slice(0, 7)}`; }} /></div>
+          <div className="materials-chart-mobile"><MonthlySalesColumns points={chartPoints.slice(-12)} selectedPeriodStart={model.periodStart} onSelectPeriod={(periodStart) => { window.location.href = `/materials?month=${periodStart.slice(0, 7)}`; }} /></div>
+        </> : <MonthlySalesColumns points={chartPoints} selectedPeriodStart={model.periodStart} onSelectPeriod={(periodStart) => { window.location.href = `/materials?month=${periodStart.slice(0, 7)}`; }} /> : <StateEmpty>No completed monthly material history is available.</StateEmpty>}
+      </div>
+    </section>
+    <aside className="materials-exposure" aria-label="Material exposure facts">
+      <header className="materials-panel-head"><div><p className="materials-kicker">Exposure</p><h2>What needs attention</h2><p>Concentration and classification signals.</p></div></header>
+      <div className="materials-exposure-list">
+        <Exposure label="Special order / non-stock" value={selectedAvailable ? exposure?.specialOrder : null} />
+        <Exposure label="Largest material" value={selectedAvailable ? exposure?.largestItem : null} name={selectedAvailable ? exposure?.largestItem?.name : null} />
+        <Exposure label="Ungrouped" value={selectedAvailable ? exposure?.ungrouped : null} />
+      </div>
+    </aside>
+  </section>;
 }
 
 function SummaryMetric({ label, value, delta }: { label: string; value: string; delta?: number | null }) {
@@ -196,50 +188,59 @@ function Exposure({ label, value, name }: { label: string; value?: { value: numb
 }
 
 function ChangeDrivers({ model, comparison }: { model: MaterialsDashboardModel; comparison: Comparison }) {
-  if (model.coverage.selectedMonth.status !== "complete") return <Card title="What changed" subtitle="Comparison unavailable"><CardBody><StateEmpty>A completed selected-period walk is required for change drivers.</StateEmpty></CardBody></Card>;
+  if (model.coverage.selectedMonth.status !== "complete") return <section className="materials-analysis-panel materials-drivers"><PanelHeading kicker="Change drivers" title="What changed" detail="Comparison unavailable" /><StateEmpty>A completed selected-period walk is required for change drivers.</StateEmpty></section>;
   const sourceDrivers: ChangeDriver[] = model.topSignedDollarChangeDrivers ?? model.items
     .filter((item) => item.comparisonSales != null)
     .sort((a, b) => Math.abs((b.extended - b.comparisonSales!)) - Math.abs((a.extended - a.comparisonSales!)))
     .slice(0, 6)
     .map((item) => ({ ...item, comparisonExtended: item.comparisonSales, comparisonSalesDelta: item.extended - item.comparisonSales! }));
   const drivers = sourceDrivers.slice(0, 6);
-  return (
-    <Card title="What changed" subtitle={comparison.available ? comparison.label : "Comparison unavailable"}>
-      <CardBody>
-        {drivers.length ? <div className="materials-driver-list">{drivers.map((item) => {
+  const increases = drivers.filter((item) => (item.comparisonSalesDelta ?? 0) >= 0);
+  const decreases = drivers.filter((item) => (item.comparisonSalesDelta ?? 0) < 0);
+  const maxChange = Math.max(...drivers.map((driver) => Math.abs(driver.comparisonSalesDelta ?? 0)), 1);
+  return <section className="materials-analysis-panel materials-drivers">
+    <PanelHeading kicker="Change drivers" title="What changed" detail={comparison.available ? comparison.label : "Comparison unavailable"} />
+    {drivers.length ? <div className="materials-driver-groups">
+      {increases.length ? <DriverGroup label="Increases" items={increases} max={maxChange} /> : null}
+      {decreases.length ? <DriverGroup label="Decreases" items={decreases} max={maxChange} /> : null}
+    </div> : <StateEmpty>{comparison.available ? "No material-level changes are available." : `Complete ${comparison.label.replace(/^vs /, "")} data is required for change drivers.`}</StateEmpty>}
+  </section>;
+}
+
+function DriverGroup({ label, items, max }: { label: string; items: ChangeDriver[]; max: number }) {
+  return <section className="materials-driver-group"><h3>{label}</h3><div className="materials-driver-list">{items.map((item) => {
           const change = item.comparisonSalesDelta ?? 0;
-          const max = Math.max(...drivers.map((driver) => Math.abs(driver.comparisonSalesDelta ?? 0)), 1);
           return <div key={item.key} className="materials-driver-row">
-            <div><b>{item.name}</b><small>{item.partNo ?? item.category}</small></div>
+            <div><b>{item.name}</b><small>{[item.category, item.partNo].filter(Boolean).join(" · ")}</small><em className="tnum">{fmt.moneyFull(item.extended)} now · {fmt.moneyFull(item.comparisonExtended ?? 0)} comparator</em></div>
             <div className="materials-driver-track" aria-hidden="true"><i className={change != null && change < 0 ? "negative" : "positive"} style={{ width: `${change == null ? 0 : Math.max(4, Math.abs(change) / max * 100)}%` }} /></div>
             <strong className={`tnum ${change < 0 ? "negative" : "positive"}`}>{signedMoney(change)}</strong>
           </div>;
-        })}</div> : <StateEmpty>{comparison.available ? "No material-level changes are available." : `Complete ${comparison.label.replace(/^vs /, "")} data is required for change drivers.`}</StateEmpty>}
-      </CardBody>
-    </Card>
-  );
+      })}</div></section>;
 }
 
 function CategoryMix({ model, comparison }: { model: MaterialsDashboardModel; comparison: Comparison }) {
-  if (model.coverage.selectedMonth.status !== "complete") return <Card title="Category mix" subtitle="Selected-period data unavailable"><CardBody><StateEmpty>A completed selected-period walk is required for category values.</StateEmpty></CardBody></Card>;
+  if (model.coverage.selectedMonth.status !== "complete") return <section className="materials-analysis-panel materials-concentration"><PanelHeading kicker="Category concentration" title="Where sales are concentrated" detail="Selected-period data unavailable" /><StateEmpty>A completed selected-period walk is required for category values.</StateEmpty></section>;
   const total = model.categories.reduce((sum, category) => sum + category.value, 0);
   const max = Math.max(...model.categories.map((category) => category.value), 1);
-  return (
-    <Card title="Category mix" subtitle={`${monthLongName(model.periodStart.slice(0, 7))} sales · current Simpro grouping`}>
-      <CardBody>
-        <div className="materials-category-list">
+  const hasComparableTaxonomy = model.categories.some((category) => category.taxonomyComparable && (category.valueDelta != null || category.comparisonValue != null));
+  return <section className={`materials-analysis-panel materials-concentration${hasComparableTaxonomy ? "" : " no-comparison"}`}>
+    <PanelHeading kicker="Category concentration" title="Where sales are concentrated" detail={`${monthLongName(model.periodStart.slice(0, 7))} sales · current Simpro grouping`} />
+    {!hasComparableTaxonomy ? <p className="materials-taxonomy-note">Historical category change is unavailable until category mapping is versioned.</p> : null}
+    <div className="materials-category-list">
           {model.categories.map((category) => {
             const change = category.valueDelta ?? (category.comparisonValue == null ? null : category.value - category.comparisonValue);
             return <div key={category.name} className={`materials-category-row${category.name === "Ungrouped" ? " ungrouped" : ""}`}>
               <div><b>{category.name}</b><span className="tnum">{total > 0 ? `${(category.value / total * 100).toFixed(1)}%` : "0%"}</span></div>
               <div className="materials-category-track"><i style={{ width: `${category.value / max * 100}%` }} /></div>
-              <div><strong className="tnum">{fmt.moneyFull(category.value)}</strong><small className={`tnum ${change != null && change < 0 ? "negative" : "positive"}`}>{comparison.available && category.taxonomyComparable && change != null ? signedMoney(change) : "—"}</small></div>
+              <div><strong className="tnum">{fmt.moneyFull(category.value)}</strong>{hasComparableTaxonomy && comparison.available && category.taxonomyComparable && change != null ? <small className={`tnum ${change < 0 ? "negative" : "positive"}`}>{signedMoney(change)}</small> : null}</div>
             </div>;
           })}
-        </div>
-      </CardBody>
-    </Card>
-  );
+    </div>
+  </section>;
+}
+
+function PanelHeading({ kicker, title, detail }: { kicker: string; title: string; detail: string }) {
+  return <header className="materials-panel-head"><div><p className="materials-kicker">{kicker}</p><h2>{title}</h2><p>{detail}</p></div></header>;
 }
 
 function MaterialsReview({ model, comparison, onOpen }: { model: MaterialsDashboardModel; comparison: Comparison; onOpen: (item: ItemWithComparison) => void }) {
@@ -251,26 +252,25 @@ function MaterialsReview({ model, comparison, onOpen }: { model: MaterialsDashbo
     return params.toString();
   };
   const start = (pagination.page - 1) * pagination.pageSize;
-  if (model.coverage.selectedMonth.status !== "complete") return <Card className="materials-review" title="Material review" subtitle="Selected-period data unavailable"><CardBody><StateEmpty>A completed selected-period walk is required for material review.</StateEmpty></CardBody></Card>;
-  return (
-    <Card className="materials-review" title="Material review" subtitle={`${pagination.total} materials · comparator: ${comparison.label}`} aside={<a className="ctl materials-csv" href={`/api/materials/csv?${query({})}`}>Download CSV</a>}>
-      <CardBody className="materials-review-controls">
-        <form action="/materials" method="get">
+  if (model.coverage.selectedMonth.status !== "complete") return <section className="materials-workbench"><header className="materials-workbench-head"><div><p className="materials-kicker">Investigation workbench</p><h2>Material review</h2><p>Selected-period data unavailable.</p></div></header><StateEmpty>A completed selected-period walk is required for material review.</StateEmpty></section>;
+  return <section className="materials-workbench">
+    <header className="materials-workbench-head"><div><p className="materials-kicker">Investigation workbench</p><h2>Material review</h2><p>{pagination.total} materials · comparator: {comparison.label}</p></div><a className="ctl materials-csv" href={`/api/materials/csv?${query({})}`}>Download CSV</a></header>
+    <div className="materials-review-controls">
+      <form action="/materials" method="get">
           <input type="hidden" name="month" value={monthKey} />
           <label><span>Search</span><input name="q" defaultValue={filters.q} placeholder="Material or part number" /></label>
           <label><span>Category</span><select name="category" defaultValue={filters.category ?? ""}><option value="">All categories</option>{(model.itemCategories ?? []).map((category) => <option key={category}>{category}</option>)}</select></label>
           <label><span>Sort</span><select name="sort" defaultValue={filters.sort}><option value="sales">Sales</option><option value="dollar-change">Dollar change</option><option value="jobs">Jobs</option><option value="quantity-change">Quantity change</option></select></label>
           <button type="submit" className="ctl">Apply</button>
-        </form>
-      </CardBody>
-      {model.items.length ? <>
+      </form>
+    </div>
+    {model.items.length ? <>
         <div className="tblwrap materials-table"><table><thead><tr><th>Material</th><th>Category</th><th className="num">Sales</th><th className="num">{comparison.columnLabel ?? comparison.shortLabel ?? comparison.label.replace(/^vs /, "")}</th><th className="num">Change</th><th className="num">Qty</th><th className="num">Jobs</th></tr></thead><tbody>
           {model.items.map((item) => { const change = item.comparisonSales == null ? null : item.extended - item.comparisonSales; return <tr key={item.key} className="rowlink" onClick={() => onOpen(item)}><td><button type="button" onClick={() => onOpen(item)}><span className="id1">{item.name}</span><span className="id2">{item.partNo ?? "No part number"}</span></button></td><td data-label="Category">{item.category}</td><td className="num tnum" data-label="Sales"><b>{fmt.moneyFull(item.extended)}</b></td><td className="num tnum" data-label={comparison.shortLabel ?? "Comparator"}>{item.comparisonSales == null ? "—" : fmt.moneyFull(item.comparisonSales)}</td><td className={`num tnum ${change != null && change < 0 ? "negative" : "positive"}`} data-label="Change">{change == null ? "—" : signedMoney(change)}</td><td className="num tnum" data-label="Qty">{qtyText(item.qty)}</td><td className="num tnum" data-label="Jobs">{item.jobCount}</td></tr>; })}
         </tbody></table></div>
         <div className="foot"><span>Showing {start + 1}–{start + model.items.length} of {pagination.total}</span><span className="pager"><a href={pagination.page > 1 ? `/materials?${query({ page: String(pagination.page - 1) })}` : undefined} aria-disabled={pagination.page === 1 || undefined}>‹</a>{pageList(pagination.totalPages, pagination.page).map((entry, index) => entry === "gap" ? <span key={`g${index}`} className="gap">…</span> : <a key={entry} className={entry === pagination.page ? "on" : undefined} href={`/materials?${query({ page: String(entry) })}`}>{entry}</a>)}<a href={pagination.page < pagination.totalPages ? `/materials?${query({ page: String(pagination.page + 1) })}` : undefined} aria-disabled={pagination.page === pagination.totalPages || undefined}>›</a></span></div>
-      </> : <CardBody><StateEmpty>No materials match these filters.</StateEmpty></CardBody>}
-    </Card>
-  );
+    </> : <div className="materials-workbench-empty"><StateEmpty>No materials match these filters.</StateEmpty></div>}
+  </section>;
 }
 
 function MaterialDrawer({ row, comparison, jobs, error }: { row: ItemWithComparison; comparison: Comparison; jobs: MaterialsItemJobDetail[] | null; error: string | null }) {

@@ -35,9 +35,10 @@ function render(status: "complete" | "failed" | "missing" = "complete") { return
 
 test("renders the redesigned unified overview with one valid monetary history", () => {
   const html = render();
-  assert.match(html, /Sales performance/);
+  assert.match(html, /Materials performance briefing/);
+  assert.match(html, /Selected period/);
   assert.match(html, /Material sales · MTD/);
-  assert.match(html, /extended sell, ex-tax/);
+  assert.match(html, /Extended sell, ex-tax/);
   assert.match(html, /All history/);
   assert.match(html, /Monthly material sales/);
   assert.doesNotMatch(html, /Quantity sold|Bullet|Sold value split by category/);
@@ -66,7 +67,8 @@ test("separates signed change drivers from selected-period review rows", () => {
 
 test("renders ranked category bars, exposures, and matched table columns", () => {
   const html = render();
-  assert.match(html, /Category mix/);
+  assert.match(html, /Where sales are concentrated/);
+  assert.match(html, /Historical category change is unavailable until category mapping is versioned/);
   assert.match(html, /Special order \/ non-stock/);
   assert.match(html, /Largest material/);
   assert.match(html, /Ungrouped/);

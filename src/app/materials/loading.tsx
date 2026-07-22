@@ -10,14 +10,12 @@ export default function MaterialsLoading() {
         </div>
         <div className="ml-auto hidden h-10 w-52 animate-pulse rounded-[11px] bg-[color:var(--surface-sunken)] sm:block" />
       </div>
-      <section className="card materials-loading-performance">
-        <div className="hd"><div><div className="skel w-36" /><div className="skel mt-2 w-72" /></div><div className="skel h-8 w-48" /></div>
-        <div className="bd materials-performance-layout">
-          <div className="materials-summary"><div className="skel h-4 w-36" /><div className="skel mt-3 h-10 w-48" /><div className="skel mt-5 h-28 w-full" /><div className="skel mt-5 h-24 w-full" /></div>
-          <div className="materials-history"><div className="skel h-[300px] w-full" /></div>
-        </div>
+      <section className="materials-briefing materials-loading-briefing">
+        <div className="materials-condition"><div className="skel h-4 w-28" /><div className="skel mt-3 h-7 w-44" /><div className="skel mt-6 h-10 w-48" /><div className="skel mt-5 h-28 w-full" /></div>
+        <div className="materials-history"><div className="skel h-7 w-52" /><div className="skel mt-6 h-[250px] w-full" /></div>
+        <div className="materials-exposure"><div className="skel h-7 w-48" /><div className="skel mt-6 h-48 w-full" /></div>
       </section>
-      <div className="materials-analysis-grid"><div className="card h-72 animate-pulse" /><div className="card h-72 animate-pulse" /></div>
+      <div className="materials-analysis-grid"><div className="h-72 animate-pulse" /><div className="h-72 animate-pulse" /></div>
     </div>
   );
 }
