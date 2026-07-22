@@ -32,7 +32,7 @@ import type {
    Every figure comes from persisted materials read models (the mockup's July
    numbers are sample content). Composition [no KPI tiles, no narrative text]:
    band pair (MATERIALS SOLD primary stat card BESIDE the Materials Value by
-   Category segmented bar) → bounded monthly trend → All Materials Sold table
+   Category segmented bar) → full monthly history trend → All Materials Sold table
    ordered by total sold value with CSV, pagination and a row drill drawer. */
 
 /* Category fills follow the mockup's rank order; Special order / non-stock

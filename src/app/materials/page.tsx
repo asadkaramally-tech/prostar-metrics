@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { DashboardPage } from "@/components/dashboard-page";
 import { MaterialsDashboard } from "@/components/materials-dashboard";
 import { PeriodSelector } from "@/components/period-selector";
-import { boundedDashboardPeriodStart } from "@/lib/metrics/periods";
+import { boundedDashboardPeriodStart, DASHBOARD_HISTORY_START } from "@/lib/metrics/periods";
 import { addMonthsToPeriodStart } from "@/lib/metrics/materials";
 import {
   getMaterialsPageReadModel,
@@ -23,8 +23,14 @@ export default async function MaterialsPage({
   const model = await cachedPageLoad(`materials:${periodStart}:page:${page}`, 120_000, () =>
     getMaterialsPageReadModel(periodStart, page),
   );
-  const trendPeriods = Array.from({ length: 13 }, (_, index) => addMonthsToPeriodStart(periodStart, index - 12))
-    .filter((month) => month >= "2023-01-01");
+  const trendPeriods: string[] = [];
+  for (
+    let month = DASHBOARD_HISTORY_START;
+    month <= periodStart;
+    month = addMonthsToPeriodStart(month, 1)
+  ) {
+    trendPeriods.push(month);
+  }
   const trend = await cachedPageLoad(`materials:trend:${periodStart}`, 120_000, () =>
     getMaterialsTrend(trendPeriods),
   );
