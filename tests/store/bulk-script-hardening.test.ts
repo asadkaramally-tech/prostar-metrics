@@ -11,6 +11,7 @@ import {
 } from "../../scripts/validate-simpro-bulk";
 import {
   compareExactProjectRows,
+  readProjectSource,
   readVerifiedProjectDeltas,
   requiredFiniteNumber,
   unverifiedPostArtifactRows,
@@ -49,6 +50,29 @@ test("dashboard reconciliation also rejects canceling per-ID totals", () => {
   const mismatches = compareExactProjectRows("jobs", source, canonical, snapshots);
   assert.deepEqual(mismatches.map((row) => row.id), ["1", "2"]);
   assert.equal(mismatches.reduce((sum, row) => sum + Number(row.canonical), 0), 300);
+});
+
+test("quote source reconciliation assigns months by DateIssued, never DateApproved", () => {
+  const artifact = {
+    manifest: { completedAt: "2026-07-22T00:00:00.000Z" },
+    sources: {
+      quotes: {
+        family: "quotes",
+        rows: [{
+          ...projectPayload(77),
+          Stage: "Approved",
+          DateIssued: "2026-06-12",
+          DateApproved: "2026-07-08",
+        }],
+      },
+    },
+  } as never;
+
+  assert.deepEqual(readProjectSource(artifact).quotes, [{
+    id: "77",
+    periodStart: "2026-06-01",
+    total: 10,
+  }]);
 });
 
 test("unverified post-artifact canonical rows are blockers", () => {

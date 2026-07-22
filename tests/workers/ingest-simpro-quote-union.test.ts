@@ -36,3 +36,11 @@ test("one-day quote windows still schedule both source-date candidates", () => {
     { DateIssued: "2026-07-21" },
   ]);
 });
+
+test("explicit project IDs are preserved as targeted ingestion parameters", () => {
+  for (const entity of ["quotes", "jobs"] as const) {
+    const args = parseArgs(["--entity", entity, "--entity-id", "2797"], {});
+    assert.deepEqual(ingestionParamSets(args), [{ entityId: 2797 }]);
+    assert.equal(ingestionIdempotencyKey(entity, ingestionParamSets(args)[0]!), `${entity}:2797`);
+  }
+});

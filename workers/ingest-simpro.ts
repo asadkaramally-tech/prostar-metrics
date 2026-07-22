@@ -450,6 +450,9 @@ function ingestionParams(args: Args) {
     }
     return { entityId: args.entityId };
   }
+  if (args.entityId !== undefined) {
+    return { entityId: args.entityId };
+  }
   if (args.entity === "jobs" && args.startDate && args.startDate === args.endDate) {
     return completedJobDiscoveryParams(args.startDate);
   }
