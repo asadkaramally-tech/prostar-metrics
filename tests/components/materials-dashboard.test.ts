@@ -36,7 +36,7 @@ function render(status: "complete" | "failed" | "missing" = "complete") { return
 test("renders the shared KPI and card layout with one monetary history", () => {
   const html = render();
   assert.match(html, /class="kpis hero"/);
-  assert.match(html, /Material sales · month to date/);
+  assert.match(html, /Material sales/);
   assert.match(html, /Extended sell, ex-tax/);
   assert.match(html, /All history/);
   assert.match(html, /Monthly Material Sales/);

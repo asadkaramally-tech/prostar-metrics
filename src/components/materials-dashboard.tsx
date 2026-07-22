@@ -144,7 +144,7 @@ function SalesPerformance({ model, comparison, range, onRange, points }: {
     <KpiBand ariaLabel={`${monthLongName(monthKey)} material metrics`}>
       <PrimaryStatCard
         href="#materials-history"
-        label={partial ? "Material sales · month to date" : "Material sales"}
+        label="Material sales"
         pills={comparisonPill}
         value={selectedAvailable ? fmt.moneyFull(totals.current) : "N/A"}
         sub={selectedAvailable ? partial ? `Extended sell, ex-tax · day ${totals.elapsedDays} of ${totals.daysInMonth}` : "Extended sell, ex-tax · full month" : "Selected-period data unavailable"}
