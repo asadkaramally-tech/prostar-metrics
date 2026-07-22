@@ -432,6 +432,58 @@ test("exact missing IDs queue targeted repair before the same generation publish
   }
 });
 
+test("job value drift queues an exact entity repair instead of a full-month backfill", async () => {
+  const fixture = await databaseFixture();
+  const repairs: BoundedSourceWork[] = [];
+  try {
+    await fixture.db.exec(`
+      insert into metrics.metrics_jobs (
+        job_id, total, completed_date, stage
+      ) values (17429, 41.25, '2023-02-01', 'Complete');
+      insert into metrics.job_snapshots (
+        job_id, sell_value, completed_date, stage_name
+      ) values (17429, 100, '2023-02-01', 'Complete');
+      insert into metrics.dashboard_read_models (
+        metric_family, period_grain, period_start, values_json, source_hash, rebuilt_at
+      ) values ('jobs', 'month', '2023-02-01', '{"completedJobs":1,"totalSellValue":100}', 'job-drift', now());
+    `);
+    await seedJobNestedAuthority(fixture.db, 17429);
+
+    const result = await runSimproReconciliation({
+      scope: "jobs",
+      periodStart: period.start,
+      requestBudget: 100,
+      endpoints: fakeJobEndpoints({
+        pages: { "2023-02-01:1": { ids: [17429], nextPage: null } },
+        details: { "17429": { ID: 17429, Total: { ExTax: 100 }, Stage: "Complete" } },
+      }),
+      leaseOwner: "job-value-drift-worker",
+      dependencies: {
+        query: fixture.query,
+        transaction: fixture.transaction,
+        continuationStore: fixture.store,
+        enqueueBoundedWork: async (params) => {
+          repairs.push(params.work);
+          return {} as BoundedSourceWorkRequest;
+        },
+      },
+    });
+
+    assert.equal(result[0]?.status, "mismatch");
+    assert.deepEqual(repairs, [{ kind: "entity_refresh", entityType: "job", entityId: 17429 }]);
+    const comparisons = result[0]?.detail.comparisons as {
+      metricsJobs: { valueMismatchCount: number; valueMismatchIds: string[] };
+      jobSnapshots: { valueMismatchCount: number; valueMismatchIds: string[] };
+    };
+    assert.equal(comparisons.metricsJobs.valueMismatchCount, 1);
+    assert.deepEqual(comparisons.metricsJobs.valueMismatchIds, ["17429"]);
+    assert.equal(comparisons.jobSnapshots.valueMismatchCount, 0);
+    assert.deepEqual(comparisons.jobSnapshots.valueMismatchIds, []);
+  } finally {
+    await fixture.db.close();
+  }
+});
+
 test("a stale manifest generation aborts publication before any authoritative check", async () => {
   const fixture = await databaseFixture();
   const endpoints = fakeQuoteEndpoints({
@@ -700,6 +752,28 @@ async function databaseFixture() {
     create table metrics.quote_snapshots (
       quote_id bigint primary key, total_value numeric, date_approved date, date_issued date
     );
+    create table metrics.metrics_jobs (
+      job_id bigint primary key, total numeric not null, completed_date date, stage text,
+      source_deleted_at timestamptz, source_snapshot_id bigint, source_hash text
+    );
+    create table metrics.metrics_job_cost_centers (
+      job_id bigint not null, section_id bigint not null, cost_center_id bigint not null,
+      source_snapshot_id bigint, source_hash text, source_deleted_at timestamptz,
+      traversal_generation bigint
+    );
+    create table metrics.metrics_job_labor (
+      job_id bigint not null, section_id bigint not null, cost_center_id bigint not null,
+      labor_id bigint not null, source_snapshot_id bigint, source_hash text,
+      source_deleted_at timestamptz, traversal_generation bigint
+    );
+    create table metrics.metrics_job_items (
+      job_id bigint not null, section_id bigint not null, cost_center_id bigint not null,
+      item_type text not null, item_id text not null, source_snapshot_id bigint,
+      source_hash text, source_deleted_at timestamptz, traversal_generation bigint
+    );
+    create table metrics.job_snapshots (
+      job_id bigint primary key, sell_value numeric, completed_date date, stage_name text
+    );
     create table metrics.dashboard_read_models (
       id bigserial primary key, metric_family text not null, period_grain text not null,
       period_start date not null, values_json jsonb not null default '{}', source_hash text,
@@ -807,6 +881,28 @@ async function seedQuoteNestedAuthority(db: PGlite, quoteId: number, generation 
   `, [quoteId, workOrder.id, workOrder.hash, generation]);
 }
 
+async function seedJobNestedAuthority(db: PGlite, jobId: number, generation = 1) {
+  const rootHash = `job-root-${jobId}`;
+  const root = await db.query<{ id: number }>(`
+    insert into metrics.raw_simpro_snapshots (
+      entity_type, entity_id, source_hash, complete_traversal, parent_identity
+    ) values ('job_details', $1::text, $2, true, jsonb_build_object('projectType', 'job', 'projectId', $1))
+    returning id
+  `, [jobId, rootHash]);
+  await db.query(`
+    update metrics.metrics_jobs
+       set source_snapshot_id = $2, source_hash = $3
+     where job_id = $1
+  `, [jobId, root.rows[0]!.id, rootHash]);
+  await db.query(`
+    insert into metrics.project_nested_traversals (
+      project_type, project_id, generation, status, finalized_at
+    ) values ('job', $1, $2, 'completed', now())
+    on conflict (project_type, project_id) do update set
+      generation = excluded.generation, status = excluded.status, finalized_at = excluded.finalized_at
+  `, [jobId, generation]);
+}
+
 function fakeQuoteEndpoints(params: {
   pages: Record<string, { ids: number[]; nextPage: number | null }>;
   details: Record<string, Record<string, unknown>>;
@@ -838,6 +934,33 @@ function fakeQuoteEndpoints(params: {
     },
     async listJobs() { throw new Error("unexpected jobs list"); },
     async getJob() { throw new Error("unexpected job detail"); },
+  } as unknown as SimproEndpoints;
+}
+
+function fakeJobEndpoints(params: {
+  pages: Record<string, { ids: number[]; nextPage: number | null }>;
+  details: Record<string, Record<string, unknown>>;
+}) {
+  return {
+    async listJobs(options: { page?: number; budget?: RequestBudget; query?: Record<string, unknown> }) {
+      consume(options.budget);
+      const day = String(options.query?.CompletedDate);
+      const page = options.page ?? 1;
+      const configured = params.pages[`${day}:${page}`] ?? { ids: [], nextPage: null };
+      return {
+        rows: configured.ids.map((ID) => ({ ID })),
+        page,
+        pageSize: 250,
+        hasMore: configured.nextPage !== null,
+        continuationToken: configured.nextPage ? { page: configured.nextPage } : null,
+      };
+    },
+    async getJob(id: string, budget?: RequestBudget) {
+      consume(budget);
+      return params.details[id] ?? { ID: Number(id), Total: { ExTax: 0 }, Stage: "Complete" };
+    },
+    async listQuotes() { throw new Error("unexpected quotes list"); },
+    async getQuote() { throw new Error("unexpected quote detail"); },
   } as unknown as SimproEndpoints;
 }
 

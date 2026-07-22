@@ -130,7 +130,7 @@ const requirementsByPage: Record<AggregateFreshnessPageKey, readonly SourceRequi
     source("timesheets", "core", 2),
     source("schedules", "secondary", null),
     incrementalSource("schedule_logs", "secondary", 1),
-    source("mobile_status", "secondary", 1, true),
+    incrementalSource("mobile_status", "secondary", 1),
   ],
   commissions: [
     source("jobs", "core", 8),
@@ -361,6 +361,12 @@ function evaluateSource(requirement: SourceRequirement, evidence: SourceFreshnes
   const lastFailedRunAt = toDate(evidence?.lastFailedRunAt);
   const lastChangeAt = toDate(evidence?.lastChangeAt);
   const dataThrough = toDate(evidence?.dataThrough) ?? lastSuccessfulRunAt;
+  // Incremental windows can complete successfully without receiving any new
+  // events. Their data-through value intentionally remains at the latest
+  // event, so use the poll completion time for the SLA in that case.
+  const freshnessAt = requirement.requiresCurrentManifest
+    ? dataThrough
+    : lastSuccessfulRunAt ?? dataThrough;
   const manifestCompletedAt = toDate(evidence?.manifestCompletedAt);
   const manifestReconciledAt = toDate(evidence?.manifestReconciledAt);
   const pendingCount = nonNegativeInteger(evidence?.pendingCount);
@@ -406,11 +412,11 @@ function evaluateSource(requirement: SourceRequirement, evidence: SourceFreshnes
       : "The current source/page manifest is incomplete.";
   } else if (
     requirement.maxAgeHours !== null
-    && dataThrough
-    && now.getTime() - dataThrough.getTime() > requirement.maxAgeHours * 36e5
+    && freshnessAt
+    && now.getTime() - freshnessAt.getTime() > requirement.maxAgeHours * 36e5
   ) {
     state = "stale";
-    detail = `Data-through exceeds the ${requirement.maxAgeHours}-hour source limit.`;
+    detail = `${requirement.requiresCurrentManifest ? "Data-through" : "Last successful poll"} exceeds the ${requirement.maxAgeHours}-hour source limit.`;
   } else if (!lastSuccessfulRunAt) {
     state = "missing";
     detail = "No successful complete source run is recorded.";

@@ -82,6 +82,8 @@ type SourceEntity = {
   stageName?: string | null;
 };
 
+const summaryValuesById = Symbol("summaryValuesById");
+
 type SourceSummary = {
   complete: boolean;
   incompleteReason?: string;
@@ -93,12 +95,14 @@ type SourceSummary = {
   generation: number;
   totalRequestsUsed: number;
   excludedByStage?: Array<{ id: string; stageName: string | null }>;
+  [summaryValuesById]: ReadonlyMap<string, number>;
 };
 
 type StoreSummary = {
   count: number;
   totalValue: number;
   ids: string[];
+  [summaryValuesById]: ReadonlyMap<string, number>;
 };
 
 type NestedSourceAuthority = {
@@ -468,7 +472,7 @@ async function reconcileQuotes(
       claim,
       source,
       normalizedIds: metricsQuotes.ids,
-      exactMissingIds: exactMissingIds(metricsComparison, snapshotComparison),
+      exactRepairIds: exactRepairIds(metricsComparison, snapshotComparison),
     }, dependencies, query);
   });
   if (publication.result.status === "mismatch") {
@@ -547,7 +551,7 @@ async function reconcileJobs(
       claim,
       source,
       normalizedIds: metricsJobs.ids,
-      exactMissingIds: exactMissingIds(metricsComparison, snapshotComparison),
+      exactRepairIds: exactRepairIds(metricsComparison, snapshotComparison),
     }, dependencies, query);
   });
   if (publication.result.status === "mismatch") {
@@ -886,6 +890,7 @@ function summarizeSource(
     totalValue: roundMoney(sum(unique.map((row) => row.totalValue))),
     ids: unique.map((row) => row.id),
     detailsFetched: entities.length,
+    [summaryValuesById]: new Map(unique.map((row) => [row.id, row.totalValue])),
     ...continuation,
   };
 }
@@ -1263,7 +1268,7 @@ async function persistDirectReconciliation(params: {
   claim: ReconciliationContinuationClaim;
   source: SourceSummary;
   normalizedIds: string[];
-  exactMissingIds: string[];
+  exactRepairIds: string[];
 }, dependencies: ResolvedReconciliationDependencies, query: PostgresQuery): Promise<{
   result: ReconciliationResult;
   repairIds: string[];
@@ -1331,7 +1336,7 @@ async function persistDirectReconciliation(params: {
   }
   return {
     result,
-    repairIds: sortedNumericIds([...params.exactMissingIds, ...nestedAuthority.invalidProjectIds]),
+    repairIds: sortedNumericIds([...params.exactRepairIds, ...nestedAuthority.invalidProjectIds]),
   };
 }
 
@@ -1692,7 +1697,7 @@ async function scheduleRepair(
           await dependencies.enqueueBoundedWork({
             work: { kind: "entity_refresh", entityType, entityId: Number(id) },
             requestedBy: "metrics-reconciliation-worker",
-            reason: `Repair exact missing ${entityType} ${id} from reconciliation ${result.checkId ?? "unknown"}.`,
+            reason: `Repair exact ${entityType} ${id} from reconciliation ${result.checkId ?? "unknown"}.`,
             origin: "reconciliation",
           });
         }
@@ -1751,6 +1756,7 @@ function summarizeStore(rows: Array<{ id: string; totalValue: number }>): StoreS
     count: rows.length,
     totalValue: roundMoney(sum(rows.map((row) => row.totalValue))),
     ids: rows.map((row) => row.id).sort((a, b) => Number(a) - Number(b)),
+    [summaryValuesById]: new Map(rows.map((row) => [row.id, row.totalValue])),
   };
 }
 
@@ -1815,19 +1821,31 @@ function dashboardCommissionSummary(row: DashboardPayloadRow | null) {
 
 function compareSummaries(source: SourceSummary, store: StoreSummary) {
   const idDiff = compareIds(source.ids, store.ids);
+  const valueMismatchIds = source.ids.filter((id) => {
+    const storeValue = store[summaryValuesById].get(id);
+    return storeValue !== undefined
+      && !numericMatches(source[summaryValuesById].get(id) ?? 0, storeValue);
+  });
   const totalValueDelta = roundMoney(store.totalValue - source.totalValue);
   return {
-    matched: idDiff.idsMatched && numericMatches(store.totalValue, source.totalValue),
+    matched: idDiff.idsMatched
+      && valueMismatchIds.length === 0
+      && numericMatches(store.totalValue, source.totalValue),
     countDelta: store.count - source.count,
     totalValueDelta,
+    valueMismatchCount: valueMismatchIds.length,
+    valueMismatchIds: valueMismatchIds.slice(0, 50),
     ...idDiff,
   };
 }
 
-function exactMissingIds(
-  ...comparisons: Array<{ missingIds: string[] }>
+function exactRepairIds(
+  ...comparisons: Array<{ missingIds: string[]; valueMismatchIds: string[] }>
 ) {
-  return sortedNumericIds(comparisons.flatMap((comparison) => comparison.missingIds));
+  return sortedNumericIds(comparisons.flatMap((comparison) => [
+    ...comparison.missingIds,
+    ...comparison.valueMismatchIds,
+  ]));
 }
 
 function compareDashboard(source: { count: number; totalValue: number }, dashboard: { count: number; totalValue: number; present?: boolean }) {

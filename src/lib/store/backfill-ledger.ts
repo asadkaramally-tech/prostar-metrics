@@ -73,7 +73,7 @@ export type BackfillReconciliationEvidence = {
   sourcePeriodManifest?: SourcePeriodManifest;
 };
 
-type BackfillQuery = typeof queryPostgres;
+export type BackfillQuery = typeof queryPostgres;
 
 export async function saveApprovedBackfillPlan(params: {
   units: BackfillWorkUnitPlan[];
@@ -159,10 +159,12 @@ export async function saveApprovedBackfillPlan(params: {
 export async function claimNextBackfillWorkUnit(
   workerId: string,
   capacityDate = businessCapacityDate(),
+  query: BackfillQuery = queryPostgres,
 ): Promise<BackfillWorkUnit | null> {
-  await recoverExpiredBackfillLeases();
-  await reopenAdvancedProvisionalBackfills();
-  await queryPostgres(
+  await recoverExpiredBackfillLeases(query);
+  await settleAuthoritativeBackfillWorkUnits(query);
+  await reopenAdvancedProvisionalBackfills(query);
+  await query(
     `insert into metrics.backfill_capacity_days (capacity_date, daily_request_ceiling)
      select $1::date, max(daily_request_ceiling)
        from metrics.backfill_source_month_ledger
@@ -178,7 +180,7 @@ export async function claimNextBackfillWorkUnit(
     [capacityDate],
   );
 
-  const result = await queryPostgres<BackfillWorkUnit>(
+  const result = await query<BackfillWorkUnit>(
     `with candidate as materialized (
        select l.id,
               l.work_phase as claim_phase,
@@ -209,6 +211,22 @@ export async function claimNextBackfillWorkUnit(
          left join metrics.backfill_traversal_manifests m on m.work_unit_id = l.id
         where l.status in ('queued', 'reconciliation_pending')
           and l.source_family <> 'invoices'
+          and not exists (
+            select 1
+              from metrics.source_period_manifests source_manifest
+             where source_manifest.source_family = l.source_family
+               and source_manifest.period_start = l.month_start
+               and source_manifest.period_end = (l.month_end_exclusive - 1)
+               and source_manifest.coverage_status = 'complete'
+               and source_manifest.reconciliation_status = 'matched'
+               and source_manifest.continuation_token is null
+               and source_manifest.manifest_generation is not null
+               and source_manifest.reconciliation_generation is not null
+               and source_manifest.reconciliation_generation = source_manifest.manifest_generation
+               and source_manifest.expected_page_count > 0
+               and source_manifest.completed_page_count = source_manifest.expected_page_count
+               and source_manifest.reconciled_at is not null
+          )
           and l.next_attempt_at <= now()
           and not exists (
             select 1
@@ -847,8 +865,8 @@ export async function getBackfillOperationalSummary() {
   return { status: status.rows, capacity: capacity.rows, months: months.rows };
 }
 
-async function recoverExpiredBackfillLeases() {
-  await queryPostgres(
+async function recoverExpiredBackfillLeases(query: BackfillQuery = queryPostgres) {
+  await query(
     `with expired as materialized (
        select id, reserved_capacity_date, reserved_requests, retry_count, max_attempts
          from metrics.backfill_source_month_ledger
@@ -888,8 +906,100 @@ async function recoverExpiredBackfillLeases() {
   );
 }
 
-async function reopenAdvancedProvisionalBackfills() {
-  await queryPostgres(
+export async function settleAuthoritativeBackfillWorkUnits(
+  query: BackfillQuery = queryPostgres,
+): Promise<{ completed: number }> {
+  const result = await query<{ id: string }>(
+    `with candidates as materialized (
+       select ledger.id,
+              to_jsonb(ledger) as before_value,
+              source_manifest.listed_count,
+              source_manifest.detail_count,
+              source_manifest.normalized_count,
+              source_manifest.manifest_generation,
+              source_manifest.reconciliation_generation,
+              source_manifest.expected_page_count,
+              source_manifest.completed_page_count,
+              source_manifest.reconciled_at
+         from metrics.backfill_source_month_ledger ledger
+         join metrics.source_period_manifests source_manifest
+           on source_manifest.source_family = ledger.source_family
+          and source_manifest.period_start = ledger.month_start
+          and source_manifest.period_end = (ledger.month_end_exclusive - 1)
+        where ledger.status in ('queued', 'reconciliation_pending')
+          and ledger.source_family <> 'invoices'
+          and source_manifest.coverage_status = 'complete'
+          and source_manifest.reconciliation_status = 'matched'
+          and source_manifest.continuation_token is null
+          and source_manifest.manifest_generation is not null
+          and source_manifest.reconciliation_generation is not null
+          and source_manifest.reconciliation_generation = source_manifest.manifest_generation
+          and source_manifest.expected_page_count > 0
+          and source_manifest.completed_page_count = source_manifest.expected_page_count
+          and source_manifest.reconciled_at is not null
+        for update of ledger
+     ), completed as (
+       update metrics.backfill_source_month_ledger ledger
+          set status = 'completed',
+              work_phase = 'reconcile',
+              reconciliation_status = 'matched',
+              reconciled_source_records = candidates.listed_count,
+              reconciled_normalized_records = candidates.normalized_count,
+              normalized_coverage = case
+                when candidates.listed_count = 0 then 100
+                else round((candidates.normalized_count::numeric / candidates.listed_count::numeric) * 100, 4)
+              end,
+              reconciliation_detail = jsonb_build_object(
+                'authority', 'source_period_manifest',
+                'settledBy', 'backfill_claim_maintenance',
+                'listedCount', candidates.listed_count,
+                'detailCount', candidates.detail_count,
+                'normalizedCount', candidates.normalized_count,
+                'manifestGeneration', candidates.manifest_generation,
+                'reconciliationGeneration', candidates.reconciliation_generation,
+                'expectedPageCount', candidates.expected_page_count,
+                'completedPageCount', candidates.completed_page_count,
+                'reconciledAt', candidates.reconciled_at
+              ),
+              continuation_token = null,
+              locked_by = null,
+              locked_at = null,
+              lease_expires_at = null,
+              heartbeat_at = null,
+              reserved_capacity_date = null,
+              reserved_requests = 0,
+              last_error = null,
+              dead_lettered_at = null,
+              completed_at = now(),
+              updated_at = now()
+         from candidates
+        where ledger.id = candidates.id
+          and ledger.status in ('queued', 'reconciliation_pending')
+       returning ledger.id, to_jsonb(ledger) as after_value
+     ), audited as (
+       insert into metrics.audit_events (
+         actor_email, action, entity_type, entity_id, before_value, after_value, reason
+       )
+       select 'system:backfill-authority-settlement',
+              'backfill_ledger_completed_from_source_period_authority',
+              'backfill_source_month_ledger',
+              completed.id::text,
+              candidates.before_value,
+              completed.after_value,
+              'Completed queued backfill control-plane work from exact complete, matched, generation-fenced source-period authority.'
+         from completed
+         join candidates on candidates.id = completed.id
+       returning entity_id
+     )
+     select completed.id::text
+       from completed
+       join audited on audited.entity_id = completed.id::text`,
+  );
+  return { completed: result.rows.length };
+}
+
+export async function reopenAdvancedProvisionalBackfills(query: BackfillQuery = queryPostgres) {
+  await query(
     `with boundary as (
        select (now() at time zone 'America/Los_Angeles')::date as pacific_date
      ), reopened_manifests as (
@@ -920,6 +1030,22 @@ async function reopenAdvancedProvisionalBackfills() {
           and l.source_family <> 'invoices'
           and m.manifest_status = 'provisional'
           and l.status in ('completed', 'queued', 'reconciliation_pending')
+          and not exists (
+            select 1
+              from metrics.source_period_manifests source_manifest
+             where source_manifest.source_family = l.source_family
+               and source_manifest.period_start = l.month_start
+               and source_manifest.period_end = (l.month_end_exclusive - 1)
+               and source_manifest.coverage_status = 'complete'
+               and source_manifest.reconciliation_status = 'matched'
+               and source_manifest.continuation_token is null
+               and source_manifest.manifest_generation is not null
+               and source_manifest.reconciliation_generation is not null
+               and source_manifest.reconciliation_generation = source_manifest.manifest_generation
+               and source_manifest.expected_page_count > 0
+               and source_manifest.completed_page_count = source_manifest.expected_page_count
+               and source_manifest.reconciled_at is not null
+          )
           and (m.observed_boundary->>'effectiveEndInclusive')::date
                 < least((l.month_end_exclusive - 1), b.pacific_date)
        returning m.work_unit_id

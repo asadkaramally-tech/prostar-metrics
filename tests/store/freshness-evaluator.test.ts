@@ -65,7 +65,7 @@ test("pending nested work keeps a complete same-generation manifest serving", ()
   assert.match(result.coverage.sources.quote_nested.detail, /Serving the last complete source window/);
 });
 
-test("incremental work still warns when the last complete serving window is stale", () => {
+test("incremental work still warns when its last successful poll is stale", () => {
   const sources = successfulSources("quotes").map((source) =>
     source.sourceFamily === "quote_logs"
       ? {
@@ -74,11 +74,46 @@ test("incremental work still warns when the last complete serving window is stal
           completeWindow: false,
           servingWindowComplete: true,
           dataThrough: "2026-07-09T09:00:00.000Z",
+          lastSuccessfulRunAt: "2026-07-09T09:00:00.000Z",
         }
       : source,
   );
 
   assert.equal(evaluatePageFreshness(baseInput("quotes", sources)).state, "stale");
+});
+
+test("a recent no-event incremental poll remains current while preserving its data-through", () => {
+  const sources = successfulSources("quotes").map((source) =>
+    source.sourceFamily === "quote_logs"
+      ? {
+          ...source,
+          dataThrough: "2026-07-01T00:00:00.000Z",
+          lastChangeAt: "2026-07-01T00:00:00.000Z",
+          lastSuccessfulRunAt: "2026-07-09T11:45:00.000Z",
+        }
+      : source,
+  );
+
+  const result = evaluatePageFreshness(baseInput("quotes", sources));
+  assert.equal(result.state, "current");
+  assert.equal(result.coverage.sources.quote_logs.state, "successful");
+  assert.equal(result.coverage.sources.quote_logs.dataThrough, "2026-07-01T00:00:00.000Z");
+});
+
+test("an incremental source is stale when its successful poll is genuinely old", () => {
+  const sources = successfulSources("quotes").map((source) =>
+    source.sourceFamily === "quote_logs"
+      ? {
+          ...source,
+          dataThrough: "2026-07-09T11:45:00.000Z",
+          lastSuccessfulRunAt: "2026-07-09T09:00:00.000Z",
+        }
+      : source,
+  );
+
+  const result = evaluatePageFreshness(baseInput("quotes", sources));
+  assert.equal(result.state, "stale");
+  assert.match(result.coverage.sources.quote_logs.detail, /Last successful poll/);
 });
 
 test("a serving-ready rollup retains queued rebuild detail in aggregate coverage", () => {
@@ -152,6 +187,8 @@ test("current source SLAs match the scheduled baseline-plus-change-log architect
   assert.equal(technicianRequirements.find((item) => item.sourceFamily === "jobs_from_timesheets")?.maxAgeHours, 2);
   assert.equal(technicianRequirements.find((item) => item.sourceFamily === "employees")?.maxAgeHours, 26);
   assert.equal(technicianRequirements.find((item) => item.sourceFamily === "schedules")?.maxAgeHours, null);
+  assert.equal(technicianRequirements.find((item) => item.sourceFamily === "schedule_logs")?.requiresCurrentManifest, false);
+  assert.equal(technicianRequirements.find((item) => item.sourceFamily === "mobile_status")?.requiresCurrentManifest, false);
 
   const result = evaluatePageFreshness(baseInput("quotes", successfulSources("quotes")));
   assert.equal(result.state, "current");
@@ -174,7 +211,11 @@ test("fresh change logs keep a page current between scheduled baseline scans", (
 
   const staleLogs = sources.map((source) =>
     source.sourceFamily === "quote_logs"
-      ? { ...source, dataThrough: "2026-07-09T10:00:00.000Z" }
+      ? {
+          ...source,
+          dataThrough: "2026-07-09T10:00:00.000Z",
+          lastSuccessfulRunAt: "2026-07-09T10:00:00.000Z",
+        }
       : source,
   );
   assert.equal(evaluatePageFreshness(baseInput("quotes", staleLogs)).state, "stale");
@@ -220,7 +261,11 @@ test("failed, suspect, and stale source evidence use status precedence", async (
   await t.test("stale source", () => {
     const sources = successfulSources("quotes").map((source) =>
       source.sourceFamily === "quote_logs"
-        ? { ...source, dataThrough: "2026-07-09T09:00:00.000Z" }
+        ? {
+            ...source,
+            dataThrough: "2026-07-09T09:00:00.000Z",
+            lastSuccessfulRunAt: "2026-07-09T09:00:00.000Z",
+          }
         : source,
     );
     assert.equal(evaluatePageFreshness(baseInput("quotes", sources)).state, "stale");
