@@ -317,8 +317,8 @@ test("trend card renders all eight chips, stacked $ and margin panels, and hones
   // Prior-year net reference (label truncates at the em dash on narrow SSR width).
   assert.match(html, /Jun ’25 · \$5,000/);
   // Provenance footnote survives.
-  assert.match(html, /Profit and margin series are <span class="repr">representative<\/span> pending Simpro verification/);
-  assert.match(html, /Simpro-verified for all 18 months/);
+  assert.match(html, /Profit, margin, revenue, and job-count series use the stored Simpro job financials for all 18 months/);
+  assert.doesNotMatch(html, /representative pending Simpro verification/);
 });
 
 test("metric-picker semantics: yoy exclusive, minimum one, mixed units allowed, cap four", () => {

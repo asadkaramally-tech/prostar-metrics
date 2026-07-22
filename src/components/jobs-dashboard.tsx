@@ -650,8 +650,7 @@ function TrendBody({ model, metrics, sel }: { model: JobDashboardReadModel; metr
         : ""}
       {anyRepr ? (
         <>
-          Profit and margin series are <span className="repr">representative</span> pending Simpro verification — revenue
-          and job counts are Simpro-verified for all {t.length} months.
+          Profit, margin, revenue, and job-count series use the stored Simpro job financials for all {t.length} months.
         </>
       ) : (
         <>Revenue and job counts are verified against Simpro for all {t.length} months.</>
