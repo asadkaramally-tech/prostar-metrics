@@ -10,12 +10,17 @@ export default function MaterialsLoading() {
         </div>
         <div className="ml-auto hidden h-10 w-52 animate-pulse rounded-[11px] bg-[color:var(--surface-sunken)] sm:block" />
       </div>
-      <section className="materials-briefing materials-loading-briefing">
-        <div className="materials-condition"><div className="skel h-4 w-28" /><div className="skel mt-3 h-7 w-44" /><div className="skel mt-6 h-10 w-48" /><div className="skel mt-5 h-28 w-full" /></div>
-        <div className="materials-history"><div className="skel h-7 w-52" /><div className="skel mt-6 h-[250px] w-full" /></div>
-        <div className="materials-exposure"><div className="skel h-7 w-48" /><div className="skel mt-6 h-48 w-full" /></div>
+      <section className="kpis hero" aria-hidden="true">
+        <div className="kpi primary"><div className="skel h-4 w-28" /><div className="skel mt-5 h-10 w-48" /><div className="skel mt-4 h-4 w-64" /><div className="skel mt-auto h-10 w-full" /></div>
+        <div className="ktiles">
+          <div className="kpi"><div className="skel h-4 w-28" /><div className="skel mt-3 h-7 w-32" /></div>
+          <div className="kpi"><div className="skel h-4 w-28" /><div className="skel mt-3 h-7 w-32" /></div>
+          <div className="kpi"><div className="skel h-4 w-28" /><div className="skel mt-3 h-7 w-20" /></div>
+          <div className="kpi"><div className="skel h-4 w-28" /><div className="skel mt-3 h-7 w-32" /></div>
+        </div>
       </section>
-      <div className="materials-analysis-grid"><div className="h-72 animate-pulse" /><div className="h-72 animate-pulse" /></div>
+      <div className="grid12"><div className="card span12"><div className="hd"><div className="skel h-7 w-52" /></div><div className="bd"><div className="skel h-[250px] w-full" /></div></div></div>
+      <div className="grid12"><div className="card span12"><div className="hd"><div className="skel h-7 w-56" /></div><div className="bd"><div className="skel h-52 w-full" /></div></div></div>
     </div>
   );
 }

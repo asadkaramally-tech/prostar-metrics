@@ -47,7 +47,7 @@ export default async function MaterialsPage({
   return (
     <DashboardPage
       title="Materials"
-      description="Sales, change drivers, and job-level material review."
+      description="Sales, category mix, and job-level material review."
       freshness={model.freshness}
       controls={<PeriodSelector action="/materials" value={model.periodStart.slice(0, 7)} />}
     >

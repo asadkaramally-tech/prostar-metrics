@@ -19,7 +19,7 @@ const DESKTOP_FALLBACK_WIDTH = 960;
  * Charts must not take a mobile branch during their initial desktop render.
  * The shared chart hook intentionally falls back to 560px; this visual has a
  * desktop-first layout, so its isolated measuring hook falls back to 960px
- * until the real container width arrives on the next animation frame.
+ * during server rendering and measures synchronously before browser paint.
  */
 function useMonthlySalesWidth(fixedWidth?: number) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -29,12 +29,11 @@ function useMonthlySalesWidth(fixedWidth?: number) {
     const node = ref.current;
     if (!node) return;
     const measure = () => setMeasured(node.clientWidth || null);
-    const frame = window.requestAnimationFrame(measure);
-    if (typeof ResizeObserver === "undefined") return () => window.cancelAnimationFrame(frame);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => {
-      window.cancelAnimationFrame(frame);
       observer.disconnect();
     };
   }, [fixedWidth]);

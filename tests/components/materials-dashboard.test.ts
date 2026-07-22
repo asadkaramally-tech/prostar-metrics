@@ -33,15 +33,14 @@ const trend: MaterialsTrendPoint[] = [
 ];
 function render(status: "complete" | "failed" | "missing" = "complete") { return renderToStaticMarkup(createElement(MaterialsDashboard, { model: toMaterialsPageReadModel(model(status)), trend })); }
 
-test("renders the redesigned unified overview with one valid monetary history", () => {
+test("renders the shared KPI and card layout with one monetary history", () => {
   const html = render();
-  assert.match(html, /Materials performance briefing/);
-  assert.match(html, /Selected period/);
-  assert.match(html, /Material sales · MTD/);
+  assert.match(html, /class="kpis hero"/);
+  assert.match(html, /Material sales · month to date/);
   assert.match(html, /Extended sell, ex-tax/);
   assert.match(html, /All history/);
-  assert.match(html, /Monthly material sales/);
-  assert.doesNotMatch(html, /Quantity sold|Bullet|Sold value split by category/);
+  assert.match(html, /Monthly Material Sales/);
+  assert.doesNotMatch(html, /materials-briefing|Quantity sold|Sold value split by category/);
 });
 
 test("uses one exact day-aligned YoY contract and prior month only as context", () => {
@@ -49,31 +48,28 @@ test("uses one exact day-aligned YoY contract and prior month only as context", 
   const html = render();
   assert.equal(built.comparison.label, "vs Jul ’25 through Jul 18");
   assert.match(html, /vs Jul ’25 through Jul 18/);
-  assert.match(html, /Jun ’26 closed/);
-  assert.match(html, /Calendar-day run-rate pace/);
+  assert.match(html, /Jun ’26 full month/);
+  assert.match(html, /Calendar-day pace/);
   assert.doesNotMatch(html, /change vs Jun|pace.*ahead of|pace.*behind/);
 });
 
-test("separates signed change drivers from selected-period review rows", () => {
+test("does not render the rejected change-driver interpretation", () => {
   const built = model();
   const html = render();
   assert.ok(built.topSignedDollarChangeDrivers.some((item) => item.name === "Prior-year-only material" && item.comparisonSalesDelta === -5000));
   assert.ok(!built.items.some((item) => item.name === "Prior-year-only material"));
-  assert.match(html, /What changed/);
-  assert.match(html, /Prior-year-only material/);
-  const review = html.slice(html.indexOf("Material review"));
-  assert.doesNotMatch(review, /Prior-year-only material/);
+  assert.doesNotMatch(html, /Change drivers|What changed|Prior-year-only material/);
 });
 
-test("renders ranked category bars, exposures, and matched table columns", () => {
+test("renders factual ranked category bars and no exposure interpretation", () => {
   const html = render();
-  assert.match(html, /Where sales are concentrated/);
-  assert.match(html, /Historical category change is unavailable until category mapping is versioned/);
+  assert.match(html, /Material Sales by Category/);
+  assert.match(html, /bars scaled to the largest category/);
   assert.match(html, /Special order \/ non-stock/);
-  assert.match(html, /Largest material/);
   assert.match(html, /Ungrouped/);
   assert.match(html, /Jul ’25 through Jul 18/);
-  assert.match(html, /Material review/);
+  assert.match(html, /Material Review/);
+  assert.doesNotMatch(html, /Exposure|What needs attention|Largest material|Historical category change/);
   assert.doesNotMatch(html, /Service Contract/);
 });
 
@@ -95,7 +91,8 @@ test("unavailable coverage suppresses comparisons rather than inventing zeros", 
   built.items.forEach((item) => { item.comparisonSales = null; item.comparisonExtended = null; item.comparisonSalesDelta = null; });
   const html = renderToStaticMarkup(createElement(MaterialsDashboard, { model: toMaterialsPageReadModel(built), trend: [] }));
   assert.match(html, /Selected-period coverage is failed/);
-  assert.match(html, /Comparison unavailable/);
+  assert.match(html, /Selected-period data unavailable/);
+  assert.match(html, /N\/A/);
   assert.doesNotMatch(html, /\$0/);
 });
 
