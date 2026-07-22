@@ -560,7 +560,12 @@ function buildStoredFreshnessStatus(row: FreshnessRow) {
     dataThrough: row.data_through,
     lastSuccessfulRunAt: row.last_successful_run_at,
     lastFailedRunAt: row.last_failed_run_at,
-    maxAgeHours: row.max_age_hours ?? 24,
+    // Aggregate rows were already evaluated source-by-source by the health
+    // publisher. Re-aging their oldest data-through timestamp here with a
+    // generic page SLA can contradict that authoritative stored result.
+    maxAgeHours: isAggregateFreshnessPageKey(row.page_key)
+      ? Number.POSITIVE_INFINITY
+      : row.max_age_hours ?? 24,
     explicitState: row.status,
     coverageDetail: coverageDetail(row.coverage_json),
   });

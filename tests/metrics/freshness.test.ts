@@ -45,7 +45,7 @@ test("buildFreshnessStatus marks stale and current data", () => {
   );
 });
 
-test("buildFreshnessStatus preserves building, partial, and suspect precedence", () => {
+test("buildFreshnessStatus preserves explicit aggregate-state precedence", () => {
   const base = {
     pageKey: "jobs",
     dataThrough: "2026-06-30T23:00:00Z",
@@ -57,4 +57,5 @@ test("buildFreshnessStatus preserves building, partial, and suspect precedence",
   assert.equal(buildFreshnessStatus({ ...base, explicitState: "building" }).state, "building");
   assert.equal(buildFreshnessStatus({ ...base, explicitState: "partial" }).state, "partial");
   assert.equal(buildFreshnessStatus({ ...base, explicitState: "suspect" }).state, "suspect");
+  assert.equal(buildFreshnessStatus({ ...base, explicitState: "stale", maxAgeHours: Number.POSITIVE_INFINITY }).state, "stale");
 });

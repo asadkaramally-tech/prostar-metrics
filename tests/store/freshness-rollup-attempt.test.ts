@@ -19,6 +19,7 @@ test("page freshness uses selected-period evidence for historical pages and the 
   assert.match(pageServingFunction, /periodStart < currentPacificMonth\(\)/);
   assert.match(pageServingFunction, /evaluateStoredPageFreshness\(pageKey, row, periodStart\)/);
   assert.match(pageServingFunction, /return buildStoredFreshnessStatus\(row\)/);
+  assert.match(source, /isAggregateFreshnessPageKey\(row\.page_key\)[\s\S]*Number\.POSITIVE_INFINITY/);
   assert.match(source, /\[sourceFamilies, selectedPeriod, historical\]/);
   assert.match(source, /when \$3::boolean[\s\S]*manifest\.coverage_status/);
 });
