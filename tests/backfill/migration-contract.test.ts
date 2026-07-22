@@ -9,6 +9,10 @@ const sourcePeriodAuthorityMigrationPath = new URL(
   "../../infra/db/migrations/051_complete_backfill_ledger_from_source_period_authority.sql",
   import.meta.url,
 );
+const julyQuoteAuthorityMigrationPath = new URL(
+  "../../infra/db/migrations/052_close_july_quote_backfills_from_source_period_authority.sql",
+  import.meta.url,
+);
 
 test("migration 007 defines capacity, source/month, run, and reconciliation ledgers", async () => {
   const sql = await readFile(migrationPath, "utf8");
@@ -89,4 +93,20 @@ test("migration 051 accepts fenced source-period authority and narrowly repairs 
   assert.match(sql, /ledger\.status = 'queued'/);
   assert.match(sql, /'system:migration-051'/);
   assert.match(sql, /'backfill_source_month_ledger'/);
+});
+
+test("migration 052 twice-safely closes only authoritative July quote ledger rows", async () => {
+  const sql = await readFile(julyQuoteAuthorityMigrationPath, "utf8");
+
+  assert.match(sql, /ledger\.month_start = date '2026-07-01'/);
+  assert.match(sql, /ledger\.source_family in \('quotes', 'quote_nested'\)/);
+  assert.match(sql, /ledger\.status = 'queued'/);
+  assert.match(sql, /source_manifest\.coverage_status = 'complete'/);
+  assert.match(sql, /source_manifest\.reconciliation_status = 'matched'/);
+  assert.match(sql, /source_manifest\.reconciliation_generation = source_manifest\.manifest_generation/);
+  assert.match(sql, /source_manifest\.expected_page_count > 0/);
+  assert.match(sql, /source_manifest\.completed_page_count = source_manifest\.expected_page_count/);
+  assert.match(sql, /'system:migration-052'/);
+  assert.match(sql, /to_jsonb\(ledger\) as before_value/);
+  assert.match(sql, /to_jsonb\(ledger\) as after_value/);
 });
