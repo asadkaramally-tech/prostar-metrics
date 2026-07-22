@@ -17,6 +17,7 @@ import {
 } from "../../src/lib/store/materials-ingest";
 import {
   buildMaterialsReadModelPayload,
+  getMaterialsTrend,
   getPersistedMaterialsReadModel,
   loadMaterialLineInputs,
   materialsFreshnessForSelectedPeriod,
@@ -295,6 +296,38 @@ test("persisted materials read model round-trips through dashboard_read_models",
 
     // A different month never serves the persisted July payload.
     assert.equal(await getPersistedMaterialsReadModel("2026-06-01", query), null);
+  } finally {
+    await db.close();
+  }
+});
+
+test("materials trend loads one bounded scalar history and preserves missing coverage", async () => {
+  const db = await migratedDatabase();
+  const query = pgliteQuery(db);
+  try {
+    const value = (status: "complete" | "failed", spend: number, quantities: number[]) => ({
+      totals: { current: spend },
+      categories: quantities.map((qty) => ({ qty })),
+      coverage: { selectedMonth: { status } },
+      // A deliberately large field proves the trend contract never returns it.
+      items: [{ key: "catalog:1", jobIds: [1, 2, 3] }],
+    });
+    await db.query(
+      `insert into metrics.dashboard_read_models (
+         metric_family, period_grain, period_start, dimensions_json, values_json, status, rebuilt_at
+       ) values
+         ('materials', 'month', '2026-05-01', '{}'::jsonb, $1::jsonb, 'ready', now()),
+         ('materials', 'month', '2026-06-01', '{}'::jsonb, $2::jsonb, 'ready', now())`,
+      [JSON.stringify(value("complete", 12500, [3.5, 8])), JSON.stringify(value("failed", 99999, [99]))],
+    );
+
+    const trend = await getMaterialsTrend(["2026-05-01", "2026-06-01", "2026-07-01"], query);
+    assert.deepEqual(trend, [
+      { periodStart: "2026-05-01", status: "complete", spend: 12500, quantity: 11.5 },
+      { periodStart: "2026-06-01", status: "failed", spend: null, quantity: null },
+      { periodStart: "2026-07-01", status: "missing", spend: null, quantity: null },
+    ]);
+    assert.equal("items" in trend[0]!, false);
   } finally {
     await db.close();
   }

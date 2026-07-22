@@ -6,6 +6,7 @@ import {
   buildMaterialsCsv,
   categorySegments,
   MaterialsDashboard,
+  niceMaterialsAxisMax,
   paceComparison,
   paceText,
   qtyDelta,
@@ -104,6 +105,12 @@ function render(model: MaterialsReadModel): string {
   return renderToStaticMarkup(createElement(MaterialsDashboard, { model }));
 }
 
+const TREND = [
+  { periodStart: "2026-05-01", spend: 18000, quantity: 92, status: "complete" as const },
+  { periodStart: "2026-06-01", spend: 20019, quantity: 211, status: "complete" as const },
+  { periodStart: "2026-07-01", spend: 65240, quantity: 121, status: "complete" as const },
+];
+
 test("band renders the MTD primary stat with labeled day-aligned pill, pace sub, and both bullet ticks", () => {
   const model = buildModel();
   const html = render(model);
@@ -126,14 +133,17 @@ test("band renders the MTD primary stat with labeled day-aligned pill, pace sub,
   assert.doesNotMatch(html, /ktiles/);
 });
 
-test("category card is the primary viz: one segmented bar, warn-tinted special order, values in the legend", () => {
+test("category card clearly labels the sold-value split, values, and shares without hiding small categories", () => {
   const model = buildModel();
   const html = render(model);
   const segments = categorySegments(model);
 
   assert.match(html, /data-primary-viz/);
-  assert.match(html, /Materials Value by Category/);
-  assert.match(html, /July · Simpro product groups/);
+  assert.match(html, /Sold value split by category/);
+  assert.match(html, /July · share of material sales · Simpro product groups/);
+  assert.match(html, />Category</);
+  assert.match(html, />Sold value</);
+  assert.match(html, />Share</);
   // Rank order from the fixture: special order leads and takes the warn tint.
   assert.equal(segments[0].name, "Special order / non-stock");
   assert.equal(segments[0].fill, "color-mix(in srgb, var(--warn), #fff 55%)");
@@ -152,6 +162,37 @@ test("category card is the primary viz: one segmented bar, warn-tinted special o
   assert.match(html, /Special order \/ non-stock · 82%/);
   // Six named categories in this fixture → no "more categories" remainder.
   assert.doesNotMatch(html, /more categor/);
+});
+
+test("category split keeps categories beyond the leading six individually visible", () => {
+  const model = buildModel();
+  model.categories.push(
+    { name: "Small valves", value: 12, qty: 2, lines: 1 },
+    { name: "Small fittings", value: 8, qty: 4, lines: 2 },
+  );
+  const html = render(model);
+  const segments = categorySegments(model);
+
+  assert.equal(segments.length, model.categories.length);
+  assert.match(html, /Small valves/);
+  assert.match(html, /Small fittings/);
+  assert.doesNotMatch(html, /more categories/);
+});
+
+test("monthly trend uses separate, explicitly labeled spend and quantity axes with monthly detail", () => {
+  const html = renderToStaticMarkup(createElement(MaterialsDashboard, { model: buildModel(), trend: TREND }));
+
+  assert.match(html, /Monthly material sales trend/);
+  assert.match(html, /May ’26 – Jul ’26/);
+  assert.match(html, /sold value and quantity use separate axes/);
+  assert.match(html, /Sold value/);
+  assert.match(html, /extended sell, excluding Service Contract materials/);
+  assert.match(html, /Quantity sold/);
+  assert.match(html, /material units · own quantity axis/);
+  assert.match(html, /aria-label="Material sold value by month"/);
+  assert.match(html, /aria-label="Material quantity sold by month"/);
+  assert.equal(niceMaterialsAxisMax([18000, 20019, 65240]), 70000);
+  assert.equal(niceMaterialsAxisMax([null, 0]), 1);
 });
 
 test("all-materials table is ordered by total sold value with Δ grammar, unit sell, and pagination", () => {
@@ -258,6 +299,10 @@ test("empty months render a truthful coverage state, not a zero dashboard", () =
   const empty = buildModel({ selectedLines: [] });
   assert.match(render(empty), /No materials were billed on jobs completed in July\./);
   assert.doesNotMatch(render(empty), /\$0/);
+
+  const emptyWithTrend = renderToStaticMarkup(createElement(MaterialsDashboard, { model: empty, trend: TREND }));
+  assert.match(emptyWithTrend, /Monthly material sales trend/);
+  assert.match(emptyWithTrend, /No materials were billed on jobs completed in July\./);
 
   empty.freshness = { ...empty.freshness, state: "stale", label: "Data is stale", detail: "Data-through is July 12." };
   assert.match(render(empty), /Selected-month results may be incomplete and should not be treated as current/);

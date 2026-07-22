@@ -25,6 +25,13 @@ export type MaterialsItemPagination = {
   totalPages: number;
 };
 
+export type MaterialsTrendPoint = {
+  periodStart: string;
+  spend: number | null;
+  quantity: number | null;
+  status: "complete" | "failed" | "missing";
+};
+
 /** The bounded payload passed to the client Materials dashboard. */
 export type MaterialsPageReadModel = Omit<MaterialsReadModel, "items"> & {
   items: MaterialsItemSummary[];
@@ -65,6 +72,13 @@ type MonthWalkDbRow = {
 };
 
 type PersistedMaterialsRow = { values_json: MaterialsReadModel | null };
+
+type MaterialsTrendDbRow = {
+  period_start: string;
+  status: string | null;
+  spend: string | number | null;
+  quantity: string | number | null;
+};
 
 /**
  * Serve the materials read model: persisted dashboard_read_models payload
@@ -208,6 +222,43 @@ export async function getPersistedMaterialsReadModel(
   );
   const payload = result.rows[0]?.values_json ?? null;
   return isUsablePersistedMaterialsReadModel(payload, periodStart) ? payload : null;
+}
+
+/** Load only the scalar history needed by the Materials trend chart. This is
+ * intentionally one bounded query: full item arrays and job IDs never cross
+ * the database or server/client boundary for trend rendering. */
+export async function getMaterialsTrend(
+  periodStarts: string[],
+  query: MaterialsRowsQuery = queryPostgres,
+): Promise<MaterialsTrendPoint[]> {
+  if (periodStarts.length === 0) return [];
+  const result = await query<MaterialsTrendDbRow>(
+    `select period_start::text,
+            values_json -> 'coverage' -> 'selectedMonth' ->> 'status' as status,
+            (values_json -> 'totals' ->> 'current')::numeric as spend,
+            coalesce((
+              select sum((category ->> 'qty')::numeric)
+                from jsonb_array_elements(coalesce(values_json -> 'categories', '[]'::jsonb)) category
+            ), 0)::numeric as quantity
+       from metrics.dashboard_read_models
+      where metric_family = $1
+        and period_grain = 'month'
+        and period_start = any($2::date[])
+        and superseded_at is null
+      order by period_start`,
+    [MATERIALS_METRIC_FAMILY, periodStarts],
+  );
+  const byPeriod = new Map(result.rows.map((row) => [row.period_start.slice(0, 10), row]));
+  return periodStarts.map((periodStart) => {
+    const row = byPeriod.get(periodStart);
+    const status = materialCoverageStatus(row?.status);
+    return {
+      periodStart,
+      status,
+      spend: status === "complete" ? nullableFiniteNumber(row?.spend) : null,
+      quantity: status === "complete" ? nullableFiniteNumber(row?.quantity) : null,
+    };
+  });
 }
 
 /**
@@ -366,4 +417,14 @@ function emptyMaterialsReadModel(
 function finiteNumber(value: string | number | null): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function nullableFiniteNumber(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function materialCoverageStatus(value: string | null | undefined): MaterialsTrendPoint["status"] {
+  return value === "complete" || value === "failed" ? value : "missing";
 }

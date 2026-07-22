@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Dpill, KpiBand, moneyK, PrimaryStatCard, SegBar, type SegBarSegment } from "@/components/band";
-import { fmt } from "@/components/charts";
+import { fmt, LineChart, tipRow, tipTitle } from "@/components/charts";
 import {
   monthLongName,
   monthShortName,
@@ -21,20 +21,23 @@ import {
   StateEmpty,
 } from "@/components/reset";
 import { SPECIAL_ORDER_CATEGORY, type MaterialsReadModel } from "@/lib/metrics/materials";
-import type { MaterialsItemPagination, MaterialsItemSummary } from "@/lib/store/materials-read-model";
+import type {
+  MaterialsItemPagination,
+  MaterialsItemSummary,
+  MaterialsTrendPoint,
+} from "@/lib/store/materials-read-model";
 
-/* /materials — implements the owner-approved mockup
-   docs/approved-design/mockups/materials.html exactly, with every figure
-   taken from the materials read model (the mockup's July numbers are sample
-   content). Composition [owner-ruled — no KPI tiles, no narrative text]:
+/* /materials — keeps the owner-approved mockup's hierarchy and extends it
+   with the same separate-axis monthly trend convention used by Quotes/Jobs.
+   Every figure comes from persisted materials read models (the mockup's July
+   numbers are sample content). Composition [no KPI tiles, no narrative text]:
    band pair (MATERIALS SOLD primary stat card BESIDE the Materials Value by
-   Category segmented bar) → All Materials Sold table ordered by total sold
-   value with CSV, pagination and a row drill drawer. The only micro-copy on
-   the page is the table subtitle's Δ column key. */
+   Category segmented bar) → bounded monthly trend → All Materials Sold table
+   ordered by total sold value with CSV, pagination and a row drill drawer. */
 
 /* Category fills follow the mockup's rank order; Special order / non-stock
-   always takes the warn tint wherever it ranks, the "N more" remainder is
-   always --n300. Light fills label in --ink, solid fills in white. */
+   always takes the warn tint wherever it ranks. Lower-ranked categories use
+   --n300 but remain individually listed. Light fills label in --ink. */
 const SPECIAL_FILL = "color-mix(in srgb, var(--warn), #fff 55%)";
 const REMAINDER_FILL = "var(--n300)";
 const RANK_FILLS = [
@@ -51,11 +54,14 @@ type MaterialsDashboardModel = Omit<MaterialsReadModel, "items"> & {
   itemPagination?: MaterialsItemPagination;
 };
 
-export type MaterialsDashboardProps = { model: MaterialsDashboardModel };
+export type MaterialsDashboardProps = {
+  model: MaterialsDashboardModel;
+  trend?: MaterialsTrendPoint[];
+};
 
 export { buildMaterialsCsv } from "@/lib/materials/csv";
 
-export function MaterialsDashboard({ model }: MaterialsDashboardProps) {
+export function MaterialsDashboard({ model, trend = [] }: MaterialsDashboardProps) {
   const [drawerItem, setDrawerItem] = useState<MaterialsItemSummary | null>(null);
   const [drawerJobIds, setDrawerJobIds] = useState<number[] | null>(null);
   const [drawerLoadError, setDrawerLoadError] = useState<string | null>(null);
@@ -94,6 +100,7 @@ export function MaterialsDashboard({ model }: MaterialsDashboardProps) {
     return (
       <DefTooltipProvider>
         <MaterialsCoverageWarning model={model} monthLong={monthLong} hasRetainedTotals={false} />
+        <MaterialsTrendCard points={trend} />
         <Card>
           <CardBody>
             <StateEmpty>{emptyMonthMessage(model, monthLong)}</StateEmpty>
@@ -107,6 +114,7 @@ export function MaterialsDashboard({ model }: MaterialsDashboardProps) {
     <DefTooltipProvider>
       <MaterialsCoverageWarning model={model} monthLong={monthLong} hasRetainedTotals />
       <MaterialsBand model={model} />
+      <MaterialsTrendCard points={trend} />
       <MaterialsTableCard model={model} onOpen={openDrawer} />
       <Drawer
         open={drawerItem !== null}
@@ -126,6 +134,79 @@ export function MaterialsDashboard({ model }: MaterialsDashboardProps) {
       </Drawer>
     </DefTooltipProvider>
   );
+}
+
+function MaterialsTrendCard({ points }: { points: MaterialsTrendPoint[] }) {
+  if (points.length === 0) return null;
+  const months = points.map((point) => point.periodStart.slice(0, 7));
+  const labels = months.map((month, index) => {
+    if (index === 0 || index === months.length - 1 || month.endsWith("-01")) return seriesLabel(month);
+    return index % 2 === 0 ? monthShortName(month) : "";
+  });
+  const fullLabels = months.map((month) => `${monthLongName(month)} ${month.slice(0, 4)}`);
+  const spend = points.map((point) => point.status === "complete" ? point.spend : null);
+  const quantity = points.map((point) => point.status === "complete" ? point.quantity : null);
+  const spendMax = niceMaterialsAxisMax(spend);
+  const quantityMax = niceMaterialsAxisMax(quantity);
+  const range = `${seriesLabel(months[0])} – ${seriesLabel(months[months.length - 1])}`;
+  const tip = (index: number) => {
+    const point = points[index];
+    if (point.status !== "complete") {
+      return tipTitle(fullLabels[index]) + tipRow("#9aa2b2", "Coverage", point.status);
+    }
+    return tipTitle(fullLabels[index])
+      + tipRow("#5b63d3", "Sold value", point.spend == null ? "N/A" : fmt.moneyFull(point.spend))
+      + tipRow("#0e9aae", "Quantity sold", qtyText(point.quantity));
+  };
+
+  return (
+    <Card
+      className="span12"
+      title="Monthly material sales trend"
+      subtitle={`${range} · sold value and quantity use separate axes · hover or tap for monthly detail`}
+    >
+      <CardBody>
+        <div data-materials-trend="" data-viz="">
+          <div className="striphead" style={{ marginTop: 0 }}>
+            <span className="sl"><i className="sw" style={{ background: "#5b63d3" }} />Sold value</span>
+            <span className="sn">extended sell, excluding Service Contract materials</span>
+          </div>
+          <LineChart
+            labels={labels}
+            series={[{ name: "Sold value", vals: spend, color: "#5b63d3", width: 2.4 }]}
+            h={220}
+            ymax={spendMax}
+            ticks={4}
+            yFmt={fmt.money}
+            xlabels={false}
+            tip={tip}
+            ariaLabel="Material sold value by month"
+          />
+          <div className="striphead">
+            <span className="sl"><i className="sw" style={{ background: "#0e9aae" }} />Quantity sold</span>
+            <span className="sn">material units · own quantity axis</span>
+          </div>
+          <LineChart
+            labels={labels}
+            series={[{ name: "Quantity sold", vals: quantity, color: "#0e9aae", width: 2.2 }]}
+            h={120}
+            ymax={quantityMax}
+            ticks={2}
+            yFmt={qtyText}
+            tip={tip}
+            ariaLabel="Material quantity sold by month"
+          />
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+export function niceMaterialsAxisMax(values: Array<number | null>): number {
+  const max = Math.max(0, ...values.filter((value): value is number => value != null && Number.isFinite(value)));
+  if (max <= 0) return 1;
+  const magnitude = 10 ** Math.floor(Math.log10(max));
+  return Math.ceil(max / magnitude) * magnitude;
 }
 
 function MaterialsCoverageWarning({
@@ -264,17 +345,18 @@ export type CategorySegment = {
   light: boolean;
 };
 
-/** Top-6 categories + an aggregated "N more categories" remainder, with the
- *  mockup's rank-ordered fills (Special order always warn-tinted). */
+/** Every category remains visible. Lower-ranked categories share the neutral
+ *  fill once the approved rank palette is exhausted, but are never grouped
+ *  into an opaque remainder. */
 export function categorySegments(model: MaterialsDashboardModel): CategorySegment[] {
   const total = model.categories.reduce((sum, slice) => sum + slice.value, 0);
   if (total <= 0) return [];
-  const top = model.categories.slice(0, 6);
-  const rest = model.categories.slice(6);
   const out: CategorySegment[] = [];
   let rank = 0;
-  for (const slice of top) {
-    const fill = slice.name === SPECIAL_ORDER_CATEGORY ? SPECIAL_FILL : RANK_FILLS[Math.min(rank, RANK_FILLS.length - 1)];
+  for (const slice of model.categories) {
+    const fill = slice.name === SPECIAL_ORDER_CATEGORY
+      ? SPECIAL_FILL
+      : rank < RANK_FILLS.length ? RANK_FILLS[rank] : REMAINDER_FILL;
     if (slice.name !== SPECIAL_ORDER_CATEGORY) rank += 1;
     out.push({
       name: slice.name,
@@ -282,16 +364,6 @@ export function categorySegments(model: MaterialsDashboardModel): CategorySegmen
       pct: (slice.value / total) * 100,
       fill,
       light: LIGHT_FILLS.has(fill),
-    });
-  }
-  if (rest.length > 0) {
-    const restValue = rest.reduce((sum, slice) => sum + slice.value, 0);
-    out.push({
-      name: `${rest.length} more ${rest.length === 1 ? "category" : "categories"}`,
-      value: restValue,
-      pct: (restValue / total) * 100,
-      fill: REMAINDER_FILL,
-      light: true,
     });
   }
   return out;
@@ -307,20 +379,31 @@ function CategoryCard({ model }: { model: MaterialsDashboardModel }) {
     labelColor: seg.light ? "var(--ink)" : undefined,
   }));
   return (
-    <Card title="Materials Value by Category" subtitle={`${monthLong} · Simpro product groups`}>
+    <Card title="Sold value split by category" subtitle={`${monthLong} · share of material sales · Simpro product groups`}>
       <CardBody>
         <div data-primary-viz="" data-viz="">
-          <SegBar tall segments={barSegments} ariaLabel={`Materials value by category, ${monthLong}`} />
-          <div className="legend" style={{ marginTop: 10, rowGap: 6, padding: 0 }}>
+          <SegBar tall segments={barSegments} ariaLabel={`${monthLong} sold value split by material category`} />
+          <div
+            aria-label="Category sold values and shares"
+            style={{ display: "grid", gap: 7, marginTop: 12 }}
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(150px,1fr) auto auto", gap: 12, color: "var(--faint)", fontSize: 11.5, fontWeight: 700 }}>
+              <span>Category</span><span>Sold value</span><span>Share</span>
+            </div>
             {segments.map((seg) => (
-              <span key={seg.name}>
-                <i className="sw" style={{ background: seg.fill, width: 10, height: 10, borderRadius: 3 }} />
-                {seg.name}{" "}
-                <b className="tnum" style={{ fontWeight: 600, color: "var(--ink)" }}>
+              <div
+                key={seg.name}
+                style={{ display: "grid", gridTemplateColumns: "minmax(150px,1fr) auto 58px", gap: 12, alignItems: "center", fontSize: 12.5 }}
+              >
+                <span style={{ minWidth: 0 }}>
+                  <i className="sw" style={{ background: seg.fill, width: 10, height: 10, borderRadius: 3, marginRight: 7 }} />
+                  {seg.name}
+                </span>
+                <b className="tnum" style={{ fontWeight: 600, color: "var(--ink)", textAlign: "right" }}>
                   {fmt.moneyFull(seg.value)}
-                </b>{" "}
-                · {seg.pct.toFixed(1)}%
-              </span>
+                </b>
+                <span className="tnum" style={{ textAlign: "right", color: "var(--ink-2)" }}>{seg.pct.toFixed(1)}%</span>
+              </div>
             ))}
           </div>
         </div>
