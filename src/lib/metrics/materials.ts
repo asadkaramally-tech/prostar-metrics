@@ -32,6 +32,16 @@ export type MaterialsCategorySlice = {
   value: number;
   qty: number;
   lines: number;
+  /** Same-month-prior-year value, day-aligned only for the live partial month. */
+  comparisonValue: number | null;
+  comparisonQty: number | null;
+  valueDelta: number | null;
+  /** UI compatibility alias for the signed selected-minus-comparator value. */
+  changeValue: number | null;
+  qtyDelta: number | null;
+  comparisonAvailable: boolean;
+  /** False until category mapping revisions are snapshotted historically. */
+  taxonomyComparable: boolean;
 };
 
 export type MaterialsItemRow = {
@@ -42,6 +52,16 @@ export type MaterialsItemRow = {
   qty: number;
   /** Null when the prior month has not been authoritatively walked. */
   priorMonthQty: number | null;
+  /** Null when the prior month has not been authoritatively walked. */
+  priorMonthExtended: number | null;
+  /** Same-month-prior-year comparators. They are day-aligned for the live
+   * partial month and full-month for closed months. */
+  comparisonSales: number | null;
+  /** UI compatibility alias for comparison sales. */
+  comparisonExtended: number | null;
+  comparisonQty: number | null;
+  comparisonSalesDelta: number | null;
+  comparisonQtyDelta: number | null;
   unitSell: number | null;
   extended: number;
   jobCount: number;
@@ -80,6 +100,45 @@ export type MaterialsReadModel = {
     excludedServiceContractLineCount: number;
   };
   warnings: string[];
+  comparison: MaterialsComparison;
+  topSignedDollarChangeDrivers: MaterialsChangeDriver[];
+  /** Bounded, signed drivers used by the investigation surface. */
+  changeDrivers: MaterialsChangeDriver[];
+  /** Small, factual selected-month exposure facts for the Materials overview.
+   * Optional while older persisted read models age out. */
+  exposure?: MaterialsExposure;
+};
+
+export type MaterialsComparison = {
+  basis: "day-aligned-yoy" | "full-yoy";
+  periodStart: string;
+  comparatorPeriodStart: string;
+  label: string;
+  shortLabel: string;
+  columnLabel: string;
+  partial: boolean;
+  elapsedDays: number;
+  available: boolean;
+  comparable: boolean;
+  sales: number | null;
+  salesDelta: number | null;
+  salesDeltaPct: number | null;
+};
+
+export type MaterialsChangeDriver = Pick<
+  MaterialsItemRow,
+  "key" | "name" | "partNo" | "category" | "extended" | "comparisonExtended" | "comparisonSalesDelta"
+> & {
+  /** Explicit aliases make the signed-driver payload self-describing. */
+  sales: number;
+  comparisonSales: number;
+  salesDelta: number;
+};
+
+export type MaterialsExposure = {
+  specialOrder: { value: number; share: number };
+  largestItem: { name: string; value: number; share: number } | null;
+  ungrouped: { value: number; share: number };
 };
 
 export const SPECIAL_ORDER_CATEGORY = "Special order / non-stock";
@@ -136,7 +195,7 @@ export function buildMaterialsReadModel(params: BuildMaterialsReadModelParams): 
   }
   if (params.coverage.priorMonth.status !== "complete") {
     warnings.push(
-      `The prior-month materials walk is ${params.coverage.priorMonth.status}; item quantities and changes are unavailable.`,
+      `The prior-month materials walk is ${params.coverage.priorMonth.status}; prior-month context is unavailable.`,
     );
   }
   if (params.coverage.priorYearMonth.status !== "complete") {
@@ -144,6 +203,28 @@ export function buildMaterialsReadModel(params: BuildMaterialsReadModelParams): 
       `The prior-year materials walk is ${params.coverage.priorYearMonth.status}; the year-over-year comparison is unavailable.`,
     );
   }
+
+  const comparisonAvailable = params.coverage.selectedMonth.status === "complete"
+    && params.coverage.priorYearMonth.status === "complete";
+  const categories = buildCategories(selected, priorYearSameDay, comparisonAvailable);
+  const items = buildItems(
+    selected,
+    priorMonth,
+    params.coverage.priorMonth.status === "complete",
+    priorYearSameDay,
+    comparisonAvailable,
+  );
+  const comparatorPeriodStart = addMonthsToPeriodStart(periodStart, -12);
+  const comparison = buildComparison({
+    periodStart,
+    comparatorPeriodStart,
+    partial: isCurrentMonthPartial,
+    elapsedDays,
+    available: comparisonAvailable,
+    sales: currentTotal,
+    comparatorSales: priorYearSameDayTotal,
+  });
+  const changeDrivers = buildTopChangeDrivers(items, priorYearSameDay, comparisonAvailable);
 
   return {
     periodStart,
@@ -156,8 +237,8 @@ export function buildMaterialsReadModel(params: BuildMaterialsReadModelParams): 
       elapsedDays,
       daysInMonth,
     },
-    categories: buildCategories(selected),
-    items: buildItems(selected, priorMonth, params.coverage.priorMonth.status === "complete"),
+    categories,
+    items,
     freshness: params.freshness,
     coverage: {
       selectedMonth: params.coverage.selectedMonth,
@@ -167,6 +248,10 @@ export function buildMaterialsReadModel(params: BuildMaterialsReadModelParams): 
       excludedServiceContractLineCount,
     },
     warnings,
+    comparison,
+    topSignedDollarChangeDrivers: changeDrivers,
+    changeDrivers,
+    exposure: buildExposure(currentTotal, categories, items),
   };
 }
 
@@ -195,8 +280,13 @@ export function materialItemKey(line: MaterialLineInput): string {
   return `${line.lineType === "prebuild" ? "prebuild" : "one-off"}:${name}`;
 }
 
-function buildCategories(lines: MaterialLineInput[]): MaterialsCategorySlice[] {
-  const byCategory = new Map<string, MaterialsCategorySlice>();
+function buildCategories(
+  lines: MaterialLineInput[],
+  comparisonLines: MaterialLineInput[],
+  comparisonAvailable: boolean,
+): MaterialsCategorySlice[] {
+  type CategoryAccumulator = Pick<MaterialsCategorySlice, "name" | "value" | "qty" | "lines">;
+  const byCategory = new Map<string, CategoryAccumulator>();
   for (const line of lines) {
     const name = materialLineCategory(line);
     const slice = byCategory.get(name) ?? { name, value: 0, qty: 0, lines: 0 };
@@ -205,8 +295,34 @@ function buildCategories(lines: MaterialLineInput[]): MaterialsCategorySlice[] {
     slice.lines += 1;
     byCategory.set(name, slice);
   }
+  const comparisonByCategory = new Map<string, Pick<MaterialsCategorySlice, "value" | "qty">>();
+  for (const line of comparisonLines) {
+    const name = materialLineCategory(line);
+    const slice = comparisonByCategory.get(name) ?? { value: 0, qty: 0 };
+    slice.value += line.extendedExTax;
+    slice.qty += line.qty;
+    comparisonByCategory.set(name, slice);
+  }
   return [...byCategory.values()]
-    .map((slice) => ({ ...slice, value: roundMoney(slice.value), qty: roundQty(slice.qty) }))
+    .map((slice) => {
+      const value = roundMoney(slice.value);
+      const qty = roundQty(slice.qty);
+      const comparison = comparisonByCategory.get(slice.name);
+      const comparisonValue = comparisonAvailable ? roundMoney(comparison?.value ?? 0) : null;
+      const comparisonQty = comparisonAvailable ? roundQty(comparison?.qty ?? 0) : null;
+      return {
+        ...slice,
+        value,
+        qty,
+        comparisonValue,
+        comparisonQty,
+        valueDelta: comparisonValue === null ? null : roundMoney(value - comparisonValue),
+        changeValue: comparisonValue === null ? null : roundMoney(value - comparisonValue),
+        qtyDelta: comparisonQty === null ? null : roundQty(qty - comparisonQty),
+        comparisonAvailable,
+        taxonomyComparable: false,
+      };
+    })
     .sort((left, right) => right.value - left.value || left.name.localeCompare(right.name));
 }
 
@@ -214,11 +330,22 @@ function buildItems(
   lines: MaterialLineInput[],
   priorMonthLines: MaterialLineInput[],
   priorMonthComplete: boolean,
+  comparisonLines: MaterialLineInput[],
+  comparisonAvailable: boolean,
 ): MaterialsItemRow[] {
   const priorQtyByKey = new Map<string, number>();
+  const priorExtendedByKey = new Map<string, number>();
   for (const line of priorMonthLines) {
     const key = materialItemKey(line);
     priorQtyByKey.set(key, (priorQtyByKey.get(key) ?? 0) + line.qty);
+    priorExtendedByKey.set(key, (priorExtendedByKey.get(key) ?? 0) + line.extendedExTax);
+  }
+  const comparisonQtyByKey = new Map<string, number>();
+  const comparisonExtendedByKey = new Map<string, number>();
+  for (const line of comparisonLines) {
+    const key = materialItemKey(line);
+    comparisonQtyByKey.set(key, (comparisonQtyByKey.get(key) ?? 0) + line.qty);
+    comparisonExtendedByKey.set(key, (comparisonExtendedByKey.get(key) ?? 0) + line.extendedExTax);
   }
 
   type ItemAccumulator = Omit<MaterialsItemRow, "jobCount" | "jobIds" | "unitSell"> & { jobIds: Set<number> };
@@ -232,6 +359,12 @@ function buildItems(
       category: materialLineCategory(line),
       qty: 0,
       priorMonthQty: priorMonthComplete ? roundQty(priorQtyByKey.get(key) ?? 0) : null,
+      priorMonthExtended: priorMonthComplete ? roundMoney(priorExtendedByKey.get(key) ?? 0) : null,
+      comparisonSales: comparisonAvailable ? roundMoney(comparisonExtendedByKey.get(key) ?? 0) : null,
+      comparisonExtended: comparisonAvailable ? roundMoney(comparisonExtendedByKey.get(key) ?? 0) : null,
+      comparisonQty: comparisonAvailable ? roundQty(comparisonQtyByKey.get(key) ?? 0) : null,
+      comparisonSalesDelta: null,
+      comparisonQtyDelta: null,
       extended: 0,
       jobIds: new Set<number>(),
     };
@@ -254,6 +387,12 @@ function buildItems(
         category: item.category,
         qty,
         priorMonthQty: item.priorMonthQty,
+        priorMonthExtended: item.priorMonthExtended,
+        comparisonSales: item.comparisonSales,
+        comparisonExtended: item.comparisonExtended,
+        comparisonQty: item.comparisonQty,
+        comparisonSalesDelta: item.comparisonSales === null ? null : roundMoney(extended - item.comparisonSales),
+        comparisonQtyDelta: item.comparisonQty === null ? null : roundQty(qty - item.comparisonQty),
         unitSell: qty > 0 ? roundMoney(extended / qty) : null,
         extended,
         jobCount: jobIds.length,
@@ -261,6 +400,104 @@ function buildItems(
       };
     })
     .sort((left, right) => right.extended - left.extended || left.key.localeCompare(right.key));
+}
+
+function buildComparison(params: {
+  periodStart: string;
+  comparatorPeriodStart: string;
+  partial: boolean;
+  elapsedDays: number;
+  available: boolean;
+  sales: number;
+  comparatorSales: number;
+}): MaterialsComparison {
+  const shortLabel = monthYearShortLabel(params.comparatorPeriodStart);
+  const cutoff = monthDayLabel(params.periodStart, params.elapsedDays);
+  const label = params.partial ? `vs ${shortLabel} through ${cutoff}` : `vs ${shortLabel} full month`;
+  const sales = params.available ? params.comparatorSales : null;
+  const salesDelta = sales === null ? null : roundMoney(params.sales - sales);
+  return {
+    basis: params.partial ? "day-aligned-yoy" : "full-yoy",
+    periodStart: params.periodStart,
+    comparatorPeriodStart: params.comparatorPeriodStart,
+    label,
+    shortLabel,
+    columnLabel: params.partial ? `${shortLabel} through ${cutoff}` : shortLabel,
+    partial: params.partial,
+    elapsedDays: params.elapsedDays,
+    available: params.available,
+    comparable: params.available,
+    sales,
+    salesDelta,
+    salesDeltaPct: sales === null || sales === 0 || salesDelta === null ? null : roundPct(salesDelta / sales),
+  };
+}
+
+function buildTopChangeDrivers(
+  items: MaterialsItemRow[],
+  comparisonLines: MaterialLineInput[],
+  comparisonAvailable: boolean,
+): MaterialsChangeDriver[] {
+  if (!comparisonAvailable) return [];
+  const drivers = new Map<string, MaterialsChangeDriver>();
+  const selectedKeys = new Set(items.map((item) => item.key));
+  for (const item of items) {
+    if (item.comparisonSales === null || item.comparisonSalesDelta === null) continue;
+    drivers.set(item.key, {
+      key: item.key,
+      name: item.name,
+      partNo: item.partNo,
+      category: item.category,
+      extended: item.extended,
+      comparisonExtended: item.comparisonExtended,
+      comparisonSalesDelta: item.comparisonSalesDelta,
+      sales: item.extended,
+      comparisonSales: item.comparisonSales,
+      salesDelta: item.comparisonSalesDelta,
+    });
+  }
+  for (const line of comparisonLines) {
+    const key = materialItemKey(line);
+    const existing = drivers.get(key);
+    // Selected-period items already carry their fully aggregated comparator.
+    if (selectedKeys.has(key)) continue;
+    const comparisonSales = roundMoney((existing?.comparisonSales ?? 0) + line.extendedExTax);
+    if (existing) {
+      existing.comparisonExtended = comparisonSales;
+      existing.comparisonSalesDelta = -comparisonSales;
+      existing.comparisonSales = comparisonSales;
+      existing.salesDelta = -comparisonSales;
+      continue;
+    }
+    drivers.set(key, {
+      key,
+      name: cleanText(line.name) ?? "Unnamed material",
+      partNo: cleanText(line.partNo),
+      category: materialLineCategory(line),
+      extended: 0,
+      comparisonExtended: comparisonSales,
+      comparisonSalesDelta: -comparisonSales,
+      sales: 0,
+      comparisonSales,
+      salesDelta: -comparisonSales,
+    });
+  }
+  return [...drivers.values()]
+    .filter((item) => item.comparisonSales !== null && item.comparisonSalesDelta !== null)
+    .sort((left, right) => Math.abs(right.salesDelta) - Math.abs(left.salesDelta) || right.salesDelta - left.salesDelta || left.key.localeCompare(right.key))
+    .slice(0, 10);
+}
+
+function buildExposure(total: number, categories: MaterialsCategorySlice[], items: MaterialsItemRow[]): MaterialsExposure {
+  const share = (value: number) => total > 0 ? roundPct(value / total) : 0;
+  const specialOrder = categories.find((category) => category.name === SPECIAL_ORDER_CATEGORY)?.value ?? 0;
+  const ungrouped = categories.find((category) => category.name === UNGROUPED_CATEGORY)?.value ?? 0;
+  const largest = items[0] ?? null;
+  return {
+    specialOrder: { value: specialOrder, share: share(specialOrder) },
+    largestItem: largest ? { name: largest.name, value: largest.extended, share: share(largest.extended) } : null,
+    ungrouped: { value: ungrouped, share: share(ungrouped) },
+  };
 }
 
 export function normalizeMaterialsPeriodStart(value: string | undefined, now = new Date()): string {
@@ -325,4 +562,20 @@ function roundMoney(value: number): number {
 
 function roundQty(value: number): number {
   return Math.round((value + Number.EPSILON) * 1000) / 1000;
+}
+
+function roundPct(value: number): number {
+  return Math.round((value + Number.EPSILON) * 10_000) / 10_000;
+}
+
+function monthYearShortLabel(periodStart: string): string {
+  const date = new Date(`${periodStart}T00:00:00Z`);
+  const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(date);
+  return `${month} ’${String(date.getUTCFullYear()).slice(-2)}`;
+}
+
+function monthDayLabel(periodStart: string, day: number): string {
+  const month = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" })
+    .format(new Date(`${periodStart}T00:00:00Z`));
+  return `${month} ${day}`;
 }

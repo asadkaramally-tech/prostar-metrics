@@ -119,7 +119,11 @@ test("aggregates categories and items with exclusions, ordering, and job drill",
     UNGROUPED_CATEGORY,
   ]);
   const raypak = model.categories.find((category) => category.name === "Raypak Parts");
-  assert.deepEqual(raypak, { name: "Raypak Parts", value: 750, qty: 4, lines: 3 });
+  assert.deepEqual(raypak, {
+    name: "Raypak Parts", value: 750, qty: 4, lines: 3,
+    comparisonValue: 0, comparisonQty: 0, valueDelta: 750, changeValue: 750, qtyDelta: 4, comparisonAvailable: true,
+    taxonomyComparable: false,
+  });
 
   // Items ordered by extended value, catalog lines merged across jobs.
   assert.deepEqual(model.items.map((item) => item.key), [
@@ -137,6 +141,12 @@ test("aggregates categories and items with exclusions, ordering, and job drill",
     category: "Raypak Parts",
     qty: 3,
     priorMonthQty: 24,
+    priorMonthExtended: 2784,
+    comparisonSales: 0,
+    comparisonExtended: 0,
+    comparisonQty: 0,
+    comparisonSalesDelta: 348,
+    comparisonQtyDelta: 3,
     unitSell: 116,
     extended: 348,
     jobCount: 2,
@@ -164,6 +174,18 @@ test("current-month totals: pace projection and day-aligned prior year", () => {
   // Day-aligned: only prior-year lines completed on or before day 18 count.
   assert.equal(model.totals.priorYearSameDay, 400);
   assert.equal(model.totals.paceProjection, 3100);
+  assert.deepEqual(model.comparison, {
+    basis: "day-aligned-yoy", periodStart: "2026-07-01", comparatorPeriodStart: "2025-07-01",
+    label: "vs Jul ’25 through Jul 18", shortLabel: "Jul ’25", columnLabel: "Jul ’25 through Jul 18",
+    partial: true, elapsedDays: 18, available: true, comparable: true,
+    sales: 400, salesDelta: 1400, salesDeltaPct: 3.5,
+  });
+  assert.equal(model.items[0]?.comparisonSales, 400);
+  assert.equal(model.items[0]?.comparisonQty, 1);
+  assert.equal(model.items[0]?.comparisonSalesDelta, 1400);
+  assert.equal(model.categories[0]?.comparisonValue, 400);
+  assert.equal(model.categories[0]?.valueDelta, 1400);
+  assert.equal(model.topSignedDollarChangeDrivers[0]?.salesDelta, 1400);
 });
 
 test("closed months use the full month for elapsed days, pace, and prior year", () => {
@@ -180,6 +202,28 @@ test("closed months use the full month for elapsed days, pace, and prior year", 
   assert.equal(model.totals.elapsedDays, 30);
   assert.equal(model.totals.paceProjection, 500);
   assert.equal(model.totals.priorYearSameDay, 777);
+  assert.equal(model.comparison.basis, "full-yoy");
+  assert.equal(model.comparison.label, "vs Jun ’25 full month");
+  assert.equal(model.comparison.sales, 777);
+  assert.equal(model.comparison.salesDelta, -277);
+});
+
+test("comparator-only records stay out of selected-period review data but remain signed change drivers", () => {
+  const model = buildMaterialsReadModel(buildParams({
+    selectedLines: [line({ catalogId: 10, name: "Current igniter", extendedExTax: 200 })],
+    priorYearLines: [
+      line({ catalogId: 10, name: "Current igniter", extendedExTax: 50, completedDate: "2025-07-10" }),
+      line({ catalogId: 99, name: "Retired pump", parentGroupName: "Pumps", extendedExTax: 600, completedDate: "2025-07-10" }),
+    ],
+  }));
+  assert.deepEqual(model.items.map((item) => item.key), ["catalog:10"]);
+  assert.deepEqual(model.categories.map((category) => category.name), [UNGROUPED_CATEGORY]);
+  const retired = model.topSignedDollarChangeDrivers.find((item) => item.key === "catalog:99");
+  assert.deepEqual(retired, {
+    key: "catalog:99", name: "Retired pump", partNo: "W-1", category: "Pumps",
+    extended: 0, comparisonExtended: 600, comparisonSalesDelta: -600,
+    sales: 0, comparisonSales: 600, salesDelta: -600,
+  });
 });
 
 test("incomplete or missing walks surface loud warnings", () => {
@@ -207,7 +251,7 @@ test("a missing prior-month walk stays unavailable instead of becoming a real ze
   }));
 
   assert.equal(model.items[0]?.priorMonthQty, null);
-  assert.match(model.warnings.join("\n"), /prior-month materials walk is missing; item quantities and changes are unavailable/);
+  assert.match(model.warnings.join("\n"), /prior-month materials walk is missing; prior-month context is unavailable/);
 });
 
 test("period helpers normalize and step months across year boundaries", () => {

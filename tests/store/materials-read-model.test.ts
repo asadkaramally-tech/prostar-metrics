@@ -17,11 +17,17 @@ import {
 } from "../../src/lib/store/materials-ingest";
 import {
   buildMaterialsReadModelPayload,
+  dollarChange,
+  filterMaterialsItems,
+  getMaterialsItemJobs,
   getMaterialsTrend,
   getPersistedMaterialsReadModel,
   loadMaterialLineInputs,
   materialsFreshnessForSelectedPeriod,
+  materialsCategoryParam,
   materialsPageParam,
+  materialsSearchParam,
+  materialsSortParam,
   toMaterialsPageReadModel,
   type MaterialsRowsQuery,
 } from "../../src/lib/store/materials-read-model";
@@ -305,10 +311,9 @@ test("materials trend loads one bounded scalar history and preserves missing cov
   const db = await migratedDatabase();
   const query = pgliteQuery(db);
   try {
-    const value = (status: "complete" | "failed", spend: number, quantities: number[]) => ({
-      totals: { current: spend },
-      categories: quantities.map((qty) => ({ qty })),
-      coverage: { selectedMonth: { status } },
+    const value = (status: "complete" | "failed", spend: number) => ({
+      totals: { current: spend, elapsedDays: 31, daysInMonth: 31, priorYearSameDay: 10_000 },
+      coverage: { selectedMonth: { status }, priorYearMonth: { status: "complete" } },
       // A deliberately large field proves the trend contract never returns it.
       items: [{ key: "catalog:1", jobIds: [1, 2, 3] }],
     });
@@ -318,16 +323,95 @@ test("materials trend loads one bounded scalar history and preserves missing cov
        ) values
          ('materials', 'month', '2026-05-01', '{}'::jsonb, $1::jsonb, 'ready', now()),
          ('materials', 'month', '2026-06-01', '{}'::jsonb, $2::jsonb, 'ready', now())`,
-      [JSON.stringify(value("complete", 12500, [3.5, 8])), JSON.stringify(value("failed", 99999, [99]))],
+      [JSON.stringify(value("complete", 12500)), JSON.stringify(value("failed", 99999))],
     );
 
     const trend = await getMaterialsTrend(["2026-05-01", "2026-06-01", "2026-07-01"], query);
     assert.deepEqual(trend, [
-      { periodStart: "2026-05-01", status: "complete", spend: 12500, quantity: 11.5 },
-      { periodStart: "2026-06-01", status: "failed", spend: null, quantity: null },
-      { periodStart: "2026-07-01", status: "missing", spend: null, quantity: null },
+      {
+        periodStart: "2026-05-01", status: "complete", sales: 12500, spend: 12500, quantity: null,
+        isPartial: false, elapsedDays: null, daysInMonth: null,
+        sameMonthLastYearSales: 10000, comparisonLabel: "vs May ’25 full month",
+      },
+      {
+        periodStart: "2026-06-01", status: "failed", sales: null, spend: null, quantity: null,
+        isPartial: false, elapsedDays: null, daysInMonth: null,
+        sameMonthLastYearSales: null, comparisonLabel: null,
+      },
+      {
+        periodStart: "2026-07-01", status: "missing", sales: null, spend: null, quantity: null,
+        isPartial: false, elapsedDays: null, daysInMonth: null,
+        sameMonthLastYearSales: null, comparisonLabel: null,
+      },
     ]);
     assert.equal("items" in trend[0]!, false);
+  } finally {
+    await db.close();
+  }
+});
+
+test("selected live materials history uses only the day-aligned same-month-last-year comparator", async () => {
+  const db = await migratedDatabase();
+  const query = pgliteQuery(db);
+  try {
+    const payload = {
+      totals: { current: 65_240, elapsedDays: 18, daysInMonth: 31, priorYearSameDay: 30_000 },
+      coverage: { selectedMonth: { status: "complete" }, priorYearMonth: { status: "complete" } },
+      items: [{ key: "catalog:1", jobIds: [1] }],
+    };
+    await db.query(
+      `insert into metrics.dashboard_read_models (
+         metric_family, period_grain, period_start, dimensions_json, values_json, status, rebuilt_at
+       ) values ('materials', 'month', '2026-07-01', '{}'::jsonb, $1::jsonb, 'ready', now())`,
+      [JSON.stringify(payload)],
+    );
+    const [point] = await getMaterialsTrend(["2026-07-01"], query);
+    assert.deepEqual(point, {
+      periodStart: "2026-07-01", status: "complete", sales: 65_240, spend: 65_240, quantity: null,
+      isPartial: true, elapsedDays: 18, daysInMonth: 31,
+      sameMonthLastYearSales: 30_000, comparisonLabel: "vs Jul ’25 through Jul 18",
+    });
+  } finally {
+    await db.close();
+  }
+});
+
+test("materials review filters before pagination and sorts canonical item comparators", () => {
+  const items = [
+    { key: "catalog:1", name: "Igniter", partNo: "007400F", category: "Raypak", qty: 3, priorMonthQty: 4, priorMonthExtended: 100, comparisonSales: 100, comparisonExtended: 100, comparisonQty: 4, comparisonSalesDelta: 50, comparisonQtyDelta: -1, unitSell: 50, extended: 150, jobCount: 2, jobIds: [1] },
+    { key: "catalog:2", name: "Pump", partNo: "P-1", category: "Pumps", qty: 1, priorMonthQty: null, priorMonthExtended: null, comparisonSales: null, comparisonExtended: null, comparisonQty: null, comparisonSalesDelta: null, comparisonQtyDelta: null, unitSell: 300, extended: 300, jobCount: 1, jobIds: [2] },
+    { key: "catalog:3", name: "Igniter harness", partNo: "007401F", category: "Raypak", qty: 9, priorMonthQty: 1, priorMonthExtended: 10, comparisonSales: 10, comparisonExtended: 10, comparisonQty: 1, comparisonSalesDelta: 170, comparisonQtyDelta: 8, unitSell: 20, extended: 180, jobCount: 7, jobIds: [3] },
+  ];
+  assert.deepEqual(filterMaterialsItems(items, { q: "0074", category: "raypak", sort: "dollar-change" }).map((item) => item.key), ["catalog:3", "catalog:1"]);
+  assert.deepEqual(filterMaterialsItems(items, { q: "", category: null, sort: "jobs" }).map((item) => item.key), ["catalog:3", "catalog:1", "catalog:2"]);
+  assert.equal(dollarChange(items[0]!), 50);
+  assert.equal(dollarChange(items[1]!), null);
+  assert.equal(materialsSearchParam("  0074  F  "), "0074 F");
+  assert.equal(materialsCategoryParam("  Raypak  "), "Raypak");
+  assert.equal(materialsSortParam("jobs"), "jobs");
+  assert.equal(materialsSortParam("not-a-sort"), "sales");
+});
+
+test("material job drill uses normalized local jobs and per-item billed facts", async () => {
+  const db = await migratedDatabase();
+  const query = pgliteQuery(db);
+  const transaction = pgliteTransaction(db);
+  try {
+    await upsertCatalogGroups([
+      { catalogId: 10, name: "Igniter", partNo: "007400F", groupName: "Ignition", parentGroupName: "Raypak Parts" },
+    ], query);
+    await replaceJobMaterialLines({
+      jobId: 8001, periodStart: "2026-07-01", completedDate: "2026-07-10", fetchedAt: new Date(),
+      lines: [walkedLine({ catalogId: 10, qty: 2, extendedExTax: 232 })],
+    }, transaction);
+    await db.query(
+      `insert into metrics.metrics_jobs (job_id, job_no, completed_date, customer_name, site_name)
+       values (8001, 'J-8001', '2026-07-10', 'A Customer', 'Main Site')`,
+    );
+    assert.deepEqual(await getMaterialsItemJobs("2026-07-01", "catalog:10", query), [{
+      jobId: 8001, jobNo: "J-8001", completedDate: "2026-07-10", name: null,
+      customerName: "A Customer", siteName: "Main Site", qty: 2, extended: 232,
+    }]);
   } finally {
     await db.close();
   }
@@ -341,6 +425,12 @@ test("materials page transport is bounded and omits job rosters", () => {
     category: "Fixture",
     qty: index,
     priorMonthQty: 0,
+    priorMonthExtended: 0,
+    comparisonSales: 0,
+    comparisonExtended: 0,
+    comparisonQty: 0,
+    comparisonSalesDelta: index * 10,
+    comparisonQtyDelta: index,
     unitSell: 10,
     extended: index * 10,
     jobCount: 2,
@@ -361,11 +451,18 @@ test("materials page transport is bounded and omits job rosters", () => {
       excludedServiceContractLineCount: 0,
     },
     warnings: [],
+    comparison: {
+      basis: "full-yoy", periodStart: "2026-07-01", comparatorPeriodStart: "2025-07-01",
+      label: "vs Jul ’25 full month", shortLabel: "Jul ’25", columnLabel: "Jul ’25", partial: false, elapsedDays: 31,
+      available: true, comparable: true, sales: 0, salesDelta: 60, salesDeltaPct: null,
+    },
+    topSignedDollarChangeDrivers: [],
+    changeDrivers: [],
   };
 
   const page = toMaterialsPageReadModel(model, 2, 2);
   assert.deepEqual(page.itemPagination, { page: 2, pageSize: 2, total: 3, totalPages: 2 });
-  assert.deepEqual(page.items.map((row) => row.key), ["catalog:3"]);
+  assert.deepEqual(page.items.map((row) => row.key), ["catalog:1"]);
   assert.equal("jobIds" in page.items[0]!, false);
   assert.equal(model.items[2]?.jobIds.join(","), "30,31");
 

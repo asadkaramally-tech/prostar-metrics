@@ -7,21 +7,30 @@ import { addMonthsToPeriodStart } from "@/lib/metrics/materials";
 import {
   getMaterialsPageReadModel,
   getMaterialsTrend,
+  materialsCategoryParam,
   materialsPageParam,
+  materialsSearchParam,
+  materialsSortParam,
 } from "@/lib/store/materials-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
 export default async function MaterialsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ month?: string; page?: string }>;
+  searchParams?: Promise<{ month?: string; page?: string; q?: string; category?: string; sort?: string }>;
 }) {
   const params = await searchParams;
   const periodStart = boundedDashboardPeriodStart(params?.month);
   if (!periodStart) notFound();
   const page = materialsPageParam(params?.page);
-  const model = await cachedPageLoad(`materials:${periodStart}:page:${page}`, 120_000, () =>
-    getMaterialsPageReadModel(periodStart, page),
+  const itemOptions = {
+    page,
+    q: materialsSearchParam(params?.q),
+    category: materialsCategoryParam(params?.category),
+    sort: materialsSortParam(params?.sort),
+  };
+  const model = await cachedPageLoad(`materials:${periodStart}:items:${JSON.stringify(itemOptions)}`, 120_000, () =>
+    getMaterialsPageReadModel(periodStart, itemOptions),
   );
   const trendPeriods: string[] = [];
   for (
@@ -37,8 +46,8 @@ export default async function MaterialsPage({
 
   return (
     <DashboardPage
-      title="Material Sales"
-      description="Materials billed on completed jobs — volume, value and category mix."
+      title="Materials"
+      description="Sales, change drivers, and job-level material review."
       freshness={model.freshness}
       controls={<PeriodSelector action="/materials" value={model.periodStart.slice(0, 7)} />}
     >

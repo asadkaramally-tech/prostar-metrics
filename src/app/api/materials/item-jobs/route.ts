@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertRole, getCurrentUser } from "@/lib/auth/roles";
 import { boundedDashboardPeriodStart } from "@/lib/metrics/periods";
-import { getMaterialsReadModel } from "@/lib/store/materials-read-model";
+import { getMaterialsItemJobs, getMaterialsReadModel } from "@/lib/store/materials-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
 export async function GET(request: Request) {
@@ -24,5 +24,8 @@ export async function GET(request: Request) {
   );
   const item = model.items.find((candidate) => candidate.key === key);
   if (!item) return NextResponse.json({ error: "Material item not found." }, { status: 404 });
-  return NextResponse.json({ jobIds: item.jobIds, jobCount: item.jobCount });
+  const jobs = await cachedPageLoad(`api:materials:item-jobs:${periodStart}:${key}`, 120_000, () =>
+    getMaterialsItemJobs(periodStart, key),
+  );
+  return NextResponse.json({ jobs, jobIds: jobs.map((job) => job.jobId), jobCount: item.jobCount });
 }

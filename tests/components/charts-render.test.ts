@@ -9,12 +9,25 @@ import { fmt } from "../../src/components/charts/fmt";
 import { HStack } from "../../src/components/charts/h-stack";
 import { Heatmap } from "../../src/components/charts/heatmap";
 import { Histogram } from "../../src/components/charts/histogram";
+import { LineChart } from "../../src/components/charts/line-chart";
 import { RatioBars } from "../../src/components/charts/ratio-bars";
 import { StackedBars } from "../../src/components/charts/stacked-bars";
 import { TrendChart } from "../../src/components/charts/trend-chart";
 import { Waterfall } from "../../src/components/charts/waterfall";
 
 const M12 = ["Jul 25", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan 26", "Feb", "Mar", "Apr", "May", "Jun"];
+
+test("charts start with desktop geometry before their container is measured", () => {
+  const html = renderToStaticMarkup(createElement(LineChart, {
+    labels: ["Jan", "Feb"],
+    series: [{ name: "Sales", color: "#5b63d3", vals: [100, 200] }],
+    ymax: 200,
+    yFmt: fmt.n,
+  }));
+
+  assert.match(html, /viewBox="0 0 960 300"/);
+  assert.doesNotMatch(html, /viewBox="0 0 560 220"/);
+});
 
 test("TrendChart dual axis renders tick-count-aligned labels on both gutters", () => {
   const html = renderToStaticMarkup(createElement(TrendChart, {
