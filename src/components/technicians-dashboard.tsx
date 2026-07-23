@@ -29,6 +29,7 @@ import type {
   TechnicianPunctualityDistribution,
 } from "@/lib/metrics/technicians";
 import type { DashboardReadModel, TechnicianHistorySummary } from "@/lib/store/dashboard-read-models";
+import { plainDisplayText } from "@/lib/text/plain-display-text";
 
 /* /technicians — implements the owner-approved redesign
    docs/approved-design/mockups/technicians.html exactly, with every figure
@@ -454,7 +455,7 @@ function TechniciansContent({
       </div>
       {/* Stretch this pair so the row ends flush (gate: multi-card rows within 28px). */}
       <div className="grid12" style={{ alignItems: "stretch" }}>
-        <EfficiencyCard rows={rows} facts={facts} />
+        <EfficiencyCard rows={rows} facts={facts} onOpen={(row) => setDrillId(row.employeeId)} />
         <PunctualityCard payload={payload} facts={facts} onOpenDetail={() => setPunctOpen(true)} />
       </div>
       <div className="grid12">
@@ -464,6 +465,7 @@ function TechniciansContent({
         <EconomicsCard payload={payload} rows={rows} archivedRows={archivedRows} facts={facts} />
       </div>
       <Drawer
+        className="tech-drawer"
         open={drillRow !== null}
         onClose={() => setDrillId(null)}
         ariaLabel="Technician detail"
@@ -686,14 +688,27 @@ function RecordedTimeCard({ rows, onOpen }: { rows: TechnicianScoreRow[]; onOpen
 
 /* ── Row 3: Labor Efficiency ───────────────────────────── */
 
-function EfficiencyCard({ rows, facts }: { rows: TechnicianScoreRow[]; facts: TechnicianTeamFacts }) {
+function EfficiencyCard({
+  rows,
+  facts,
+  onOpen,
+}: {
+  rows: TechnicianScoreRow[];
+  facts: TechnicianTeamFacts;
+  onOpen: (row: TechnicianScoreRow) => void;
+}) {
   const [mode, setMode] = useState<"quote" | "recurring">("quote");
   const EFF_DEF = effDef(facts);
   const barRows = useMemo(
     () =>
       rows
         .filter((row) => row.jobs > 0)
-        .map((row) => ({ name: row.name, v: mode === "recurring" ? row.effR : row.effQ }))
+        .map((row) => ({
+          id: row.employeeId,
+          name: row.name,
+          v: mode === "recurring" ? row.effR : row.effQ,
+          ariaLabel: `${row.name} — open labor efficiency detail`,
+        }))
         .sort((a, b) => (b.v ?? -9) - (a.v ?? -9)),
     [rows, mode],
   );
@@ -706,7 +721,8 @@ function EfficiencyCard({ rows, facts }: { rows: TechnicianScoreRow[]; facts: Te
           Estimated ÷ actual hours — above 1.00× beats the estimate ·{" "}
           <span data-def={EFF_DEF}>
             per-tech hour-share allocation
-          </span>
+          </span>{" "}
+          · click a row for technician detail
         </>
       }
       aside={
@@ -734,6 +750,10 @@ function EfficiencyCard({ rows, facts }: { rows: TechnicianScoreRow[]; facts: Te
             fmt={ratioX}
             pos={POS}
             neg={NEG}
+            onRowClick={(barRow) => {
+              const selected = rows.find((row) => row.employeeId === barRow.id);
+              if (selected) onOpen(selected);
+            }}
           />
         ) : (
           <StateEmpty>No covered {mode === "recurring" ? "recurring" : "quote-linked"} jobs for the roster this month.</StateEmpty>
@@ -1097,146 +1117,141 @@ export function TechnicianDrill({
   );
 
   return (
-    <div className="card">
-      <div className="hd">
-        <div>
-          <div className="ti">{row.name}</div>
-          <div className="st">
-            {hired ? `hired ${hired} · ` : ""}viewing {facts.monthLong} {facts.year}
-            {row.archived ? " · archived — history kept" : ""}
-          </div>
-        </div>
-        <button type="button" className="ctl" style={{ height: 34 }} onClick={onBack}>
-          ← All technicians
+    <div className="tech-drill">
+      <div className="tech-drill-actions">
+        <span className="st">
+          {hired ? `hired ${hired} · ` : ""}viewing {facts.monthLong} {facts.year}
+          {row.archived ? " · archived — history kept" : ""}
+        </span>
+        <button type="button" className="ctl" onClick={onBack}>
+          All technicians
         </button>
       </div>
-      <CardBody>
-        <KV four>
-          <KVCell label="Job hours" value={fmt.hrs(row.job)} />
-          <KVCell label="Unbilled" value={fmt.hrs(row.unb)} />
-          <KVCell label="Recorded" value={fmt.hrs(row.rec)} />
-          <KVCell label="Utilization" value={row.util === null ? "—" : `${row.util.toFixed(0)}%`} />
-          <KVCell
-            label="Quote eff."
-            value={
-              row.effQ === null ? (
-                "—"
-              ) : (
-                <span className="repr" data-def={EFF_DEF}>
-                  {ratioX(row.effQ)}
-                </span>
-              )
-            }
-          />
-          <KVCell
-            label="On-time"
-            value={
-              row.ot === null ? (
-                "—"
-              ) : (
-                <span className="def" data-def={OT_DEF}>
-                  {pctInt(row.ot)}
-                </span>
-              )
-            }
-          />
-          <KVCell label={`${facts.monthLong} jobs`} value={String(row.jobs)} />
-        </KV>
-        <div style={{ marginTop: 20 }}>
-          <DSec>{facts.monthLong} unbilled activity — per recorded type</DSec>
-        </div>
-        {buckets.length > 0 ? (
-          <div style={{ maxWidth: 460 }}>
-            {buckets.map((bucket) => (
-              <DNote
-                key={bucket.label}
-                style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "4px 0", borderBottom: "1px solid var(--hair-2)" }}
-              >
-                <span>{bucket.label}</span>
-                <b className="tnum" style={{ color: "var(--ink)" }}>
-                  {fmt.hrs(bucket.hours)}
-                </b>
-              </DNote>
-            ))}
-            <DNote style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "4px 0" }}>
-              <span>Total unbilled</span>
+      <KV>
+        <KVCell label="Job hours" value={fmt.hrs(row.job)} />
+        <KVCell label="Unbilled" value={fmt.hrs(row.unb)} />
+        <KVCell label="Recorded" value={fmt.hrs(row.rec)} />
+        <KVCell label="Utilization" value={row.util === null ? "—" : `${row.util.toFixed(0)}%`} />
+        <KVCell
+          label="Quote eff."
+          value={
+            row.effQ === null ? (
+              "—"
+            ) : (
+              <span className="repr" data-def={EFF_DEF}>
+                {ratioX(row.effQ)}
+              </span>
+            )
+          }
+        />
+        <KVCell
+          label="On-time"
+          value={
+            row.ot === null ? (
+              "—"
+            ) : (
+              <span className="def" data-def={OT_DEF}>
+                {pctInt(row.ot)}
+              </span>
+            )
+          }
+        />
+        <KVCell label={`${facts.monthLong} jobs`} value={String(row.jobs)} />
+      </KV>
+      <div className="tech-drill-section">
+        <DSec>{facts.monthLong} unbilled activity — per recorded type</DSec>
+      </div>
+      {buckets.length > 0 ? (
+        <div className="tech-drill-list">
+          {buckets.map((bucket) => (
+            <DNote
+              key={bucket.label}
+              style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "4px 0", borderBottom: "1px solid var(--hair-2)" }}
+            >
+              <span>{bucket.label}</span>
               <b className="tnum" style={{ color: "var(--ink)" }}>
-                {fmt.hrs(row.unb)}
+                {fmt.hrs(bucket.hours)}
               </b>
             </DNote>
-          </div>
-        ) : (
-          <DNote>No unbilled activity recorded in {facts.monthLong}.</DNote>
-        )}
-        <div style={{ marginTop: 20 }}>
-          <DSec>{facts.monthLong} efficiency — quote-linked jobs</DSec>
+          ))}
+          <DNote style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "4px 0" }}>
+            <span>Total unbilled</span>
+            <b className="tnum" style={{ color: "var(--ink)" }}>
+              {fmt.hrs(row.unb)}
+            </b>
+          </DNote>
         </div>
-        <div className="tblwrap">
-          <table>
-            <thead>
+      ) : (
+        <DNote>No unbilled activity recorded in {facts.monthLong}.</DNote>
+      )}
+      <div className="tech-drill-section">
+        <DSec>{facts.monthLong} efficiency — quote-linked jobs</DSec>
+      </div>
+      <div className="tblwrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Job</th>
+              <th className="num">Estimated</th>
+              <th className="num">Actual</th>
+              <th className="num hide-sm">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {covered.length === 0 ? (
               <tr>
-                <th>Job</th>
-                <th className="num">Estimated</th>
-                <th className="num">Actual</th>
-                <th className="num hide-sm">Result</th>
+                <td className="id1" style={{ fontWeight: 500 }}>
+                  No covered quote-linked jobs in {facts.monthLong}
+                </td>
+                <td className="num tnum">—</td>
+                <td className="num tnum">—</td>
+                <td className="num hide-sm" />
               </tr>
-            </thead>
-            <tbody>
-              {covered.length === 0 ? (
-                <tr>
-                  <td className="id1" style={{ fontWeight: 500 }}>
-                    No covered quote-linked jobs in {facts.monthLong}
-                  </td>
-                  <td className="num tnum">—</td>
-                  <td className="num tnum">—</td>
-                  <td className="num hide-sm" />
-                </tr>
-              ) : (
-                covered.map((allocation) => <DrillJobRow key={`${allocation.jobId}-${allocation.employeeId}`} allocation={allocation} />)
-              )}
-              {row.effQ !== null ? (
-                <tr>
-                  <td colSpan={4} style={{ border: 0, paddingTop: 10, color: "var(--subtle)", fontSize: 13 }}>
-                    {first}’s{" "}
-                    <span data-def={EFF_DEF}>
-                      {ratioX(row.effQ)} uses the hour-share allocation
-                    </span>
-                    {facts.teamEff !== null
-                      ? `; the team ratio is ${ratioX(facts.teamEff)} across ${facts.effCoveredJobs} covered jobs.`
-                      : "."}
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+            ) : (
+              covered.map((allocation) => <DrillJobRow key={`${allocation.jobId}-${allocation.employeeId}`} allocation={allocation} />)
+            )}
+            {row.effQ !== null ? (
+              <tr>
+                <td colSpan={4} style={{ border: 0, paddingTop: 10, color: "var(--subtle)", fontSize: 13 }}>
+                  {first}’s{" "}
+                  <span data-def={EFF_DEF}>
+                    {ratioX(row.effQ)} uses the hour-share allocation
+                  </span>
+                  {facts.teamEff !== null
+                    ? `; the team ratio is ${ratioX(facts.teamEff)} across ${facts.effCoveredJobs} covered jobs.`
+                    : "."}
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+      <div className="tech-drill-section">
         <DSec>Completed-job economics — separate cohort</DSec>
-        <DNote>
-          {row.sell > 0 ? (
-            <>
-              Jobs completed in {facts.monthLong} that {first} worked on carry <b className="tnum">{fmt.moneyFull(row.sell)}</b>{" "}
-              allocated revenue and{" "}
-              {row.np !== null ? (
-                <>
-                  <b className="tnum">{fmt.moneyFull(row.np)}</b> allocated net profit
-                </>
-              ) : (
-                <>no covered net profit</>
-              )}{" "}
-              (hours-share allocation from recorded job time). This cohort includes hours recorded before{" "}
-              {facts.monthLong} on jobs that finished in {facts.monthLong}
-              {row.outsidePeriodHours !== null && row.outsidePeriodHours > 0
-                ? ` — ${fmt.hrs(row.outsidePeriodHours)} of ${first}’s allocation basis`
-                : ""}{" "}
-              — it is contribution context, not {facts.monthLong} earnings.
-            </>
-          ) : (
-            <>
-              No jobs completed in {facts.monthLong} carry {first}’s hours — no allocation this month.
-            </>
-          )}
-        </DNote>
-      </CardBody>
+      </div>
+      <DNote>
+        {row.sell > 0 ? (
+          <>
+            Jobs completed in {facts.monthLong} that {first} worked on carry <b className="tnum">{fmt.moneyFull(row.sell)}</b>{" "}
+            allocated revenue and{" "}
+            {row.np !== null ? (
+              <>
+                <b className="tnum">{fmt.moneyFull(row.np)}</b> allocated net profit
+              </>
+            ) : (
+              <>no covered net profit</>
+            )}{" "}
+            (hours-share allocation from recorded job time). This cohort includes hours recorded before {facts.monthLong} on jobs that
+            finished in {facts.monthLong}
+            {row.outsidePeriodHours !== null && row.outsidePeriodHours > 0
+              ? ` — ${fmt.hrs(row.outsidePeriodHours)} of ${first}’s allocation basis`
+              : ""}{" "}
+            — it is contribution context, not {facts.monthLong} earnings.
+          </>
+        ) : (
+          <>No jobs completed in {facts.monthLong} carry {first}’s hours — no allocation this month.</>
+        )}
+      </DNote>
     </div>
   );
 }
@@ -1245,11 +1260,12 @@ function DrillJobRow({ allocation }: { allocation: TechnicianJobAllocationDetail
   const est = allocation.allocatedQuotedHours;
   const act = allocation.actualHours;
   const result = est !== null && act > 0 ? est / act : null;
+  const jobName = plainDisplayText(allocation.jobName, "", 120);
   return (
     <tr>
       <td className="id1" style={{ fontWeight: 500 }}>
         {allocation.jobNo ?? allocation.jobId}
-        {allocation.jobName ? ` · ${allocation.jobName}` : ""}
+        {jobName ? ` · ${jobName}` : ""}
       </td>
       <td className="num tnum">{est !== null ? fmt.hrs(est) : "—"}</td>
       <td className="num tnum">{act > 0 ? fmt.hrs(act) : "—"}</td>

@@ -59,7 +59,7 @@ function juneFixture(): TechnicianPerformanceReadModel {
     ],
     jobs: [
       {
-        jobId: "j1", jobNo: "1001", jobName: "Boiler service", completedDate: "2026-06-10",
+        jobId: "j1", jobNo: "1001", jobName: "<div style=\"font-size:10pt;\"><span>Boiler&nbsp;service</span></div>", completedDate: "2026-06-10",
         sellValue: 1000, sellValueCovered: true, grossProfit: 400, netProfit: 200,
         quoteId: "q1", quotedHours: 10,
         timesheets: [{ employeeId: "1", displayName: "Alice Field", hours: 8, inPeriodHours: 8 }],
@@ -264,7 +264,11 @@ test("drilldown keeps the full roster visible and opens per-technician facts in 
 
   assert.match(html, /Technician Scorecard/);
   assert.match(html, /role="dialog"/);
-  assert.match(html, /← All technicians/);
+  assert.match(html, /class="drawer open tech-drawer"/);
+  assert.match(html, /class="tech-drill"/);
+  assert.match(html, /All technicians/);
+  const drawerHtml = html.slice(html.indexOf('role="dialog"'));
+  assert.doesNotMatch(drawerHtml, /class="card"/, "technician detail must not nest a full card inside the drawer");
   assert.match(html, /hired May 2020 · viewing June 2026/);
   // KPIs from the payload: 100h job, 60h unbilled, 160h recorded, 63% util, 3 jobs.
   assert.match(html, /Job hours<\/div><div class="v tnum">100h/);
@@ -281,6 +285,7 @@ test("drilldown keeps the full roster visible and opens per-technician facts in 
   // Covered quote-linked jobs table is honest per the payload (j1 only).
   assert.match(html, /June efficiency — quote-linked jobs/);
   assert.match(html, /1001 · Boiler service/);
+  assert.doesNotMatch(drawerHtml, /&lt;div|&lt;span|&amp;nbsp;/);
   assert.match(html, /10h<\/td><td class="num tnum">8h/);
   assert.match(html, /1\.25×/);
   assert.match(html, /Alice’s <span[^>]*>1\.25× uses the hour-share allocation<\/span>; the team ratio is 1\.00× across 2 covered jobs\./);
@@ -372,6 +377,8 @@ test("labor efficiency renders payload-driven diverging bars", () => {
   assert.match(html, /1\.00× — estimate met exactly/);
   assert.match(html, /Quote-linked/);
   assert.match(html, /Recurring/);
+  assert.match(html, /click a row for technician detail/);
+  assert.match(html, /role="button" tabindex="0" aria-label="Alice Field — open labor efficiency detail"/);
   assert.match(html, /2 covered jobs \(team\)/);
   assert.match(html, /team and per-technician figures use the recorded-time allocation\./);
   // Only technicians with allocated jobs appear as efficiency bars: Alice 1.25×, Bob 0.75×.

@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 import type { ValueFormatter } from "./fmt";
 import { devBarsDomain } from "./geometry";
 import { useContainerWidth } from "./use-container-width";
@@ -9,7 +9,7 @@ import { useContainerWidth } from "./use-container-width";
    difference, not two lengths) — a 1:1 port of kit.js devBars. Bars extend
    left (below ref, red) or right (above, green). */
 
-export type DevBarRow = { name: string; v: number | null; cov?: string };
+export type DevBarRow = { name: string; v: number | null; cov?: string; id?: string; ariaLabel?: string };
 
 export type DevBarsProps = {
   rows: DevBarRow[];
@@ -26,6 +26,7 @@ export type DevBarsProps = {
   w?: number;
   className?: string;
   style?: CSSProperties;
+  onRowClick?: (row: DevBarRow, index: number) => void;
 };
 
 export function DevBars(props: DevBarsProps) {
@@ -51,6 +52,13 @@ export function DevBars(props: DevBarsProps) {
           {props.refLabel || String(ref)}
         </text>
         {rows.map((r, ri) => {
+          const interactive = typeof props.onRowClick === "function";
+          const activate = () => props.onRowClick?.(r, ri);
+          const onKeyDown = (event: KeyboardEvent<SVGGElement>) => {
+            if (!interactive || (event.key !== "Enter" && event.key !== " ")) return;
+            event.preventDefault();
+            activate();
+          };
           const y = T + ri * rowH + (compact ? 22 : (rowH - 14) / 2), bh = 14;
           const name = (
             <text
@@ -68,7 +76,16 @@ export function DevBars(props: DevBarsProps) {
           );
           if (r.v == null) {
             return (
-              <g key={ri}>
+              <g
+                key={r.id ?? ri}
+                role={interactive ? "button" : undefined}
+                tabIndex={interactive ? 0 : undefined}
+                aria-label={interactive ? r.ariaLabel ?? `${r.name}: no covered jobs` : undefined}
+                onClick={interactive ? activate : undefined}
+                onKeyDown={onKeyDown}
+                style={interactive ? { cursor: "pointer" } : undefined}
+              >
+                {interactive ? <rect x={0} y={T + ri * rowH} width={W} height={rowH} fill="transparent" /> : null}
                 {name}
                 <text x={X(ref) + 9} y={y + bh / 2 + 4} fontSize={12.5} fill="#6b7383">
                   no covered jobs
@@ -79,7 +96,16 @@ export function DevBars(props: DevBarsProps) {
           const up = r.v >= ref;
           const x0 = Math.min(X(ref), X(r.v)), w = Math.max(2, Math.abs(X(r.v) - X(ref)));
           return (
-            <g key={ri}>
+            <g
+              key={r.id ?? ri}
+              role={interactive ? "button" : undefined}
+              tabIndex={interactive ? 0 : undefined}
+              aria-label={interactive ? r.ariaLabel ?? `${r.name}: ${f(r.v)}` : undefined}
+              onClick={interactive ? activate : undefined}
+              onKeyDown={onKeyDown}
+              style={interactive ? { cursor: "pointer" } : undefined}
+            >
+              {interactive ? <rect x={0} y={T + ri * rowH} width={W} height={rowH} fill="transparent" /> : null}
               {name}
               <rect x={x0} y={y} width={w} height={bh} rx={4} fill={up ? props.pos || "#1a8a5a" : props.neg || "#d0463a"} />
               <text

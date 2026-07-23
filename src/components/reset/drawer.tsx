@@ -13,9 +13,10 @@ export type DrawerProps = {
   sub?: ReactNode;
   children?: ReactNode;
   ariaLabel?: string;
+  className?: string;
 };
 
-export function Drawer({ open, onClose, title, sub, children, ariaLabel }: DrawerProps) {
+export function Drawer({ open, onClose, title, sub, children, ariaLabel, className }: DrawerProps) {
   const drawerRef = useRef<HTMLElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
@@ -57,7 +58,7 @@ export function Drawer({ open, onClose, title, sub, children, ariaLabel }: Drawe
   return (
     <>
       <div className="scrim open" onClick={onClose} aria-hidden="true" />
-      <aside ref={drawerRef} className="drawer open" role="dialog" aria-modal="true" aria-label={ariaLabel} tabIndex={-1}>
+      <aside ref={drawerRef} className={["drawer open", className].filter(Boolean).join(" ")} role="dialog" aria-modal="true" aria-label={ariaLabel} tabIndex={-1}>
         <div className="dh">
           <div>
             <div className="ti">{title}</div>
