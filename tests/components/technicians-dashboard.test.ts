@@ -183,7 +183,7 @@ test("recorded-time rows split job / travel / other unbilled and mark the primar
   const payload = juneFixture();
   const html = render(dashboardModel(payload));
 
-  assert.match(html, /Recorded Time vs Capacity/);
+  assert.match(html, /Recorded Time by Technician/);
   assert.match(html, /sorted by job hours · click a row for the full activity split/);
   assert.match(html, /data-primary-viz/);
   // Legend carries the three fills; travel renders in --series-2.
@@ -191,15 +191,17 @@ test("recorded-time rows split job / travel / other unbilled and mark the primar
   assert.match(html, /Travel/);
   assert.match(html, /Other unbilled/);
   assert.match(html, /#0e9aae/);
-  // Right meta: job hours · utilization share (Bob 150h/210h → 71%).
-  assert.match(html, /150h · 71% on jobs/);
-  assert.match(html, /100h · 63% on jobs/);
+  // Right meta: job-assigned hours first, then the recorded-hours denominator.
+  assert.match(html, /150h job hrs/);
+  assert.match(html, /71% of 210h recorded/);
+  assert.match(html, /100h job hrs/);
+  assert.match(html, /63% of 160h recorded/);
   // Cara is inactive → faint row with recorded hours only.
-  assert.match(html, /inactive · 8h/);
+  assert.match(html, /8h recorded/);
   // Rows are keyboard-activatable drills.
   assert.match(html, /open the full Alice Field drilldown/);
   // No capacity tick and no amber over-capacity rule anywhere in the card.
-  assert.doesNotMatch(html, /dark tick|monthly capacity|amber = above/);
+  assert.doesNotMatch(html, /Recorded Time vs Capacity|dark tick|monthly capacity|amber = above/);
 });
 
 test("scorecard sorts every metric column both ways with null rows always last — no capacity column", () => {

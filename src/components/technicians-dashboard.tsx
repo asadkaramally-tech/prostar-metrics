@@ -450,7 +450,7 @@ function TechniciansContent({
     <>
       <TechniciansBand facts={facts} payload={payload} historySummary={historySummary} />
       <div className="grid12">
-        <CapacityCard rows={rows} onOpen={(row) => setDrillId(row.employeeId)} />
+        <RecordedTimeCard rows={rows} onOpen={(row) => setDrillId(row.employeeId)} />
       </div>
       {/* Stretch this pair so the row ends flush (gate: multi-card rows within 28px). */}
       <div className="grid12" style={{ alignItems: "stretch" }}>
@@ -513,7 +513,7 @@ function TechniciansBand({
   return (
     <>
       <KpiBand ariaLabel={`${monthLong} key metrics`}>
-        <a className="kpi primary" href="#capacity">
+        <a className="kpi primary" href="#recorded-time">
           <span className="lblrow">
             <span className="lbl">
               <span className="def" data-def={utilDef}>Productive utilization</span>
@@ -587,25 +587,26 @@ function TechniciansBand({
 
 /* ── Row 2: Recorded Time (primary visualization) ──────── */
 
-function capacityRowTip(row: TechnicianScoreRow): string {
+function recordedTimeRowTip(row: TechnicianScoreRow): string {
   const buckets = activityBuckets(row.tech);
   const travel = buckets.find((bucket) => bucket.label === "Travel");
   const others = buckets.filter((bucket) => bucket.label !== "Travel");
   return (
     tipRow(ACC, "Job-assigned", fmt.hrs(row.job)) +
     (travel ? tipRow(SERIES2, "Travel", fmt.hrs(travel.hours)) : "") +
-    others.map((bucket) => tipRow(GREY, bucket.label, fmt.hrs(bucket.hours))).join("")
+    others.map((bucket) => tipRow(GREY, bucket.label, fmt.hrs(bucket.hours))).join("") +
+    tipRow(GREY, "Recorded total", fmt.hrs(row.rec))
   );
 }
 
-function CapacityCard({ rows, onOpen }: { rows: TechnicianScoreRow[]; onOpen: (row: TechnicianScoreRow) => void }) {
+function RecordedTimeCard({ rows, onOpen }: { rows: TechnicianScoreRow[]; onOpen: (row: TechnicianScoreRow) => void }) {
   const sorted = useMemo(() => [...rows].sort((a, b) => b.job - a.job), [rows]);
   const scale = Math.max(1, ...sorted.map((row) => row.rec)) * 1.04;
   return (
     <Card
       className="span12"
       style={{ scrollMarginTop: 70 }}
-      title={<span id="capacity">Recorded Time vs Capacity</span>}
+      title={<span id="recorded-time">Recorded Time by Technician</span>}
       subtitle="Job-assigned vs travel vs other unbilled · sorted by job hours · click a row for the full activity split"
       aside={
         <Legend
@@ -627,16 +628,17 @@ function CapacityCard({ rows, onOpen }: { rows: TechnicianScoreRow[]; onOpen: (r
               const jobW = (row.job / scale) * 100;
               const travW = (travel / scale) * 100;
               const otherW = (other / scale) * 100;
-              const meta = row.inactive
-                ? `inactive · ${fmt.hrs(row.rec)}`
-                : `${fmt.hrs(row.job)} · ${row.util !== null ? Math.round(row.util) : "—"}% on jobs`;
+              const utilizationLabel = row.util !== null ? `${Math.round(row.util)}% of ${fmt.hrs(row.rec)} recorded` : `of ${fmt.hrs(row.rec)} recorded`;
+              const drillLabel = row.inactive
+                ? `${row.name} — inactive, ${fmt.hrs(row.rec)} recorded; open the full ${row.name} drilldown`
+                : `${row.name} — ${fmt.hrs(row.job)} job-assigned out of ${fmt.hrs(row.rec)} recorded, ${row.util !== null ? `${Math.round(row.util)}% of recorded` : "utilization unavailable"}; open the full ${row.name} drilldown`;
               return (
                 <div
                   key={row.employeeId}
                   className={row.inactive ? "crow inactive drillable" : "crow drillable"}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${row.name} — open the full ${row.name} drilldown`}
+                  aria-label={drillLabel}
                   onClick={() => onOpen(row)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
@@ -644,7 +646,7 @@ function CapacityCard({ rows, onOpen }: { rows: TechnicianScoreRow[]; onOpen: (r
                       onOpen(row);
                     }
                   }}
-                  onPointerEnter={(event) => tipShow(tipTitle(row.name) + capacityRowTip(row), event.clientX, event.clientY)}
+                  onPointerEnter={(event) => tipShow(tipTitle(row.name) + recordedTimeRowTip(row), event.clientX, event.clientY)}
                   onPointerLeave={tipHide}
                 >
                   <span className="cname">{row.name}</span>
@@ -657,7 +659,19 @@ function CapacityCard({ rows, onOpen }: { rows: TechnicianScoreRow[]; onOpen: (r
                       <span className="unb" style={{ left: `${(jobW + travW).toFixed(2)}%`, width: `${otherW.toFixed(2)}%` }} />
                     ) : null}
                   </div>
-                  <span className="cmeta">{meta}</span>
+                  <span className="cmeta">
+                    {row.inactive ? (
+                      <>
+                        <b>inactive</b>
+                        <small>{fmt.hrs(row.rec)} recorded</small>
+                      </>
+                    ) : (
+                      <>
+                        <b>{fmt.hrs(row.job)} job hrs</b>
+                        <small>{utilizationLabel}</small>
+                      </>
+                    )}
+                  </span>
                 </div>
               );
             })}
