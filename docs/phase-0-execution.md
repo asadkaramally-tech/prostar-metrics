@@ -1,4 +1,6 @@
-# Phase 0 Execution Notes
+# HISTORICAL — Phase 0 Execution Notes
+
+This is an early implementation snapshot, not a current readiness checklist. See [`index.md`](index.md) and [`roadmap.md`](roadmap.md).
 
 ## Implemented
 

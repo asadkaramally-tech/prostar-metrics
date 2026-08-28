@@ -17,6 +17,7 @@ import {
   productionDeploymentSupportContract,
   productionDeploymentTargetContract,
   readyRevisionFailure,
+  requireRoutineDeploymentCertificate,
   validateAcrBuildBinding,
   validateDeploymentWhatIf,
   validateEvidenceSigningKeyIds,
@@ -1590,6 +1591,7 @@ test("routine deploy remains lean while --full retains exhaustive preflight and 
   assert.match(source, /if \(args\.mode === "routine"\)/);
   assert.match(source, /readRoutineMonitoringEvidence\(\)/);
   assert.match(source, /else if \(args\.mode === "full"\) \{\s*runDeploymentPreflight/s);
+  assert.match(source, /requireRoutineDeploymentCertificate\(args\.mode, reusable\)/);
   const monitoringSource = source.slice(
     source.indexOf("async function deployAndVerifyMonitoringReceivers"),
     source.indexOf("function versionlessSecretUrl"),
@@ -1607,6 +1609,13 @@ test("routine deploy remains lean while --full retains exhaustive preflight and 
   assert.throws(() => parseDeployArgs(["--resume", "--resume"]), /Unknown deploy argument/);
   assert.throws(() => parseDeployArgs(["--already-verified"]), /Unknown deploy argument/);
   assert.throws(() => parseDeployArgs(["--anything"]), /Unknown deploy argument/);
+  const reusable = { sourceSha256: "source", dependencySha256: "dependencies" };
+  assert.equal(requireRoutineDeploymentCertificate("routine", reusable), reusable);
+  assert.equal(requireRoutineDeploymentCertificate("full", null), null);
+  assert.throws(
+    () => requireRoutineDeploymentCertificate("routine", null),
+    /requires an exact full-preflight certificate/,
+  );
   for (const contract of [
     /\["npm", \["test"\], "tests"\]/,
     /\["npm", \["run", "test:infra"\], "infrastructure tests"\]/,

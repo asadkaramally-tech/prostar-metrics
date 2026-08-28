@@ -384,6 +384,15 @@ export function parseDeployArgs(argv) {
   return Object.freeze({ mode: full.length === 1 ? "full" : "routine" });
 }
 
+export function requireRoutineDeploymentCertificate(mode, reusable) {
+  if (mode === "routine" && !reusable) {
+    throw new Error(
+      "Routine deployment requires an exact full-preflight certificate for the current source and dependency tree; run npm run deploy:prod -- --full.",
+    );
+  }
+  return reusable;
+}
+
 export function validateProductionParameterContract(document) {
   const parameters = document?.parameters ?? {};
   const value = (name) => parameters[name]?.value;
@@ -1826,6 +1835,7 @@ async function main() {
           dependencySha256,
         })
         : null;
+      requireRoutineDeploymentCertificate(args.mode, reusable);
       let preflightSucceededAt = reusable?.preflightSucceededAt ?? new Date().toISOString();
       if (reusable) {
         log("exact source and dependency ACR certificate found; reusing immutable ACR checkpoint");

@@ -17,7 +17,7 @@ import {
   seriesName,
   type TrendMode,
 } from "../../src/components/quotes/quote-metrics-dashboard";
-import { quoteDashboardReadModelOptions } from "../../src/app/api/quotes/route";
+import { quoteDashboardReadModelOptions } from "../../src/lib/api/dashboard-route-params";
 import {
   quoteDealTiers,
   type QuoteDealTier,

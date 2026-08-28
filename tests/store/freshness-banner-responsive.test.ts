@@ -19,7 +19,7 @@ test("freshness pill is truthful relative time, green only when current", () => 
   const now = new Date("2026-07-15T10:02:00.000Z");
   const current = renderToStaticMarkup(createElement(FreshnessBanner, { freshness: base, now }));
   assert.match(current, /class="pill"/);
-  assert.match(current, /Updated 2 min ago/);
+  assert.match(current, /Data through Jul 14, 2026 · checked 2 min ago/);
   assert.doesNotMatch(current, />Live</);
 
   const stale = renderToStaticMarkup(createElement(FreshnessBanner, {
@@ -27,7 +27,7 @@ test("freshness pill is truthful relative time, green only when current", () => 
     now: new Date("2026-07-15T13:00:00.000Z"),
   }));
   assert.match(stale, /class="pill warn"/);
-  assert.match(stale, /Updated 3 hrs ago/);
+  assert.match(stale, /Data through Jul 14, 2026 · checked 3 hrs ago/);
 });
 
 test("freshness pill never fabricates a timestamp when no successful run exists", () => {
@@ -36,5 +36,5 @@ test("freshness pill never fabricates a timestamp when no successful run exists"
   }));
   assert.match(missing, /class="pill warn"/);
   assert.match(missing, /No app-owned data yet/);
-  assert.doesNotMatch(missing, /Updated/);
+  assert.doesNotMatch(missing, /checked/);
 });

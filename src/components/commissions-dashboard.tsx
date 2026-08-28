@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { DevBars, fmt, Histogram, type HistogramBucket } from "@/components/charts";
 import {
   Card,
@@ -462,8 +462,9 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
   const [mode, setMode] = useState<CommissionSummaryMode>("monthly");
   const [openTech, setOpenTech] = useState<string | null>(null);
   const [allocationDetails, setAllocationDetails] = useState<Record<string, CommissionJobAllocation[]>>({});
-  const [allocationLoading, setAllocationLoading] = useState<string | null>(null);
-  const [allocationError, setAllocationError] = useState<string | null>(null);
+  const [allocationLoading, setAllocationLoading] = useState<ReadonlySet<string>>(() => new Set());
+  const [allocationErrors, setAllocationErrors] = useState<Record<string, string>>({});
+  const allocationRequests = useRef(new Set<string>());
   const interacted = useRef(false);
 
   const computed = useMemo(
@@ -481,9 +482,14 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
   const toggleOpen = (employeeId: string) => {
     interacted.current = true;
     setOpenTech((current) => (current === employeeId ? null : employeeId));
-    if (allocationDetails[employeeId] || worksheet.servingStatus !== "ready" || !computed?.rows.find((row) => row.employeeId === employeeId)?.jobCount) return;
-    setAllocationLoading(employeeId);
-    setAllocationError(null);
+    if (allocationDetails[employeeId] || allocationRequests.current.has(employeeId) || worksheet.servingStatus !== "ready" || !computed?.rows.find((row) => row.employeeId === employeeId)?.jobCount) return;
+    allocationRequests.current.add(employeeId);
+    setAllocationLoading((current) => new Set(current).add(employeeId));
+    setAllocationErrors((current) => {
+      const next = { ...current };
+      delete next[employeeId];
+      return next;
+    });
     const search = commissionAllocationDetailSearch(worksheet.periodStart, employeeId);
     void fetch(`/api/commissions/allocations?${search.toString()}`, { cache: "no-store" })
       .then(async (response) => {
@@ -492,8 +498,18 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
         if (!Array.isArray(payload.allocations)) throw new Error("Allocation detail could not be loaded.");
         setAllocationDetails((current) => ({ ...current, [employeeId]: payload.allocations! }));
       })
-      .catch((error: unknown) => setAllocationError(error instanceof Error ? error.message : "Allocation detail could not be loaded."))
-      .finally(() => setAllocationLoading((current) => current === employeeId ? null : current));
+      .catch((error: unknown) => setAllocationErrors((current) => ({
+        ...current,
+        [employeeId]: error instanceof Error ? error.message : "Allocation detail could not be loaded.",
+      })))
+      .finally(() => {
+        allocationRequests.current.delete(employeeId);
+        setAllocationLoading((current) => {
+          const next = new Set(current);
+          next.delete(employeeId);
+          return next;
+        });
+      });
   };
 
   /** Uncheck/recheck a person: the pool is unchanged, but it redistributes
@@ -538,7 +554,7 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
             onToggleExclude={toggleExclude}
             allocationDetails={allocationDetails}
             allocationLoading={allocationLoading}
-            allocationError={allocationError}
+            allocationErrors={allocationErrors}
           />
         ) : (
           <WorksheetStateCard worksheet={worksheet} />
@@ -690,7 +706,7 @@ function WorksheetTab({
   onToggleExclude,
   allocationDetails,
   allocationLoading,
-  allocationError,
+  allocationErrors,
 }: {
   worksheet: CommissionReadyWorksheetModel;
   computed: { pool: number; rows: CommissionComputedRow[] };
@@ -700,8 +716,8 @@ function WorksheetTab({
   onToggleOpen: (employeeId: string) => void;
   onToggleExclude: (employeeId: string) => void;
   allocationDetails: Record<string, CommissionJobAllocation[]>;
-  allocationLoading: string | null;
-  allocationError: string | null;
+  allocationLoading: ReadonlySet<string>;
+  allocationErrors: Record<string, string>;
 }) {
   const eff = controls.efficiencyEnabled;
   const monthLong = monthLongName(worksheet.periodLabel);
@@ -828,8 +844,8 @@ function WorksheetTab({
                 onToggle={() => onToggleOpen(row.employeeId)}
                 onToggleExclude={() => onToggleExclude(row.employeeId)}
                 allocations={allocationDetails[row.employeeId]}
-                allocationLoading={allocationLoading === row.employeeId}
-                allocationError={allocationError}
+                allocationLoading={allocationLoading.has(row.employeeId)}
+                allocationError={allocationErrors[row.employeeId] ?? null}
               />
             ))}
           </div>
@@ -848,8 +864,8 @@ function WorksheetTab({
               onToggle={() => onToggleOpen(row.employeeId)}
               onToggleExclude={() => onToggleExclude(row.employeeId)}
               allocations={allocationDetails[row.employeeId]}
-              allocationLoading={allocationLoading === row.employeeId}
-              allocationError={allocationError}
+              allocationLoading={allocationLoading.has(row.employeeId)}
+              allocationError={allocationErrors[row.employeeId] ?? null}
             />
           ))}
         </div>
@@ -924,6 +940,7 @@ function BoardRow({
   const multipliers = worksheet.config.tierMultipliers;
   const tierDef = `Rank boosts go to the top three by allocated ${monthLong} value: Gold ×${multipliers.Gold.toFixed(2)}, Silver ×${multipliers.Silver.toFixed(2)}, Bronze ×${multipliers.Bronze.toFixed(2)} — everyone else ×1.00. Boosts shift relative shares; the pool total never changes.`;
   const zero = row.jobCount === 0 && row.effectiveValue <= 0;
+  const detailId = useId();
 
   return (
     <div style={{ borderBottom: "1px solid var(--hair-2)" }}>
@@ -936,6 +953,7 @@ function BoardRow({
               checked={!row.excluded}
               onChange={onToggleExclude}
               onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
               aria-label={`Include ${row.displayName} in the commission calculation`}
               title={row.excluded ? "Excluded — check to put back in and redistribute" : "Included — uncheck to remove and redistribute"}
               style={{ width: 15, height: 15, accentColor: "var(--acc)", cursor: "pointer" }}
@@ -945,6 +963,8 @@ function BoardRow({
         }
         open={open}
         onClick={onToggle}
+        ariaControls={detailId}
+        ariaLabel={`${open ? "Collapse" : "Expand"} commission details for ${row.displayName}`}
         name={row.displayName}
         sub={
           zero ? (
@@ -994,8 +1014,10 @@ function BoardRow({
         amount={row.final > 0 ? fmt.cents(row.final) : "$0.00"}
       />
       {open ? (
-        <RowDetail row={row} pool={pool} controls={controls} basis={basis} monthLong={monthLong} worksheet={worksheet}
-          allocations={allocations} loading={allocationLoading} error={allocationError} />
+        <div id={detailId}>
+          <RowDetail row={row} pool={pool} controls={controls} basis={basis} monthLong={monthLong} worksheet={worksheet}
+            allocations={allocations} loading={allocationLoading} error={allocationError} />
+        </div>
       ) : null}
     </div>
   );

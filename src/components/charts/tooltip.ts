@@ -8,6 +8,7 @@
 
 let tipEl: HTMLDivElement | null = null;
 let globalHideWired = false;
+const DEFINITION_TOOLTIP_ID = "shared-definition-tooltip";
 
 function tip(): HTMLDivElement {
   if (!tipEl) {
@@ -16,6 +17,9 @@ function tip(): HTMLDivElement {
     // looks for .charttip); no stylesheet rule attaches to it — styling stays
     // in the inline kit css below.
     tipEl.className = "charttip";
+    tipEl.id = DEFINITION_TOOLTIP_ID;
+    tipEl.setAttribute("role", "tooltip");
+    tipEl.setAttribute("aria-hidden", "true");
     tipEl.style.cssText =
       "position:fixed;z-index:60;background:#fff;border:1px solid #e9ebf0;border-radius:10px;" +
       "padding:9px 12px;font-size:12px;color:#2a3140;box-shadow:0 6px 24px -8px rgba(16,24,40,.24);" +
@@ -34,6 +38,7 @@ export function tipShow(html: string, cx: number, cy: number): void {
   if (typeof document === "undefined") return;
   const t = tip();
   t.innerHTML = html;
+  t.setAttribute("aria-hidden", "false");
   t.style.opacity = "1";
   const w = t.offsetWidth,
     h = t.offsetHeight;
@@ -46,7 +51,10 @@ export function tipShow(html: string, cx: number, cy: number): void {
 }
 
 export function tipHide(): void {
-  if (tipEl) tipEl.style.opacity = "0";
+  if (tipEl) {
+    tipEl.style.opacity = "0";
+    tipEl.setAttribute("aria-hidden", "true");
+  }
 }
 
 /* Repositioning helper for pointermove tracking (kit.js stackedBars hot rect). */
@@ -97,15 +105,34 @@ export function wireDefTooltips(): () => void {
       (e as PointerEvent).clientY,
     );
   };
+  const focus = (e: FocusEvent) => {
+    const target = e.target as Element | null;
+    const d = target?.closest?.("[data-def]") as HTMLElement | null;
+    if (!d) return;
+    const rect = d.getBoundingClientRect();
+    tipShow(
+      `<div style="max-width:250px;line-height:1.55;color:#2a3140">${escapeTooltipText(d.dataset.def ?? "")}</div>`,
+      rect.left + rect.width / 2,
+      rect.top,
+    );
+  };
   const out = (e: Event) => {
     const target = e.target as Element | null;
     if (target?.closest?.("[data-def]")) tipHide();
   };
   document.addEventListener("pointerover", over);
   document.addEventListener("pointerout", out);
+  document.addEventListener("focusin", focus);
+  document.addEventListener("focusout", out);
+  document.querySelectorAll<HTMLElement>("[data-def]").forEach((element) => {
+    if (!element.hasAttribute("tabindex")) element.tabIndex = 0;
+    element.setAttribute("aria-describedby", DEFINITION_TOOLTIP_ID);
+  });
   return () => {
     document.removeEventListener("pointerover", over);
     document.removeEventListener("pointerout", out);
+    document.removeEventListener("focusin", focus);
+    document.removeEventListener("focusout", out);
     defWired = false;
   };
 }

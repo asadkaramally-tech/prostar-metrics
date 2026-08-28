@@ -172,7 +172,7 @@ function CategoryMix({ model }: { model: MaterialsDashboardModel }) {
   if (model.coverage.selectedMonth.status !== "complete") return <Card className="span12" title="Material Sales by Category" subtitle="Selected-period data unavailable"><CardBody><StateEmpty>A completed selected-period walk is required for category values.</StateEmpty></CardBody></Card>;
   const total = model.categories.reduce((sum, category) => sum + category.value, 0);
   const max = Math.max(...model.categories.map((category) => category.value), 1);
-  return <Card className="span12" title="Material Sales by Category" subtitle={`${monthLongName(model.periodStart.slice(0, 7))} · current Simpro grouping · bars scaled to the largest category`}>
+  return <Card className="span12" title="Material Sales by Category" subtitle={`${monthLongName(model.periodStart.slice(0, 7))} · Simpro category grouping · bars scaled to the largest category`}>
     <CardBody><BarList variant="cols2" ariaLabel="Material sales by category">
       {model.categories.map((category) => <BarListRow
         key={category.name}

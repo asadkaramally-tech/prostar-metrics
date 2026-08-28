@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
-import { assertRole, getCurrentUser, type CurrentUser } from "@/lib/auth/roles";
+import { getCurrentUser } from "@/lib/auth/roles";
 import {
-  currentActiveExclusionRevision,
+  canReadQuoteOverrideHistory,
+  hasQuoteOverrideOperatorRole,
+  quoteOverrideHistoryResponse,
+  toAcceptanceAuditRecord,
+} from "@/lib/api/quote-override-response";
+import {
   getQuoteOverrideHistory,
   persistQuoteOverrideAction,
   quoteOverrideActions,
   QuoteOverrideConflictError,
   QuoteOverrideIdempotencyConflictError,
-  type QuoteOverrideRecord,
   type QuoteOverrideAction,
 } from "@/lib/store/quote-overrides";
 import { clearPageLoadCache } from "@/lib/store/page-cache";
@@ -27,7 +31,7 @@ export async function GET(request: Request) {
 
   try {
     const history = await getQuoteOverrideHistory(quoteId);
-    return NextResponse.json(quoteOverrideHistoryResponse(quoteId, history, hasOperatorRole(user)));
+    return NextResponse.json(quoteOverrideHistoryResponse(quoteId, history, hasQuoteOverrideOperatorRole(user)));
   } catch (error) {
     return NextResponse.json({ error: errorMessage(error, "Unable to load quote override history.") }, { status: 500 });
   }
@@ -35,7 +39,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
-  if (!hasOperatorRole(user)) {
+  if (!hasQuoteOverrideOperatorRole(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -95,56 +99,6 @@ export async function POST(request: Request) {
   }
 }
 
-export function quoteOverrideHistoryResponse(quoteId: number, history: QuoteOverrideRecord[], canWrite: boolean) {
-  return {
-    quoteId,
-    history: history.map(toAcceptanceAuditRecord),
-    currentExclusionRevision: currentActiveExclusionRevision(history),
-    canWrite,
-  };
-}
-
-function toAcceptanceAuditRecord(record: Awaited<ReturnType<typeof getQuoteOverrideHistory>>[number] | Awaited<ReturnType<typeof persistQuoteOverrideAction>>) {
-  const requestedEffect = record.outcome === "excluded"
-    ? "excluded"
-    : record.outcome === "manual_reinstated"
-      ? "reinstated"
-    : record.outcome === "won"
-      ? "legacy_accept"
-      : "legacy_not_accept";
-  return {
-    id: record.id,
-    quoteId: record.quoteId,
-    reason: record.reason,
-    evidenceUrl: record.evidenceUrl,
-    actorEmail: record.actorEmail,
-    revision: record.revision,
-    active: record.active,
-    createdAt: record.createdAt,
-    supersededAt: record.supersededAt,
-    action: record.action,
-    requestedEffect,
-    effective: requestedEffect === "excluded" && record.active,
-  };
-}
-
-function hasOperatorRole(user: Awaited<ReturnType<typeof getCurrentUser>>) {
-  try {
-    assertRole(user, ["admin", "operator"]);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function canReadQuoteOverrideHistory(user: CurrentUser) {
-  try {
-    assertRole(user, ["admin", "finance", "operator"]);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function positiveInteger(value: unknown) {
   const parsed = Number(value);

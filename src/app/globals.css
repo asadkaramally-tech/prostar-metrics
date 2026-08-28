@@ -229,6 +229,7 @@ input[type="month"]:not(:disabled) {
   .nav a{height:32px;padding:0 10px}
   .owner{display:none}
 }
+.data-health-mobile-trigger{bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 
 .content,
 .dashboard-content {
@@ -919,6 +920,8 @@ body.show-states .states{display:block}
 
 /* ── Sortable table headers (scoped to .tblwrap) ───────── */
 .tblwrap th.sortable{cursor:pointer;user-select:none}
+.tblwrap th.sortable button{all:unset;cursor:pointer;color:inherit}
+.tblwrap th.sortable button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radius:2px}
 .tblwrap th.sortable:hover{color:var(--muted)}
 .tblwrap th.sortable::after{content:"";margin-left:5px;color:var(--faint);font-size:9px}
 .tblwrap th.sortable:hover::after{content:"↕"}
@@ -1316,6 +1319,13 @@ a.kpi:hover{border-color:var(--border-strong)}
 .caprows .crow.inactive .cmeta b,.caprows .crow.inactive .cmeta small{color:var(--faint)}
 .caprows .crow.inactive .job{background:var(--n300)}
 @media (max-width:1023px){.caprows .crow{grid-template-columns:110px 1fr 150px}.caprows .cmeta small{font-size:11px}}
+@media (max-width:480px){
+  .caprows .crow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name meta" "track track";gap:7px 10px;padding:10px 0}
+  .caprows .cname{grid-area:name}
+  .caprows .ctrack{grid-area:track;height:16px}
+  .caprows .cmeta{grid-area:meta;max-width:132px}
+  .caprows .cmeta b,.caprows .cmeta small{white-space:normal}
+}
 
 /* inline stat strip (brief §3.4 — commissions Summary header) */
 .strip{display:flex;align-items:center;gap:22px;min-height:40px;flex-wrap:wrap}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { assertRole, getCurrentUser } from "@/lib/auth/roles";
-import { boundedDashboardPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
+import { jobDashboardReadModelParams } from "@/lib/api/dashboard-route-params";
 import { getJobDashboardReadModel } from "@/lib/store/job-dashboard-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -17,17 +17,4 @@ export async function GET(request: Request) {
     getJobDashboardReadModel(params),
   );
   return NextResponse.json(model, { status: model.loadError ? 503 : 200 });
-}
-
-export function jobDashboardReadModelParams(searchParams: URLSearchParams, now = new Date()) {
-  const periodStart = boundedDashboardPeriodStart(searchParams.get("month"), now);
-  if (!periodStart) return null;
-  const page = Number(searchParams.get("page"));
-  return {
-    selectedMonth: periodStartToMonthKey(periodStart),
-    category: searchParams.get("category"),
-    costCenter: searchParams.get("costCenter"),
-    technician: searchParams.get("technician"),
-    page: Number.isSafeInteger(page) && page > 0 ? page : 1,
-  };
 }

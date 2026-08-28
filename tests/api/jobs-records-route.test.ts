@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { jobDrilldownRecordsParams } from "../../src/app/api/jobs/records/route";
+import { jobDrilldownRecordsParams } from "../../src/lib/api/dashboard-route-params";
 
 test("jobs records API normalizes the requested month", () => {
   assert.equal(jobDrilldownRecordsParams(new URLSearchParams({ month: "2026-06" })), "2026-06");

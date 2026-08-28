@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { jobDashboardReadModelParams } from "../../src/app/api/jobs/route";
+import { jobDashboardReadModelParams } from "../../src/lib/api/dashboard-route-params";
 
 test("jobs API forwards page 2 and all existing filters to the read model", () => {
   const params = jobDashboardReadModelParams(new URLSearchParams({

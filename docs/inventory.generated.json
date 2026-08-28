@@ -1,0 +1,854 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": {
+    "app": "44d67563c89ad79866f85a7f8db99f5e788f694466a896a7a0c0f6f9d89329fc",
+    "metricsBicep": "ef304b2e444792b49764bf89609bcb86c843f4c5cc425371f4d3b76667028fc1",
+    "envExample": "44ddbde4007e1dad68c30a119d46a546ca1363d8385b9dfebe521975e3921353"
+  },
+  "pages": [
+    {
+      "route": "/",
+      "module": "src/app/page.tsx",
+      "components": [],
+      "stores": []
+    },
+    {
+      "route": "/commissions",
+      "module": "src/app/commissions/page.tsx",
+      "components": [
+        "@/components/commissions-dashboard",
+        "@/components/dashboard-page"
+      ],
+      "stores": [
+        "@/lib/store/commissions-read-model",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/jobs",
+      "module": "src/app/jobs/page.tsx",
+      "components": [
+        "@/components/dashboard-page",
+        "@/components/jobs-dashboard",
+        "@/components/period-selector"
+      ],
+      "stores": [
+        "@/lib/store/job-dashboard-read-model",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/materials",
+      "module": "src/app/materials/page.tsx",
+      "components": [
+        "@/components/dashboard-page",
+        "@/components/materials-dashboard",
+        "@/components/period-selector"
+      ],
+      "stores": [
+        "@/lib/store/materials-read-model",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/quotes",
+      "module": "src/app/quotes/page.tsx",
+      "components": [
+        "@/components/dashboard-page",
+        "@/components/period-selector",
+        "@/components/quotes/quote-metrics-dashboard"
+      ],
+      "stores": [
+        "@/lib/store/page-cache",
+        "@/lib/store/quote-dashboard-read-model"
+      ]
+    },
+    {
+      "route": "/technicians",
+      "module": "src/app/technicians/page.tsx",
+      "components": [
+        "@/components/dashboard-page",
+        "@/components/period-selector",
+        "@/components/technicians-dashboard"
+      ],
+      "stores": [
+        "@/lib/store/dashboard-read-models",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/today",
+      "module": "src/app/today/page.tsx",
+      "components": [
+        "@/components/dashboard-page",
+        "@/components/period-selector",
+        "@/components/today-dashboard"
+      ],
+      "stores": [
+        "@/lib/store/page-cache",
+        "@/lib/store/today-read-model"
+      ]
+    }
+  ],
+  "apis": [
+    {
+      "route": "/api/auth/session",
+      "module": "src/app/api/auth/session/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "authenticated-owner",
+      "roles": [],
+      "stores": []
+    },
+    {
+      "route": "/api/commissions",
+      "module": "src/app/api/commissions/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/commissions-read-model",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/commissions/allocations",
+      "module": "src/app/api/commissions/allocations/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/commissions-read-model"
+      ]
+    },
+    {
+      "route": "/api/commissions/config",
+      "module": "src/app/api/commissions/config/route.ts",
+      "methods": [
+        "POST"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/commission-lifecycle",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/commissions/exports",
+      "module": "src/app/api/commissions/exports/route.ts",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/commission-exports",
+        "@/lib/store/commission-lifecycle",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/commissions/lifecycle",
+      "module": "src/app/api/commissions/lifecycle/route.ts",
+      "methods": [
+        "POST"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/commission-lifecycle",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/commissions/overrides",
+      "module": "src/app/api/commissions/overrides/route.ts",
+      "methods": [
+        "POST"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/commission-lifecycle",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/commissions/rebuild",
+      "module": "src/app/api/commissions/rebuild/route.ts",
+      "methods": [
+        "POST"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/commission-lifecycle",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/data-refresh",
+      "module": "src/app/api/data-refresh/route.ts",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin"
+      ],
+      "stores": [
+        "@/lib/store/bounded-source-work",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/health",
+      "module": "src/app/api/health/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "public",
+      "roles": [],
+      "stores": [
+        "@/lib/store/postgres"
+      ]
+    },
+    {
+      "route": "/api/jobs",
+      "module": "src/app/api/jobs/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/job-dashboard-read-model",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/jobs/records",
+      "module": "src/app/api/jobs/records/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/job-dashboard-read-model",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/materials",
+      "module": "src/app/api/materials/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/materials-read-model",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/materials/csv",
+      "module": "src/app/api/materials/csv/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/materials-read-model",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/materials/item-jobs",
+      "module": "src/app/api/materials/item-jobs/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/materials-read-model",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/quotes",
+      "module": "src/app/api/quotes/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/page-cache",
+        "@/lib/store/quote-dashboard-read-model"
+      ]
+    },
+    {
+      "route": "/api/quotes/overrides",
+      "module": "src/app/api/quotes/overrides/route.ts",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "auth": "authenticated-policy",
+      "roles": [],
+      "stores": [
+        "@/lib/store/page-cache",
+        "@/lib/store/quote-overrides"
+      ]
+    },
+    {
+      "route": "/api/technicians",
+      "module": "src/app/api/technicians/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/dashboard-read-models",
+        "@/lib/store/page-cache"
+      ]
+    },
+    {
+      "route": "/api/today",
+      "module": "src/app/api/today/route.ts",
+      "methods": [
+        "GET"
+      ],
+      "auth": "role-gated",
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "stores": [
+        "@/lib/store/page-cache",
+        "@/lib/store/today-read-model"
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "name": "job-prostar-metrics-employees",
+      "trigger": "manual",
+      "cron": null,
+      "command": "npm run ingest:worker -- --entity employees --request-budget 250"
+    },
+    {
+      "name": "job-prostar-metrics-ingest",
+      "trigger": "schedule",
+      "cron": "*/20 * * * *",
+      "command": "npm run ingest:worker -- --entity quotes"
+    },
+    {
+      "name": "job-prostar-metrics-jobs",
+      "trigger": "schedule",
+      "cron": "*/20 * * * *",
+      "command": "npm run ingest:worker -- --entity jobs"
+    },
+    {
+      "name": "job-prostar-metrics-mobile",
+      "trigger": "manual",
+      "cron": null,
+      "command": "npm run ingest:worker -- --entity mobile_status --request-budget 250"
+    },
+    {
+      "name": "job-prostar-metrics-reconcile",
+      "trigger": "schedule",
+      "cron": "30 5 * * *",
+      "command": "npm run reconcile:worker"
+    },
+    {
+      "name": "job-prostar-metrics-rollups",
+      "trigger": "manual",
+      "cron": null,
+      "command": "npm run rollups:worker"
+    },
+    {
+      "name": "job-prostar-metrics-schedules",
+      "trigger": "manual",
+      "cron": null,
+      "command": "npm run ingest:worker -- --entity schedules --request-budget 250"
+    },
+    {
+      "name": "job-prostar-metrics-timesheets",
+      "trigger": "manual",
+      "cron": null,
+      "command": "npm run ingest:worker -- --entity timesheets --request-budget 250"
+    },
+    {
+      "name": "job-prostar-timesheet-jobs",
+      "trigger": "manual",
+      "cron": null,
+      "command": "npm run ingest:worker -- --entity jobs_from_timesheets --request-budget 250"
+    },
+    {
+      "name": "job-psm-backfill-hourly",
+      "trigger": "schedule",
+      "cron": "20,50 * * * *",
+      "command": "run backfill:worker -- --execute --drain-limit 5 --runtime-minutes 19 --run-request-limit 1000"
+    },
+    {
+      "name": "job-psm-candidate-drain",
+      "trigger": "schedule",
+      "cron": "2,32 * * * *",
+      "command": "run ingest:worker -- --request-budget 250 --drain-limit 50"
+    },
+    {
+      "name": "job-psm-commissions-nightly",
+      "trigger": "schedule",
+      "cron": "0 10,11 * * *",
+      "command": "run rollups:worker -- --nightly-commissions --local-hour 3 --limit 1"
+    },
+    {
+      "name": "job-psm-employees-daily",
+      "trigger": "schedule",
+      "cron": "0 9,10 * * *",
+      "command": "run ingest:worker -- --entity employees --local-hour 2 --request-budget 250 --drain-limit 20"
+    },
+    {
+      "name": "job-psm-job-logs",
+      "trigger": "schedule",
+      "cron": "*/15 * * * *",
+      "command": "run ingest:worker -- --entity job_logs --request-budget 250 --drain-limit 4"
+    },
+    {
+      "name": "job-psm-materials",
+      "trigger": "schedule",
+      "cron": "40 1,7,13,19 * * *",
+      "command": "run materials:worker -- --mode incremental --hot-window-days 7 --request-limit 8000 --auto-close-prior-month"
+    },
+    {
+      "name": "job-psm-mobile-logs",
+      "trigger": "schedule",
+      "cron": "*/15 * * * *",
+      "command": "run ingest:worker -- --entity mobile_status --request-budget 250 --drain-limit 4"
+    },
+    {
+      "name": "job-psm-operational-health",
+      "trigger": "schedule",
+      "cron": "10,25,40,55 * * * *",
+      "command": "run telemetry:operational"
+    },
+    {
+      "name": "job-psm-quote-logs",
+      "trigger": "schedule",
+      "cron": "*/15 * * * *",
+      "command": "run ingest:worker -- --entity quote_logs --request-budget 250 --drain-limit 4"
+    },
+    {
+      "name": "job-psm-reconcile-stable-history",
+      "trigger": "schedule",
+      "cron": "0 9 1 * *",
+      "command": "run reconcile:worker -- --mode older-stable-history --scope all --batch-months 3 --runtime-minutes 20 --request-budget 1000"
+    },
+    {
+      "name": "job-psm-reconcile-trailing-24m",
+      "trigger": "schedule",
+      "cron": "0 8 * * *",
+      "command": "run reconcile:worker -- --mode trailing-24-months --scope all --batch-months 3 --runtime-minutes 20 --request-budget 1000"
+    },
+    {
+      "name": "job-psm-rollup-drain",
+      "trigger": "schedule",
+      "cron": "12,42 * * * *",
+      "command": "run rollups:worker -- --limit 30"
+    },
+    {
+      "name": "job-psm-schedule-logs",
+      "trigger": "schedule",
+      "cron": "*/15 * * * *",
+      "command": "run ingest:worker -- --entity schedule_logs --request-budget 250 --drain-limit 4"
+    },
+    {
+      "name": "job-psm-timesheets-hourly",
+      "trigger": "schedule",
+      "cron": "0 * * * *",
+      "command": "run ingest:worker -- --entity timesheets --lookback-days 90 --request-budget 250 --drain-limit 20"
+    },
+    {
+      "name": "job-psm-ts-jobs-hourly",
+      "trigger": "schedule",
+      "cron": "5 * * * *",
+      "command": "run ingest:worker -- --entity jobs_from_timesheets --lookback-days 120 --request-budget 250 --drain-limit 20"
+    }
+  ],
+  "configuration": {
+    "localExample": [
+      "AZURE_CLIENT_ID",
+      "AZURE_CONFIG_DIR",
+      "AZURE_POSTGRES_CA_CERT",
+      "AZURE_POSTGRES_CA_CERT_PATH",
+      "AZURE_POSTGRES_CONNECTION_STRING",
+      "AZURE_POSTGRES_MIGRATION_CONNECTION_STRING",
+      "AZURE_STORAGE_ACCOUNT_NAME",
+      "COMMISSION_EXPORT_CONTAINER",
+      "METRICS_ADMIN_EMAILS",
+      "METRICS_AUTH_MODE",
+      "METRICS_DEV_AUTH_BYPASS",
+      "METRICS_FINANCE_EMAILS",
+      "METRICS_OPERATOR_EMAILS",
+      "METRICS_VIEWER_EMAILS",
+      "MIGRATION_COMPATIBILITY_COMMAND_TIMEOUT_MS",
+      "MIGRATION_COMPATIBILITY_PLATFORM",
+      "MIGRATION_COMPATIBILITY_QUERY_TIMEOUT_MS",
+      "PGSSLROOTCERT",
+      "POSTGRES_CONNECTION_TIMEOUT_MS",
+      "POSTGRES_POOL_IDLE_TIMEOUT_MS",
+      "POSTGRES_POOL_MAX",
+      "POSTGRES_SSL_CA_CERT",
+      "POSTGRES_SSL_CA_CERT_BASE64",
+      "POSTGRES_SSL_REJECT_UNAUTHORIZED",
+      "SIMPRO_BASE_URL",
+      "SIMPRO_BEARER_TOKEN",
+      "SIMPRO_COMPANY_ID",
+      "SIMPRO_MAX_PAGE_SIZE",
+      "SIMPRO_REQUESTS_PER_SECOND",
+      "SIMPRO_REQUEST_TIMEOUT_MS"
+    ],
+    "deployedRuntime": [
+      "AZURE_CLIENT_ID",
+      "AZURE_POSTGRES_CONNECTION_STRING",
+      "AZURE_STORAGE_ACCOUNT_NAME",
+      "COMMISSION_EXPORT_CONTAINER",
+      "HOSTNAME",
+      "METRICS_ADMIN_EMAILS",
+      "METRICS_AUTH_MODE",
+      "METRICS_FINANCE_EMAILS",
+      "METRICS_OPERATOR_EMAILS",
+      "METRICS_VIEWER_EMAILS",
+      "POSTGRES_CONNECTION_TIMEOUT_MS",
+      "POSTGRES_POOL_IDLE_TIMEOUT_MS",
+      "POSTGRES_POOL_MAX",
+      "POSTGRES_SSL_CA_CERT_BASE64",
+      "POSTGRES_SSL_REJECT_UNAUTHORIZED",
+      "SIMPRO_BASE_URL",
+      "SIMPRO_BEARER_TOKEN",
+      "SIMPRO_COMPANY_ID",
+      "SIMPRO_REQUESTS_PER_SECOND"
+    ],
+    "sourceReferenced": [
+      "AUDIT_INCLUDE_IDS",
+      "AUDIT_PERIOD_END",
+      "AUDIT_PERIOD_START",
+      "AZURE_CONFIG_DIR",
+      "AZURE_POSTGRES_CONNECTION_STRING",
+      "AZURE_POSTGRES_MIGRATION_CONNECTION_STRING",
+      "AZURE_STORAGE_ACCOUNT_NAME",
+      "BACKFILL_APPROVED_BY",
+      "BACKFILL_CONFIRM",
+      "BACKFILL_DAILY_REQUEST_CEILING",
+      "BACKFILL_DRAIN_LIMIT",
+      "BACKFILL_ESTIMATES_PATH",
+      "BACKFILL_EXECUTE",
+      "BACKFILL_RUNTIME_MINUTES",
+      "BACKFILL_RUN_REQUEST_LIMIT",
+      "BACKFILL_START_MONTH",
+      "BACKFILL_THROUGH_MONTH",
+      "COMMISSION_EXPORT_CONTAINER",
+      "DIRECT_PROFIT_CAPACITY_ACTOR",
+      "DIRECT_PROFIT_CAPACITY_CONCURRENCY",
+      "DIRECT_PROFIT_CAPACITY_CONFIRM",
+      "DIRECT_PROFIT_CAPACITY_MAX_REQUESTS",
+      "DIRECT_PROFIT_CAPACITY_RETRY_FAILED",
+      "DIRECT_PROFIT_CAPACITY_RUNTIME_MINUTES",
+      "METRICS_ADMIN_EMAILS",
+      "METRICS_AUTH_MODE",
+      "METRICS_DEV_AUTH_BYPASS",
+      "METRICS_FINANCE_EMAILS",
+      "METRICS_OPERATOR_EMAILS",
+      "METRICS_VIEWER_EMAILS",
+      "MIGRATION_COMPATIBILITY_CLONE_ONLY",
+      "MIGRATION_COMPATIBILITY_IMAGE_DIGEST",
+      "MIGRATION_COMPATIBILITY_MODE",
+      "MIGRATION_COMPATIBILITY_PLATFORM",
+      "MIGRATION_COMPATIBILITY_REPORT",
+      "NODE_ENV",
+      "PATH",
+      "POSTGRES_POOL_IDLE_TIMEOUT_MS",
+      "POSTGRES_SSL_CA_CERT",
+      "POSTGRES_SSL_CA_CERT_BASE64",
+      "PRIOR_PRODUCTION_IMAGE",
+      "PROSTAR_EVIDENCE_GATE_CATEGORY",
+      "QUEUE_KEEP_SUFFIX",
+      "QUEUE_MAINTENANCE_EXECUTE",
+      "RELEASE_A11Y_REPORT",
+      "RELEASE_BROWSER_ATTESTATION",
+      "RELEASE_DEPLOYMENT_MANIFEST",
+      "RELEASE_E2E_REPORT",
+      "RELEASE_PROJECT_ROOT",
+      "ROLLUP_DRAIN_LIMIT",
+      "ROLLUP_LOCAL_HOUR",
+      "ROLLUP_NIGHTLY_COMMISSIONS",
+      "ROLLUP_PERIOD_START",
+      "ROLLUP_REASON",
+      "ROLLUP_SCOPE",
+      "SIMPRO_COMPANY_ID",
+      "SIMPRO_REQUEST_TIMEOUT_MS"
+    ]
+  },
+  "migrations": [
+    {
+      "name": "001_metrics_foundation.sql",
+      "sha256": "68a0fd5aab7723e428d3a4f1e78389bdc13cee7f67706abf4bfd688b72ebed75"
+    },
+    {
+      "name": "002_read_models_and_normalized_snapshots.sql",
+      "sha256": "4c87d516a6f9d282b651eda39f5cebbcdd6e4015fc46d2f8ddffd4e60f501ffd"
+    },
+    {
+      "name": "003_jobs_from_timesheets_ingestion.sql",
+      "sha256": "2bf1cbec109221e46c6e4bc6610d01067e0a4fcda3f75eb4935d016bd469d4a3"
+    },
+    {
+      "name": "004_metrics_canonical_contract.sql",
+      "sha256": "0b7ac0bcbba375e394d3d3f562378c4ab3eac30fe97cee761becc392b7a58138"
+    },
+    {
+      "name": "005_pipeline_runtime_contract.sql",
+      "sha256": "0ded7287e6ad83393ff244d78098a7db62931c90be4db1f8b54fc56a8c8f5b19"
+    },
+    {
+      "name": "006_canonical_field_contract.sql",
+      "sha256": "e9dc1b7acca2620b39cc040a2593b8acddeb9ea8ced869f67c4606dbf64461e0"
+    },
+    {
+      "name": "007_historical_backfill_ledger.sql",
+      "sha256": "ef39c52b128845a2f76fc6304a4e6bcff150217eb28931d978ce94d87dd5a174"
+    },
+    {
+      "name": "008_commission_lifecycle.sql",
+      "sha256": "743d5d68d6d9017e03252ff0633c335fdbba254f4c8a0bb79a5fa773447f423c"
+    },
+    {
+      "name": "009_commission_roster_seed.sql",
+      "sha256": "3601b7b7dbf0031f59828600ef4726cf616006c79875a2c3ac9b923d3c8599b5"
+    },
+    {
+      "name": "010_quarantine_production_verification_artifacts.sql",
+      "sha256": "c10fe9404e1743a3d430835f723948328ce70856d1c00e5f623c6fb2b33a677f"
+    },
+    {
+      "name": "011_enforce_serving_window.sql",
+      "sha256": "6fa5f1e6e05a1212032bac395de322f1743635656b07b9598e28c4c2a98c47b2"
+    },
+    {
+      "name": "012_pacific_serving_window.sql",
+      "sha256": "dbefe09f5068ebe924b325a7e87f71f6f4cdedfef834aa0572afa8687fd2ddf4"
+    },
+    {
+      "name": "013_ingestion_durability.sql",
+      "sha256": "b25bb73023f428d53349001bce968b04fa743bf2c90611aa5ce983e1c3720a6e"
+    },
+    {
+      "name": "014_source_period_manifests.sql",
+      "sha256": "cd7c522f469e08db14df286a5446bfb089ef76166b3cc98d7f3a5dbd79350a08"
+    },
+    {
+      "name": "015_commission_manifest_evidence.sql",
+      "sha256": "7fd57801f3786b6c508183f53569a25beba072920064eda8be38961979d1beab"
+    },
+    {
+      "name": "016_authoritative_backfill_manifest.sql",
+      "sha256": "df205bdc7bd5a5df962f82c2115e3467ea2bf0ff20a160e8728e744ad1747866"
+    },
+    {
+      "name": "017_seed_reviewed_quote_decisions.sql",
+      "sha256": "ef7ecbd4c3ac512df4e29fe23863dd91cef04ebcf77e6ed83ffa967d9ea9fc0a"
+    },
+    {
+      "name": "018_verified_technician_mobile_semantics.sql",
+      "sha256": "d4d1d54ae16b791299d90ada0f0cfa7eef3e38f796be216a8127a031901b9c40"
+    },
+    {
+      "name": "019_seed_verified_commission_period_configs.sql",
+      "sha256": "32a9947998e3e8c7e7f0403ef87b18ca53b2536d78a1a4892d738ef3cf5a5f60"
+    },
+    {
+      "name": "020_queue_verified_commission_config_rebuilds.sql",
+      "sha256": "3b94216e1d6fdc3f988c6f72d00cf2bfac54380e1ae3bbe39c80d780c354e4ea"
+    },
+    {
+      "name": "021_cancel_prebootstrap_nested_queue.sql",
+      "sha256": "df0176456d927217509abfccea138eb028ed3ad1a803a1068a2ceb2bb758dfaf"
+    },
+    {
+      "name": "022_cancel_prebootstrap_out_of_scope_nested_queue.sql",
+      "sha256": "c010b8556121c022edc4a7632b08574a1d2b5f1db384e0368780f7beb378ff0e"
+    },
+    {
+      "name": "023_canonical_job_source_quotes.sql",
+      "sha256": "284d7e0bcb6b9c7807e69572f842de1c34127188263240d2e4b59a0de5807d4b"
+    },
+    {
+      "name": "024_operational_hour_precision.sql",
+      "sha256": "79dd7b45c0b180f19fd65e271d7b068bd13e8a6277d9975bb045791e35127a28"
+    },
+    {
+      "name": "025_upgrade_verified_commission_tier_config.sql",
+      "sha256": "68437467608d41cfe828a03c9f5a2637b079a6feb0dc6a5169a96f6446bc1178"
+    },
+    {
+      "name": "026_simpro_profit_capacity_contract.sql",
+      "sha256": "b00ae9bf4a6a5a64c8de86aea1ce980ae5e841c6a22cfa7f34b9b8c8331560e9"
+    },
+    {
+      "name": "027_profit_capacity_completeness_gate.sql",
+      "sha256": "eaf03469fa25ca47c230ac36f4c24c4a60f6497b1f7f4599721b912f7d06066f"
+    },
+    {
+      "name": "028_exact_profit_capacity_backfill_ledger.sql",
+      "sha256": "5adeba3029aea4d34ac4f4742d0053c0d76fa620970320e74504b223a7404bdf"
+    },
+    {
+      "name": "029_nested_traversal_generation.sql",
+      "sha256": "3a2043c309971c6931d7bc14a9cecd0bcdc40db9c97363c6f541d072d0ba8e7c"
+    },
+    {
+      "name": "030_schedule_identity_reconciliation.sql",
+      "sha256": "3e45df8132c57ee8b7cc34e48a81441971aa5ede3bf16d2d8d0f69bad90af87d"
+    },
+    {
+      "name": "031_platform_data_trust_contract.sql",
+      "sha256": "4f99cf526011ec8e9a4cf95e9e50e2c3d369eee383891c69cc4f3893edccd548"
+    },
+    {
+      "name": "032_technician_reconciliation_results.sql",
+      "sha256": "d3a76ef9f0512a91845616f8f79899f86e1e09396ab3fe82a2f3ae4c4cce2ac0"
+    },
+    {
+      "name": "033_quote_reinstatement_scope_cleanup.sql",
+      "sha256": "4f5d1a37a2cfc9a7f5a109f2167e6352a125d33a1b8a4ce3862d5ce53da8ad29"
+    },
+    {
+      "name": "034_reviewed_quote_exclusion_registry.sql",
+      "sha256": "16dc40bc1f80a5c735ea997665bac1984933b21d05f95d7db7cffd4b805a1774"
+    },
+    {
+      "name": "035_remove_job_no_quote_acceptance.sql",
+      "sha256": "98b5e1dafbce89850544732aec84c045de79aede1dda69003d9ac3b64fd2ca37"
+    },
+    {
+      "name": "036_commission_initialization_integrity.sql",
+      "sha256": "98e180287fb96ace8237581e3d658a6bc6ace07c92ccef7e66ee854a5462db58"
+    },
+    {
+      "name": "037_independent_reconciliation_source_generations.sql",
+      "sha256": "5586e9bd46f8a9081a887d859081561d149a2810966aafb5a8c4ab5086e54038"
+    },
+    {
+      "name": "038_job_source_quote_lookup_index.sql",
+      "sha256": "5290c6e7c686166a66c4f634d4316a2c71d359cf966685e6ebd18ac40f9b82d6"
+    },
+    {
+      "name": "039_effective_technician_roster.sql",
+      "sha256": "74370bc58acd11cd2920281b2084601c72563fb669cf864cb017ba64da42db35"
+    },
+    {
+      "name": "041_quote_customer_site_identity.sql",
+      "sha256": "58c826fbec58e1edd3915cf22ecc3c4b3d66f48e1cbb3aa8c20946154ca27f60"
+    },
+    {
+      "name": "042_roster_from_recorded_work.sql",
+      "sha256": "5d1652e4fc1ec1970e027d92b2466ad41b639c428e9f24adc8cccfeea5b61f87"
+    },
+    {
+      "name": "043_hot_path_serving_indexes.sql",
+      "sha256": "f1d46c36eb1a748ec175ffe67a62342da523ff82d9b4241d90a293b2aa7d811b"
+    },
+    {
+      "name": "044_technician_rollup_join_indexes.sql",
+      "sha256": "f20f09c7eeadbbe3e0e9ab745ef23f1797413805395baa0cd02fdf04ca7b40d4"
+    },
+    {
+      "name": "045_materials_sales_contract.sql",
+      "sha256": "7a1341471c63a6efd610e48f01c9c429b1bd070c6a9aea39333b96975741a143"
+    },
+    {
+      "name": "046_worker_execution_leases.sql",
+      "sha256": "0aea266c827382574466a7665520b50e8211b5536bfbe00ce2a96d1b748212e9"
+    },
+    {
+      "name": "047_quote_date_union_reconciliation_cursor.sql",
+      "sha256": "84babbcee3d04771b34a617b9ce983e6fb4e2ce853936cfbdfa4bd48678c2eef"
+    },
+    {
+      "name": "048_rebuild_legacy_technician_read_models.sql",
+      "sha256": "4f5d56f8f2d9fb487b0dbfcc1e200310b247ddb2d045a730b746f52e07bdb1b2"
+    },
+    {
+      "name": "049_cancel_historically_superseded_job_nested_refreshes.sql",
+      "sha256": "c7f2c7bf74d0444c5b6173acf3992af19ea5198ab7a3f25d6cf5f986a9da2cc0"
+    },
+    {
+      "name": "050_coalesce_queued_nested_refreshes.sql",
+      "sha256": "1c49669f3c6487cf06915249229ff346310b91d43b0c03b673365741f12c9ced"
+    },
+    {
+      "name": "051_complete_backfill_ledger_from_source_period_authority.sql",
+      "sha256": "6f075dfac21b500ed28d7045a614c0d27daecd21a508f1f5a2dd59b3a5ee3ad2"
+    },
+    {
+      "name": "052_close_july_quote_backfills_from_source_period_authority.sql",
+      "sha256": "1955c2fcd0933ca1dd5ad1d30671370861efb35ebc89704715e0356ad3c0de79"
+    }
+  ]
+}

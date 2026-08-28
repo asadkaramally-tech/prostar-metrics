@@ -59,15 +59,15 @@ The current-month evidence test used a fixed July 2026 timestamp and began faili
 | Gate | Result |
 |---|---|
 | Install from lockfile | Passed |
-| Full application/store suite | 1,035 passed; 0 failed |
-| Script/evidence suite | 397 concrete assertions passed |
+| Full application/store suite | 1,036 passed; 0 failed |
+| Script/evidence suite | 399 concrete assertions passed |
 | Infrastructure suite | 165 concrete assertions passed |
 | Feature-plan check | 98 records validated |
 | Reference-manifest check | 4 artifacts and 5 sidecar hashes validated |
 | No-mirror guard | Passed |
 | TypeScript | Passed |
 | ESLint | 0 errors; 3 nonblocking warnings |
-| Production build | Passed; 29 pages generated and build evidence validated |
+| Production build | Passed; 29 pages generated, 30 route records and 19 required server-file records validated |
 | Full dependency audit | 0 known vulnerabilities |
 | Production dependency audit | 0 known vulnerabilities |
 | Full-history secret scan | 73 commits scanned; no unignored findings |
@@ -83,4 +83,24 @@ The current-month evidence test used a fixed July 2026 timestamp and began faili
 6. Finish the release receipt for the 24 job image digests, migration ledger, smoke result, and rollback digest.
 7. Confirm the August commission/payroll decision cutoff before treating any incomplete period as usable.
 
-Accessibility, commission-row request isolation, modal focus, freshness wording, and narrow-screen layout remain valid Phase 1 work. They were not mixed into this stabilization patch.
+## Follow-on roadmap implementation
+
+The remaining locally actionable Phase 1 and Phase 2 items were completed on the same stabilization branch after the baseline commit:
+
+- native sortable header buttons, keyboard-operable row disclosures, dialog focus trapping/restoration, and focusable definition tooltips;
+- per-technician commission allocation request/loading/error isolation;
+- freshness text that separately states the business-data cutoff and pipeline check age;
+- a bottom-positioned mobile Data Health control and a 320px recorded-time row layout;
+- a deterministic generated route/API/auth/job/config/migration inventory with drift enforcement;
+- fail-closed routine deployment certification for exact source and dependency bytes;
+- a concise authority index, architecture, deployment, operations, recovery, owner-action, and roadmap document set.
+
+Local browser verification at 320×700 confirmed a 320px document width with no page-level horizontal overflow, a 44×44 Data Health control below the 56px navigation rather than overlapping it, dialog Tab/Shift-Tab containment, Escape close, and focus restoration. The database-backed technician rows could not be visually populated without a production-data connection; their narrow reflow is covered by source and component regression checks. The local error state correctly disclosed the missing app-owned store rather than fabricating data.
+
+## Final clean-install verification
+
+The completed roadmap was verified from the lockfile with `npm ci` (481 packages, zero install-time vulnerabilities), followed by the full gate recorded above. The application suite passed all 1,036 tests, the script/evidence suite observed 399 concrete assertions, and the infrastructure suite passed all 165 assertions, including Bicep compilation. The Bicep check required approved access only because Azure CLI writes its local session file outside the workspace; it did not change Azure resources.
+
+The final production build used the explicit webpack backend so it does not depend on Turbopack opening an internal port in a locked build environment. TypeScript, the generated inventory drift check, the 98-record feature plan, authoritative-reference hashes, no-mirror guard, both npm advisory audits, and patch whitespace all passed. ESLint reported no errors and the same three nonblocking warnings listed in the repository output.
+
+The owner-authorized work is deliberately not represented as completed. Exact guarded procedures for repository privacy and CI authority, the second protected evidence copy, credential handling, release and receipt creation, bounded queue repair/replay, restore testing, and commission policy decisions are in [`../owner-actions.md`](../owner-actions.md). Production remains unchanged.

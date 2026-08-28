@@ -33,14 +33,15 @@ test("header renders the approved top grammar: Operations eyebrow, h1, sub, cont
   assert.match(html, /class="controls"/);
 });
 
-test("freshness pill states Updated N ago (never Live) and turns amber off-current", () => {
+test("freshness pill separates data cutoff from pipeline check time and turns amber off-current", () => {
   const current = renderToStaticMarkup(createElement(TestDashboardPage, {
     title: "Job Metrics",
     description: "d",
     freshness,
   }, createElement("section", null, "content")));
   assert.match(current, /class="pill"[^>]*role="status"/);
-  assert.match(current, /Updated \d+ (min|hr|hrs|days) ago/);
+  assert.match(current, /Data through Jun 30, 2026 · checked \d+ (min|hr|hrs|days) ago/);
+  assert.doesNotMatch(current, />Updated /);
   assert.doesNotMatch(current, />Live</);
 
   const stale = renderToStaticMarkup(createElement(TestDashboardPage, {
@@ -57,7 +58,7 @@ test("freshness pill states Updated N ago (never Live) and turns amber off-curre
   }, createElement("section", null, "content")));
   assert.match(missing, /class="pill warn"/);
   assert.match(missing, /No app-owned data yet/);
-  assert.doesNotMatch(missing, /Updated NaN/);
+  assert.doesNotMatch(missing, /checked NaN/);
 });
 
 test("commission period controls reset summaryYear when month navigation crosses a year", () => {

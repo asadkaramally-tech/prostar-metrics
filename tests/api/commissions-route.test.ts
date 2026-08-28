@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { commissionDashboardReadModelParams } from "../../src/app/api/commissions/route";
+import { commissionDashboardReadModelParams } from "../../src/lib/api/dashboard-route-params";
 import { parseCommissionDashboardPeriod } from "../../src/lib/commissions/period";
 
 const now = new Date("2026-07-21T12:00:00-07:00");

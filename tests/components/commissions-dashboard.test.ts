@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -36,6 +38,9 @@ import {
   commissionServingRow,
 } from "../helpers/commission-serving";
 
+const commissionSource = readFileSync(path.join(process.cwd(), "src/components/commissions-dashboard.tsx"), "utf8");
+const boardSource = readFileSync(path.join(process.cwd(), "src/components/reset/board.tsx"), "utf8");
+
 /* ── June-like fixture (cent-clean splits so the disclosure-rounded payload
       weights equal the server's exact weights). FINAL OWNER RULE fixture
       shape: Stephen Furtado's hours carry the legacy non-field flag — those
@@ -50,6 +55,16 @@ test("commission allocation detail requests use the canonical YYYY-MM key", () =
     commissionAllocationDetailSearch("2026-06-01", "42").toString(),
     "month=2026-06&employeeId=42",
   );
+});
+
+test("commission allocation requests and disclosure state are isolated per technician", () => {
+  assert.match(commissionSource, /allocationRequests\.current\.has\(employeeId\)/);
+  assert.match(commissionSource, /allocationErrors\[row\.employeeId\] \?\? null/);
+  assert.match(commissionSource, /allocationLoading\.has\(row\.employeeId\)/);
+  assert.match(commissionSource, /ariaControls=\{detailId\}/);
+  assert.match(boardSource, /role=\{onClick \? "button" : undefined\}/);
+  assert.match(boardSource, /aria-expanded=\{onClick \? Boolean\(open\) : undefined\}/);
+  assert.match(boardSource, /event\.key === "Enter" \|\| event\.key === " "/);
 });
 
 const SAVED_CONFIG: CommissionPeriodConfig = {

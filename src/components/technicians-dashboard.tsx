@@ -949,10 +949,11 @@ function ScorecardCard({
         .filter(Boolean)
         .join(" ")}
       data-sort={key}
-      onClick={() => onSort(key)}
       aria-sort={sortKey === key ? (sortDir === 1 ? "ascending" : "descending") : undefined}
     >
-      {children}
+      <button type="button" onClick={() => onSort(key)}>
+        {children}
+      </button>
     </th>
   );
 
@@ -965,8 +966,8 @@ function ScorecardCard({
         <>
           <span>
             {rosterApplied
-              ? `Roster: ${facts.rosterCount} people with recorded work · sorted by job hours (descending) — click a column to re-sort`
-              : `Roster gate unavailable — showing every mapped technician · sorted by job hours (descending) — click a column to re-sort`}
+              ? `Roster: ${facts.rosterCount} people with recorded work · sorted by job hours (descending) — select a column to re-sort`
+              : `Roster gate unavailable — showing every mapped technician · sorted by job hours (descending) — select a column to re-sort`}
           </span>
           <span />
         </>

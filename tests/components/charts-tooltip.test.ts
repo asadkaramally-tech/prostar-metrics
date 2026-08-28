@@ -59,6 +59,10 @@ test("tooltip helpers escape source-controlled labels and reject unsafe colors",
 test("[data-def] definition tooltips are wired document-wide by the provider", () => {
   assert.match(tooltipSource, /closest\?\.\("\[data-def\]"\)/, "delegated [data-def] targeting");
   assert.match(tooltipSource, /max-width:250px/, "kit's definition bubble width");
+  assert.match(tooltipSource, /document\.addEventListener\("focusin", focus\)/);
+  assert.match(tooltipSource, /element\.tabIndex = 0/);
+  assert.match(tooltipSource, /aria-describedby/);
+  assert.match(tooltipSource, /role", "tooltip"/);
   const provider = read("src/components/reset/def-tooltip.tsx");
   assert.match(provider, /wireDefTooltips\(\)/);
   assert.match(provider, /useEffect/);

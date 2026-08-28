@@ -130,5 +130,5 @@ test("large job and commission detail collections render incrementally", () => {
   assert.match(jobsSource, /CLIENT_PAGE_SIZE/);
   assert.match(jobsSource, /Showing \$\{start \+ 1\}–\$\{start \+ visible\.length\} of/);
   // Commission job detail renders only for the opened leaderboard row.
-  assert.match(commissionsSource, /\{open \? \(\s*<RowDetail/);
+  assert.match(commissionsSource, /\{open \? \(\s*<div id=\{detailId\}>\s*<RowDetail/);
 });

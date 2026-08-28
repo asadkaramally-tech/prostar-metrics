@@ -1,4 +1,6 @@
-# Deploy handoff — redesign/approved-mockups-2026-07-20
+# HISTORICAL / SUPERSEDED — Deploy handoff, 2026-07-20
+
+This file is retained as historical evidence only. Do not follow its direct-Bicep, manual job-creation, firewall, or `.env.local` copying instructions. The current and only deployment authority is [`../DEPLOY.md`](../DEPLOY.md).
 
 Everything is built, tested, and preflight-green. This document is the complete
 brief for finishing the production deploy of the metrics.psm.photos redesign.

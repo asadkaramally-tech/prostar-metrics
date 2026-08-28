@@ -53,6 +53,7 @@ export function DataHealthDrawer(props: DataHealthDrawerProps) {
   const [workNotice, setWorkNotice] = useState<string | null>(null);
   const [workSubmitting, setWorkSubmitting] = useState(false);
   const panelId = useId();
+  const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const summary = props.state === "ready" ? props.model.summary : null;
@@ -71,7 +72,28 @@ export function DataHealthDrawer(props: DataHealthDrawerProps) {
     closeButtonRef.current?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusable = [...panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )].filter((element) => !element.hidden);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panelRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
@@ -155,7 +177,7 @@ export function DataHealthDrawer(props: DataHealthDrawerProps) {
       <button
         type="button"
         onClick={showDrawer}
-        className="focus-ring fixed right-4 top-[9px] z-30 flex h-10 w-10 items-center justify-center rounded-[10px] border border-white/[.08] bg-white/[.045] text-[#d4d7e0] lg:hidden"
+        className="data-health-mobile-trigger focus-ring fixed right-4 z-30 flex h-11 w-11 items-center justify-center rounded-[10px] border border-white/[.12] bg-[#181c29] text-[#e4e7ef] shadow-lg lg:hidden"
         aria-label={`Data health: ${triggerStatus}`}
         aria-expanded={open}
         aria-controls={panelId}
@@ -180,10 +202,12 @@ export function DataHealthDrawer(props: DataHealthDrawerProps) {
             tabIndex={-1}
           />
           <aside
+            ref={panelRef}
             id={panelId}
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${panelId}-title`}
+            tabIndex={-1}
             className="absolute inset-y-0 right-0 flex w-full max-w-[430px] flex-col border-l border-[color:var(--hair)] bg-[color:var(--surface)] shadow-[var(--shadow-pop)]"
           >
             <header className="flex min-h-[72px] items-start gap-3 border-b border-[color:var(--hair)] px-5 py-4">

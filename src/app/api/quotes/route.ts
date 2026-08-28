@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertRole, getCurrentUser } from "@/lib/auth/roles";
-import { boundedDashboardPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
-import { getQuoteMetricsReadModel, type QuoteMetricsReadModelOptions } from "@/lib/store/quote-dashboard-read-model";
+import { quoteDashboardReadModelOptions } from "@/lib/api/dashboard-route-params";
+import { getQuoteMetricsReadModel } from "@/lib/store/quote-dashboard-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
 export async function GET(request: Request) {
@@ -16,19 +16,4 @@ export async function GET(request: Request) {
   return NextResponse.json(await cachedPageLoad(`api:quotes:${JSON.stringify(options)}`, 120_000, () =>
     getQuoteMetricsReadModel(options),
   ));
-}
-
-export function quoteDashboardReadModelOptions(searchParams: URLSearchParams, now = new Date()): QuoteMetricsReadModelOptions | null {
-  const periodStart = boundedDashboardPeriodStart(searchParams.get("month"), now);
-  if (!periodStart) return null;
-  return {
-    selectedMonth: periodStartToMonthKey(periodStart),
-    search: searchParams.get("search") ?? undefined,
-    category: searchParams.get("category") ?? undefined,
-    tier: searchParams.get("tier") ?? undefined,
-    outcome: searchParams.get("outcome") ?? undefined,
-    acceptancePath: searchParams.get("acceptancePath") ?? undefined,
-    sort: searchParams.get("sort") ?? undefined,
-    page: searchParams.get("page") ?? undefined,
-  };
 }

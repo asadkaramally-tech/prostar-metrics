@@ -224,7 +224,9 @@ test("scorecard sorts every metric column both ways with null rows always last �
 
   const html = render(dashboardModel(payload));
   assert.match(html, /class="num sortable sorted" data-sort="job"/);
-  assert.match(html, /sorted by job hours \(descending\) — click a column to re-sort/);
+  assert.match(html, /data-sort="job"[^]*?<button type="button">Job Hrs<\/button>/);
+  assert.match(html, /sorted by job hours \(descending\) — select a column to re-sort/);
+  assert.doesNotMatch(source, /<th[^>]*onClick=/);
   assert.match(html, /Roster: 3 people with recorded work/);
   assert.match(html, /· inactive/);
   assert.match(html, />—</);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { assertRole, getCurrentUser } from "@/lib/auth/roles";
-import { boundedDashboardPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
+import { jobDrilldownRecordsParams } from "@/lib/api/dashboard-route-params";
 import { getJobDrilldownRecords } from "@/lib/store/job-dashboard-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -22,8 +22,4 @@ export async function GET(request: Request) {
   } catch {
     return NextResponse.json({ error: "Job drilldown records could not be loaded." }, { status: 503 });
   }
-}
-
-export function jobDrilldownRecordsParams(searchParams: URLSearchParams, now = new Date()): string | null {
-  return periodStartToMonthKey(boundedDashboardPeriodStart(searchParams.get("month"), now) ?? undefined) ?? null;
 }
