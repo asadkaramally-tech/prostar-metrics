@@ -5,6 +5,7 @@ import {
   mapItemFact,
   mapLaborFact,
   mapWorkOrderFact,
+  enqueueAffectedRollups,
   persistProjectItem,
   persistProjectLabor,
   persistProjectWorkOrder,
@@ -138,4 +139,31 @@ test("every quote child upsert takes the category lock before writing", async ()
     const mutationIndex = Math.max(sql.indexOf("insert into"), sql.indexOf("update metrics"));
     assert.ok(sql.indexOf("pg_advisory_xact_lock") < mutationIndex);
   }
+});
+
+test("future schedule months are deferred without failing the parent nested ingestion", async () => {
+  const calls: Array<{ sql: string; values: unknown[] | undefined }> = [];
+  const query = (async <T>(sql: string, values?: unknown[]) => {
+    calls.push({ sql, values });
+    return { rows: [{ id: "1", status: "queued" }] as T[], rowCount: 1 };
+  }) as PostgresQuery;
+
+  await enqueueAffectedRollups([
+    { scope: "technicians", periodStart: "9999-01-01" },
+    { scope: "jobs", periodStart: "2023-01-01" },
+  ], "nested job finalization", query);
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]?.values?.[1], "2023-01-01");
+});
+
+test("malformed future-looking months still fail closed", async () => {
+  const query = (async <T>() => ({ rows: [] as T[], rowCount: 0 })) as PostgresQuery;
+
+  await assert.rejects(
+    enqueueAffectedRollups([
+      { scope: "technicians", periodStart: "9999-99-01" },
+    ], "nested job finalization", query),
+    /Unable to queue technicians rollup/,
+  );
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { tipHide, tipShow, tipTitle } from "./tooltip";
+import { tipHide, tipShow, tipText, tipTitle } from "./tooltip";
 import { useContainerWidth } from "./use-container-width";
 
 /* Horizontal stacked bars (capacity): container-true width, hover, compact
@@ -18,7 +18,7 @@ export type HStackRow = {
   noteShort?: string;
   noteColor?: string;
   over?: boolean;
-  /** Tooltip body (HTML string built with tipRow), appended after the title. */
+  /** Tooltip body rendered as plain text after the title. */
   tip?: string;
 };
 
@@ -46,7 +46,7 @@ export function HStack(props: HStackProps) {
   const maxV = Math.max(...rows.map((r) => Math.max(r.cap || 0, r.segs.reduce((s, x) => s + x.v, 0)))) * 1.04;
 
   const enter = (r: HStackRow) => (e: ReactPointerEvent<SVGRectElement>) => {
-    if (r.tip) tipShow(tipTitle(r.name) + r.tip, e.clientX, e.clientY);
+    if (r.tip) tipShow(tipTitle(r.name) + tipText(r.tip), e.clientX, e.clientY);
   };
   const leave = (r: HStackRow) => () => {
     if (r.tip) tipHide();

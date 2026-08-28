@@ -9,6 +9,7 @@ import {
   type JobFinancialTotals,
 } from "@/lib/simpro/normalize";
 import { pickId, pickName } from "@/lib/simpro/schemas";
+import { businessCurrentMonth } from "@/lib/backfill/plan";
 import {
   queryPostgres,
   withPostgresTransaction,
@@ -1073,6 +1074,10 @@ export async function enqueueAffectedRollups(
   query: PostgresQuery,
 ): Promise<void> {
   for (const affected of uniquePeriods(affectedPeriods)) {
+    // Simpro may publish next-month schedules before that month is serveable.
+    // Defer only well-formed future months; malformed or unexpectedly old
+    // periods must still fail closed through enqueueRollupRebuild.
+    if (isFutureMonthStart(affected.periodStart)) continue;
     const queued = await enqueueRollupRebuild({
       metricFamily: affected.scope,
       periodStart: affected.periodStart,
@@ -1082,6 +1087,13 @@ export async function enqueueAffectedRollups(
       throw new Error(`Unable to queue ${affected.scope} rollup for ${affected.periodStart}.`);
     }
   }
+}
+
+function isFutureMonthStart(periodStart: string): boolean {
+  if (!/^\d{4}-\d{2}-01$/.test(periodStart)) return false;
+  const parsed = new Date(`${periodStart}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== periodStart) return false;
+  return periodStart > businessCurrentMonth();
 }
 
 function uniquePeriods(affectedPeriods: AffectedPeriod[]): AffectedPeriod[] {

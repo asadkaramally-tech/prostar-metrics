@@ -57,12 +57,30 @@ export function tipTrack(cx: number, cy: number): void {
   t.style.top = Math.max(10, cy - t.offsetHeight - 14) + "px";
 }
 
+export function escapeTooltipText(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function safeTooltipColor(color: string): string {
+  return /^(?:#[\da-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%a-z]+\)|color-mix\([#\w\s,().%-]+\)|var\(--[\w-]+\))$/i.test(color)
+    ? color
+    : "#e9ebf0";
+}
+
 export const tipRow = (color: string, name: string, val: string): string =>
-  `<div style="display:flex;align-items:center;gap:7px;white-space:nowrap"><i style="width:8px;height:8px;border-radius:3px;background:${color};flex:none"></i>` +
-  `<span style="color:#5c6474">${name}</span><b style="margin-left:auto;padding-left:16px;color:#101422">${val}</b></div>`;
+  `<div style="display:flex;align-items:center;gap:7px;white-space:nowrap"><i style="width:8px;height:8px;border-radius:3px;background:${safeTooltipColor(color)};flex:none"></i>` +
+  `<span style="color:#5c6474">${escapeTooltipText(name)}</span><b style="margin-left:auto;padding-left:16px;color:#101422">${escapeTooltipText(val)}</b></div>`;
 
 export const tipTitle = (s: string): string =>
-  `<div style="font-weight:700;color:#101422;margin-bottom:5px">${s}</div>`;
+  `<div style="font-weight:700;color:#101422;margin-bottom:5px">${escapeTooltipText(s)}</div>`;
+
+export const tipText = (s: string): string =>
+  `<span style="color:#6b7383">${escapeTooltipText(s)}</span>`;
 
 /* Definition tooltips: any element with [data-def] shows its formula/date-
    anchor on hover or tap (kit.js document-level delegation, ported). */
@@ -74,7 +92,7 @@ export function wireDefTooltips(): () => void {
     const target = e.target as Element | null;
     const d = target?.closest?.("[data-def]") as HTMLElement | null;
     if (d) tipShow(
-      `<div style="max-width:250px;line-height:1.55;color:#2a3140">${d.dataset.def}</div>`,
+      `<div style="max-width:250px;line-height:1.55;color:#2a3140">${escapeTooltipText(d.dataset.def ?? "")}</div>`,
       (e as PointerEvent).clientX,
       (e as PointerEvent).clientY,
     );

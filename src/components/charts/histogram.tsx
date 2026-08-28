@@ -3,7 +3,7 @@
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import type { ValueFormatter } from "./fmt";
 import { autoStride, histogramLayout, niceTicks } from "./geometry";
-import { tipHide, tipRow, tipShow, tipTitle } from "./tooltip";
+import { tipHide, tipRow, tipShow, tipText, tipTitle } from "./tooltip";
 import { useContainerWidth } from "./use-container-width";
 
 /* Histogram with hover — a 1:1 port of kit.js histogram. Bars have
@@ -18,7 +18,7 @@ export type HistogramBucket = {
   neg?: boolean;
   /** Accent (indigo) bar with a forced value + emphasised x label. */
   accent?: boolean;
-  /** Extra tooltip HTML appended after the count row. */
+  /** Extra plain text appended after the count row. */
   extra?: string;
 };
 
@@ -48,7 +48,7 @@ export function Histogram(props: HistogramProps) {
 
   const enter = (b: HistogramBucket, fill: string) => (e: ReactPointerEvent<SVGPathElement>) =>
     tipShow(
-      tipTitle(b.tipLabel || b.label) + tipRow(fill, props.seriesName || "Jobs", vf(b.count)) + (b.extra || ""),
+      tipTitle(b.tipLabel || b.label) + tipRow(fill, props.seriesName || "Jobs", vf(b.count)) + (b.extra ? tipText(b.extra) : ""),
       e.clientX,
       e.clientY,
     );

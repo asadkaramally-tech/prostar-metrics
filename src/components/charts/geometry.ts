@@ -135,8 +135,12 @@ export const heatTextFor = (v: number): string => heatCellStyle(v)[1];
 
 /* Representative-cell hatch overlay: dark bands hatch with #00000024
    stripes, light bands with #ffffff1f (mockups tokens.css .cell.hatch). */
-export function heatReprOverlay(v: number): string {
+export function heatReprBackgroundImage(v: number): string {
   return heatTextFor(v) === "#fff"
-    ? "background-image:repeating-linear-gradient(45deg,transparent 0 5px,#00000024 5px 8px)"
-    : "background-image:repeating-linear-gradient(45deg,transparent 0 5px,#ffffff1f 5px 8px)";
+    ? "repeating-linear-gradient(45deg,transparent 0 5px,#00000024 5px 8px)"
+    : "repeating-linear-gradient(45deg,transparent 0 5px,#ffffff1f 5px 8px)";
+}
+
+export function heatReprOverlay(v: number): string {
+  return `background-image:${heatReprBackgroundImage(v)}`;
 }

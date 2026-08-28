@@ -253,6 +253,23 @@ test("Heatmap applies the contrast-safe ramp, hatches representative cells and m
   assert.match(html, /class="hcol">May</);
 });
 
+test("Bullet and Heatmap render source labels as text rather than markup", () => {
+  const payload = `<img src=x onerror="globalThis.pwned=1">`;
+  const bullet = renderToStaticMarkup(createElement(Bullet, {
+    cur: { m: payload, v: 50 },
+    high: { m: payload, v: 100 },
+  }));
+  const heatmap = renderToStaticMarkup(createElement(Heatmap, {
+    months: [payload],
+    rows: [{ name: payload, cells: [{ v: 25 }] }],
+  }));
+
+  for (const html of [bullet, heatmap]) {
+    assert.doesNotMatch(html, /<img/);
+    assert.match(html, /&lt;img/);
+  }
+});
+
 test("HStack draws capacity ticks and over-capacity notes", () => {
   const html = renderToStaticMarkup(createElement(HStack, {
     w: 560,

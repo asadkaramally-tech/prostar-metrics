@@ -551,8 +551,9 @@ test("publishes an authoritative empty month only with terminal checksum evidenc
 test("publishes the current Pacific month as provisional with open-quote discovery", async () => {
   const db = await migratedDatabase();
   try {
-    const current = await db.query<{ month_start: string }>(
-      `select date_trunc('month', now() at time zone 'America/Los_Angeles')::date::text as month_start`,
+    const current = await db.query<{ month_start: string; evidence_as_of: string }>(
+      `select date_trunc('month', now() at time zone 'America/Los_Angeles')::date::text as month_start,
+              now()::text as evidence_as_of`,
     );
     const periodStart = current.rows[0].month_start;
     await seedLedger(db, "quotes", periodStart);
@@ -566,6 +567,7 @@ test("publishes the current Pacific month as provisional with open-quote discove
         status: "complete",
         discoveryIdentity: "verified-open-quote-universe",
       },
+      evidenceAsOf: current.rows[0].evidence_as_of,
     });
 
     await publishVerifiedBulkBootstrapEvidence([unit], pgliteQuery(db));
@@ -865,6 +867,7 @@ function evidenceUnit(params: {
   currentMonth?: boolean;
   detailCoverageRequired?: boolean;
   openQuoteDiscovery?: Record<string, unknown>;
+  evidenceAsOf?: Date | string;
   state?: "partial" | "unavailable";
   stateReason?: string;
 }): BulkBootstrapEvidenceUnit {
@@ -902,7 +905,7 @@ function evidenceUnit(params: {
     }],
     artifactSha256: sha(`artifact:${params.sourceFamily}:${params.periodStart}`),
     manifestSha256: sha(`manifest:${params.sourceFamily}:${params.periodStart}`),
-    evidenceAsOf: "2026-07-10T18:00:00.000Z",
+    evidenceAsOf: params.evidenceAsOf ?? "2026-07-10T18:00:00.000Z",
     currentMonth: params.currentMonth ?? false,
     detailCoverageRequired: params.detailCoverageRequired ?? true,
     openQuoteDiscovery: params.openQuoteDiscovery,

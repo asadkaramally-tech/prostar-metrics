@@ -10,7 +10,7 @@ export { HStack, type HStackProps, type HStackRow, type HStackSegment } from "./
 export { RatioBars, type RatioBarsProps, type RatioBarRow } from "./ratio-bars";
 export { Histogram, type HistogramProps, type HistogramBucket } from "./histogram";
 export { Heatmap, type HeatmapProps, type HeatmapRow, type HeatmapCell } from "./heatmap";
-export { tipShow, tipHide, tipRow, tipTitle, wireDefTooltips } from "./tooltip";
+export { escapeTooltipText, tipShow, tipHide, tipRow, tipText, tipTitle, wireDefTooltips } from "./tooltip";
 export {
   niceTicks,
   monotonePath,
@@ -25,4 +25,5 @@ export {
   heatRamp,
   heatTextFor,
   heatReprOverlay,
+  heatReprBackgroundImage,
 } from "./geometry";

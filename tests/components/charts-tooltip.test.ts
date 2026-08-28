@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { tipRow, tipTitle } from "../../src/components/charts/tooltip";
+import { tipRow, tipText, tipTitle } from "../../src/components/charts/tooltip";
 
 const read = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8");
 const tooltipSource = read("src/components/charts/tooltip.ts");
@@ -39,6 +39,21 @@ test("tooltip rows and titles keep the kit's exact markup", () => {
       `<span style="color:#5c6474">Won</span><b style="margin-left:auto;padding-left:16px;color:#101422">$189,074</b></div>`,
   );
   assert.equal(tipTitle("Jun"), `<div style="font-weight:700;color:#101422;margin-bottom:5px">Jun</div>`);
+});
+
+test("tooltip helpers escape source-controlled labels and reject unsafe colors", () => {
+  const payload = `<img src=x onerror="globalThis.pwned=1"> & 'quoted'`;
+  const title = tipTitle(payload);
+  const row = tipRow(`red"></i><img src=x onerror=1`, payload, payload);
+  const text = tipText(payload);
+
+  for (const html of [title, row, text]) {
+    assert.doesNotMatch(html, /<img/);
+    assert.match(html, /&lt;img/);
+    assert.match(html, /&amp;/);
+    assert.match(html, /&#39;quoted&#39;/);
+  }
+  assert.match(row, /background:#e9ebf0/);
 });
 
 test("[data-def] definition tooltips are wired document-wide by the provider", () => {
