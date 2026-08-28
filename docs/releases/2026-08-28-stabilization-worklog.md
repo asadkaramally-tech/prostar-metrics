@@ -59,7 +59,7 @@ The current-month evidence test used a fixed July 2026 timestamp and began faili
 | Gate | Result |
 |---|---|
 | Install from lockfile | Passed |
-| Full application/store suite | 1,036 passed; 0 failed |
+| Full application/store suite | 1,039 passed; 0 failed |
 | Script/evidence suite | 399 concrete assertions passed |
 | Infrastructure suite | 165 concrete assertions passed |
 | Feature-plan check | 98 records validated |
@@ -99,7 +99,7 @@ Local browser verification at 320×700 confirmed a 320px document width with no 
 
 ## Final clean-install verification
 
-The completed roadmap was verified from the lockfile with `npm ci` (481 packages, zero install-time vulnerabilities), followed by the full gate recorded above. The application suite passed all 1,036 tests, the script/evidence suite observed 399 concrete assertions, and the infrastructure suite passed all 165 assertions, including Bicep compilation. The Bicep check required approved access only because Azure CLI writes its local session file outside the workspace; it did not change Azure resources.
+The completed roadmap was verified from the lockfile with `npm ci` (481 packages, zero install-time vulnerabilities), followed by the full gate recorded above. After the live blocker audit exposed the additional valid pre-2023 schedule case, the application suite passed all 1,039 tests, the script/evidence suite observed 399 concrete assertions, and the infrastructure suite passed all 165 assertions, including Bicep compilation. The Bicep check required approved access only because Azure CLI writes its local session file outside the workspace; it did not change Azure resources.
 
 The final production build used the explicit webpack backend so it does not depend on Turbopack opening an internal port in a locked build environment. TypeScript, the generated inventory drift check, the 98-record feature plan, authoritative-reference hashes, no-mirror guard, both npm advisory audits, and patch whitespace all passed. ESLint reported no errors and the same three nonblocking warnings listed in the repository output.
 

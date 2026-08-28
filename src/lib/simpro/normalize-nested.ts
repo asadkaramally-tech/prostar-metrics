@@ -10,6 +10,7 @@ import {
 } from "@/lib/simpro/normalize";
 import { pickId, pickName } from "@/lib/simpro/schemas";
 import { businessCurrentMonth } from "@/lib/backfill/plan";
+import { DASHBOARD_HISTORY_START } from "@/lib/metrics/periods";
 import {
   queryPostgres,
   withPostgresTransaction,
@@ -1074,10 +1075,11 @@ export async function enqueueAffectedRollups(
   query: PostgresQuery,
 ): Promise<void> {
   for (const affected of uniquePeriods(affectedPeriods)) {
-    // Simpro may publish next-month schedules before that month is serveable.
-    // Defer only well-formed future months; malformed or unexpectedly old
-    // periods must still fail closed through enqueueRollupRebuild.
-    if (isFutureMonthStart(affected.periodStart)) continue;
+    // Simpro contains legitimate schedules outside the dashboard's fixed
+    // Jan-2023-through-current serving window. Persist that source evidence,
+    // but do not turn an intentionally unserved month into a parent-ingestion
+    // failure. Malformed periods still fail closed through the queue owner.
+    if (isValidMonthOutsideServingWindow(affected.periodStart)) continue;
     const queued = await enqueueRollupRebuild({
       metricFamily: affected.scope,
       periodStart: affected.periodStart,
@@ -1089,11 +1091,11 @@ export async function enqueueAffectedRollups(
   }
 }
 
-function isFutureMonthStart(periodStart: string): boolean {
+function isValidMonthOutsideServingWindow(periodStart: string): boolean {
   if (!/^\d{4}-\d{2}-01$/.test(periodStart)) return false;
   const parsed = new Date(`${periodStart}T00:00:00.000Z`);
   if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== periodStart) return false;
-  return periodStart > businessCurrentMonth();
+  return periodStart < DASHBOARD_HISTORY_START || periodStart > businessCurrentMonth();
 }
 
 function uniquePeriods(affectedPeriods: AffectedPeriod[]): AffectedPeriod[] {

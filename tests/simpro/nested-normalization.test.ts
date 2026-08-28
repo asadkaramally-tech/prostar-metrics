@@ -141,7 +141,7 @@ test("every quote child upsert takes the category lock before writing", async ()
   }
 });
 
-test("future schedule months are deferred without failing the parent nested ingestion", async () => {
+test("valid schedule months outside the serving window are deferred without failing parent ingestion", async () => {
   const calls: Array<{ sql: string; values: unknown[] | undefined }> = [];
   const query = (async <T>(sql: string, values?: unknown[]) => {
     calls.push({ sql, values });
@@ -149,6 +149,7 @@ test("future schedule months are deferred without failing the parent nested inge
   }) as PostgresQuery;
 
   await enqueueAffectedRollups([
+    { scope: "technicians", periodStart: "2021-03-01" },
     { scope: "technicians", periodStart: "9999-01-01" },
     { scope: "jobs", periodStart: "2023-01-01" },
   ], "nested job finalization", query);

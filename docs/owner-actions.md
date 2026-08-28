@@ -42,6 +42,10 @@ npm run queue:repair -- --entity schedules --error-contains "Unable to queue tec
 
 Compare returned IDs to the preview, then let the normal bounded worker drain them. Re-read dead letters, source run state, reconciliation, rollup, and page freshness. Stop if the match set differs, a new failure appears, or scope expands. Repeat only with a newly captured preview; never raise the predicate to a generic error or reset the full queue.
 
+The live baseline also contains the same failure class for August 2026, October 2026, and one March 2021 nested job. Preview and execute each exact entity/error pair separately; do not combine months into a broad predicate. The fixed source defers valid months before January 2023 and after the current Pacific month.
+
+Two July backfill units (`jobs` and `quotes`) lost their reconciliation leases. Their current manifests are suspect/mismatched, so they must not be marked complete. Use `npm run backfill:repair` first in dry-run mode with the exact source, July month, and `Lost backfill lease while reconciling` predicate. Execute only the matching unit with the owner identity/reason, then let the bounded backfill worker rebuild authority and reconcile normally.
+
 ## Credentials and access
 
 The full-history scan found no confirmed committed credential, so do not rotate indiscriminately. For a proven exposure or scheduled rotation:

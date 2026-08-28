@@ -6,7 +6,7 @@ Status date: 2026-08-28. “Implemented locally” means code and regression cov
 |---|---|---|
 | Preserve candidate evidence | Partial | First hashed local copy complete; owner must select and verify a second protected copy. |
 | Establish release authority | Partial | Live revision 152 and source-context binding recorded; owner-authorized production query must add 24 job digests, migration ledger, smoke result, and rollback digest. |
-| Diagnose future-schedule dead letters | Implemented locally | Valid future rollups are deferred; deploy first, then use the bounded repair procedure in `runbook.md`. |
+| Diagnose out-of-window schedule dead letters | Implemented locally | Valid pre-2023 and future rollups are deferred; malformed dates still fail closed. Deploy first, then use the bounded repair procedure in `runbook.md`. |
 | Dependency and injection security | Implemented locally | Patched dependency tree, escaped/React-rendered source labels, regression tests, zero known npm advisories at local verification. |
 | CI and secret scanning | Prepared locally | Read-only workflow and reviewed Gitleaks allowlist exist; repository owner must push, enable required checks, and protect the authoritative branch. |
 | Deployment gate | Implemented locally | Changed source/dependencies now fail routine mode without an exact full-preflight certificate; `--full` is the only certificate-producing path. |
@@ -24,3 +24,5 @@ Status date: 2026-08-28. “Implemented locally” means code and regression cov
 The branch is ready for owner review only after the clean-install gate in `AGENTS.md` is rerun and its counts are added to the stabilization worklog.
 
 Exact guarded procedures for every owner-authorized item are in [`owner-actions.md`](owner-actions.md).
+
+The current sanitized pre-release Azure, PostgreSQL, queue, backup, and GitHub baseline is recorded in [`releases/2026-08-28-pre-release-production-baseline.md`](releases/2026-08-28-pre-release-production-baseline.md).
