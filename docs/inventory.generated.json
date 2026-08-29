@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": {
-    "app": "44d67563c89ad79866f85a7f8db99f5e788f694466a896a7a0c0f6f9d89329fc",
+    "app": "2a3d27773b524f6a19afd385932270b1f57021ebb0daa7c749f7a8ba711af4fc",
     "metricsBicep": "ef304b2e444792b49764bf89609bcb86c843f4c5cc425371f4d3b76667028fc1",
     "envExample": "44ddbde4007e1dad68c30a119d46a546ca1363d8385b9dfebe521975e3921353"
   },
@@ -81,7 +81,6 @@
       "module": "src/app/today/page.tsx",
       "components": [
         "@/components/dashboard-page",
-        "@/components/period-selector",
         "@/components/today-dashboard"
       ],
       "stores": [

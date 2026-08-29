@@ -1,12 +1,12 @@
 /**
  * /today loading state — the approved skeleton treatment (tokens.css .skel)
- * laid out in the page's real geometry (header, hero split, queue column) so
+ * laid out in the page's real geometry (header, KPI band, and job table) so
  * the loaded content does not shift.
  */
 export default function TodayLoading() {
   return (
-    <div className="dashboard-content" role="status" aria-busy="true" aria-label="Loading Today">
-      <span className="sr-only">Loading Today</span>
+    <div className="dashboard-content" role="status" aria-busy="true" aria-label="Loading Today's Profitability">
+      <span className="sr-only">Loading Today&apos;s Profitability</span>
       <div className="top">
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="skel" style={{ width: 110 }} />

@@ -23,6 +23,24 @@ const model: TodayDashboardReadModel = {
   timezone: "America/Los_Angeles",
   elapsedDays: 14,
   daysInMonth: 31,
+  today: {
+    completedJobs: 2,
+    revenue: 10459,
+    revenueCoveredJobs: 2,
+    grossProfit: 7400,
+    grossMargin: 70.7515,
+    netProfit: 5100,
+    netMargin: 48.7618,
+    averageJobValue: 5229.5,
+    grossProfitCoveredJobs: 2,
+    netProfitCoveredJobs: 2,
+    netNegativeJobs: 1,
+    netNegativeTotal: -300,
+    jobs: [
+      { jobId: "18002", jobNo: "18002", name: "Boiler repair", siteName: "North Tower", sellValue: 10000, grossProfit: 7000, grossMargin: 70, netProfit: 5400, netMargin: 54, updatedFromSourceAt: "2026-07-15T16:58:00.000Z" },
+      { jobId: "18001", jobNo: "18001", name: "Diagnostic visit", siteName: "South Tower", sellValue: 459, grossProfit: 400, grossMargin: 87.1459, netProfit: -300, netMargin: -65.3595, updatedFromSourceAt: "2026-07-15T16:55:00.000Z" },
+    ],
+  },
   dailyCumulativeRevenue: {
     currentMonth: cumulative("2026-07", [11689, 123361, 123361, 125520, 126895, 147184, 160821, 184846, 207179, 223822, 225838, 225838, 246691, 261425]),
     priorMonth: cumulative("2026-06", Array.from({ length: 30 }, (_, i) => (i < 13 ? 16958 * (i + 1) : 16958 * 13)).map((v, i) => (i === 13 ? 220458 : i === 29 ? 435979 : v))),
@@ -93,37 +111,16 @@ function render(overrides: Partial<Parameters<typeof TodayDashboard>[0]> = {}) {
   return renderToStaticMarkup(createElement(TodayDashboard, { model, ...overrides }));
 }
 
-test("hero renders revenue, net/margin and dgrid values from the payload", () => {
+test("today profitability band and completed-job table render from the daily payload", () => {
   const html = render();
-  assert.match(html, /\$261,425/);
-  assert.match(html, /\$139,937 net · 53\.5% margin/);
-  assert.match(html, /avg \$2,588/);
-  assert.match(html, /\$91,636 total/);
-  assert.match(html, /\$1,307\.13/);
-  assert.match(html, /0\.50% rate/);
-  assert.match(html, /822\.8h/);
-  assert.match(html, /114% of cap/);
-});
-
-test("same-day chips compute their deltas from the payload comparisons", () => {
-  const html = render();
-  assert.match(html, /↑ 75\.9% vs Jul ’25 · day 14/);
-  assert.match(html, /↑ 18\.6% vs Jun ’26 · day 14/);
-});
-
-test("chips fall back honestly when a prior period has no same-day basis", () => {
-  const html = render({
-    model: {
-      ...model,
-      sameDayComparisons: {
-        ...model.sameDayComparisons,
-        priorYearSameMonth: { month: "2025-07", cumulativeRevenue: 0, jobs: 0 },
-      },
-    },
-  });
-  assert.match(html, /no Jul ’25 day-14 basis/);
-  assert.doesNotMatch(html, /↑ Infinity/);
-  assert.doesNotMatch(html, /NaN/);
+  assert.match(html, /Net profit today/);
+  assert.match(html, /\$5,100/);
+  assert.match(html, /48\.8% net margin/);
+  assert.match(html, /\$10,459/);
+  assert.match(html, /Today&#x27;s Completed Jobs/);
+  assert.match(html, /Boiler repair/);
+  assert.match(html, /Diagnostic visit/);
+  assert.match(html, /−\$300/);
 });
 
 test("today stays metrics-only, without action queues or loss lists", () => {
@@ -132,6 +129,7 @@ test("today stays metrics-only, without action queues or loss lists", () => {
   assert.match(html, /Revenue to Net/);
   assert.match(html, /Work Volume/);
   assert.match(html, /Team Capacity/);
+  assert.match(html, /refreshes every minute/i);
   assert.doesNotMatch(html, /Needs a Decision|Losses So Far|Biggest Completions|Roster|quote 2457|diagnostic call|follow-up/i);
 });
 
@@ -143,12 +141,12 @@ test("states block renders only when gated on", () => {
   const shown = render({ showStates: true });
   assert.match(shown, /class="states show"/);
   assert.match(shown, /State treatments \(design reference\)/);
-  assert.match(shown, /No completions yet today; the pace chart holds the last available cumulative point\./);
+  assert.match(shown, /No jobs have been completed today yet\. The screen will fill in as completions arrive\./);
 });
 
 test("load errors render the honest error treatment instead of fabricated figures", () => {
   const html = render({ model: { ...model, loadError: "boom", lossesPriorMonth: null, rosterDetail: null } });
-  assert.match(html, /Live Simpro pull failed\./);
+  assert.match(html, /Today&#x27;s profitability feed could not be loaded\./);
   assert.match(html, /Try again/);
   assert.doesNotMatch(html, /\$261,425/);
 });

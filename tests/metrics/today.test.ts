@@ -86,6 +86,27 @@ test("MTD KPIs reproduce the verified July figures", () => {
   assert.equal(model.mtd.rosterSource, "effective_technician_roster");
 });
 
+test("today profitability includes only the current Pacific completed cohort and preserves coverage", () => {
+  const daily = buildTodayReadModel({
+    jobs: [
+      { jobId: 1, jobNo: "J-1", name: "Covered", completedDate: "2026-07-14", stageName: "Complete", sellValue: 1000, grossProfitActual: 700, netProfitActual: 500, updatedFromSourceAt: "2026-07-14T18:00:00Z" },
+      { jobId: 2, jobNo: "J-2", name: "Missing net", completedDate: "2026-07-14", stageName: "Archived", sellValue: 500, grossProfitActual: 300, netProfitActual: null, updatedFromSourceAt: "2026-07-14T19:00:00Z" },
+      { jobId: 3, completedDate: "2026-07-13", stageName: "Complete", sellValue: 900, grossProfitActual: 600, netProfitActual: 400 },
+      { jobId: 4, completedDate: "2026-07-14", stageName: "Progress", sellValue: 800, grossProfitActual: 500, netProfitActual: 300 },
+    ],
+    quotesSent: [], timesheets: [], roster: { size: 0, source: "recorded_work_month" }, now,
+  }).today;
+  assert.equal(daily.completedJobs, 2);
+  assert.equal(daily.revenue, 1500);
+  assert.equal(daily.revenueCoveredJobs, 2);
+  assert.equal(daily.grossProfit, 1000);
+  assert.equal(daily.grossProfitCoveredJobs, 2);
+  assert.equal(daily.netProfit, 500);
+  assert.equal(daily.netProfitCoveredJobs, 1);
+  assert.equal(daily.netMargin, 50, "net margin uses the same covered-job revenue denominator");
+  assert.deepEqual(daily.jobs.map((row) => row.jobNo), ["J-2", "J-1"], "newest source update sorts first");
+});
+
 test("daily cumulative revenue serves the live month plus both comparison months", () => {
   const { currentMonth, priorMonth, priorYearSameMonth } = model.dailyCumulativeRevenue;
   assert.equal(currentMonth.month, "2026-07");

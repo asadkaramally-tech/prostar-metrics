@@ -1,8 +1,7 @@
 import type { ComponentType } from "react";
 
 /**
- * Single source of truth for the five primary metric dashboards. Today remains
- * a route for current-month snapshots, but it is not primary navigation.
+ * Single source of truth for the primary metric dashboards.
  */
 export type NavItem = {
   href: string;
@@ -11,12 +10,22 @@ export type NavItem = {
 };
 
 export const navItems: NavItem[] = [
+  { href: "/today", label: "Today", icon: TodayProfitabilityIcon },
   { href: "/quotes", label: "Quotes", icon: QuoteMetricsIcon },
   { href: "/jobs", label: "Jobs", icon: JobMetricsIcon },
   { href: "/materials", label: "Materials", icon: MaterialSalesIcon },
   { href: "/technicians", label: "Technicians", icon: TechnicianPerformanceIcon },
   { href: "/commissions", label: "Commissions", icon: TechnicianCommissionsIcon },
 ];
+
+function TodayProfitabilityIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+      <path d="M4 19V9M10 19V5M16 19v-7M3 19h18" />
+      <path d="m4 8 6-4 6 7 4-3" />
+    </svg>
+  );
+}
 
 function QuoteMetricsIcon({ className }: { className?: string }) {
   return (

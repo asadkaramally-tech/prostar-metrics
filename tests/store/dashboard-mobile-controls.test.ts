@@ -106,7 +106,7 @@ test("navigation uses the compact desktop top bar with an accessible active stat
   assert.match(navItemsSource, /label: "Jobs"/);
   assert.match(navItemsSource, /label: "Technicians"/);
   assert.match(navItemsSource, /label: "Commissions"/);
-  assert.doesNotMatch(navItemsSource, /label: "Today"/);
+  assert.match(navItemsSource, /href: "\/today", label: "Today"/);
 });
 
 test("quote wide content is contained by the approved local scrollers", () => {

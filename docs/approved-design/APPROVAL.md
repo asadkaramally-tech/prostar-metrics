@@ -1,5 +1,13 @@
 # Owner approval record
 
+## 2026-08-28 addition
+
+The owner added and approved the `/today` **Today's Profitability** operating
+screen described in [todays-profitability.md](todays-profitability.md). It uses
+the established design system and app-owned PostgreSQL serving boundary.
+
+## 2026-07-20 redesign
+
 2026-07-20 — Asad approved the converged mockups ("approved gop") as the visual and
 compositional source of truth for the five dashboards, per the takeover brief's
 governing-authority ladder (#2). The approved artifacts are vendored here:

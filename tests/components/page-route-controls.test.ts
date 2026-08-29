@@ -13,8 +13,10 @@ test("materials month navigation resets table pagination", () => {
   assert.doesNotMatch(page, /hiddenFields=\{\{ page:/);
 });
 
-test("Today links its previous-month affordance to the Jobs dashboard and has route loading UI", () => {
+test("Today's Profitability is a live-date screen and has route loading UI", () => {
   const page = source("src/app/today/page.tsx");
-  assert.match(page, /prevHref=\{`\/jobs\?month=\$\{priorMonthKey\}`\}/);
-  assert.match(source("src/app/today/loading.tsx"), /aria-label="Loading Today"/);
+  assert.match(page, /title="Today's Profitability"/);
+  assert.match(page, /freshness=\{model\.freshness\.jobs\}/);
+  assert.doesNotMatch(page, /PeriodSelector|MonthStepper/);
+  assert.match(source("src/app/today/loading.tsx"), /aria-label="Loading Today's Profitability"/);
 });
