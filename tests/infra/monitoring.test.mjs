@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { homedir, tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 const azureDirectory = fileURLToPath(new URL("../../infra/azure/", import.meta.url));
@@ -19,22 +22,46 @@ const [monitoringBicep, metricsBicep, monitoringParametersText, operationalTelem
 const monitoringParameters = JSON.parse(monitoringParametersText);
 
 test("all Azure Bicep entry points compile to ARM JSON", (t) => {
-  const probe = spawnSync("az", ["bicep", "version"], { encoding: "utf8" });
-  if (probe.error?.code === "ENOENT") {
-    t.skip("Azure CLI is not installed");
-    return;
+  const isolatedConfig = mkdtempSync(join(tmpdir(), "psm-bicep-test-"));
+  const installedConfig = process.env.AZURE_CONFIG_DIR || join(homedir(), ".azure");
+  const binaryName = process.platform === "win32" ? "bicep.exe" : "bicep";
+  const installedBicep = join(installedConfig, "bin", binaryName);
+  const isolatedBin = join(isolatedConfig, "bin");
+  const dotnetCache = join(isolatedConfig, "dotnet-cache");
+  mkdirSync(isolatedBin, { recursive: true });
+  mkdirSync(dotnetCache, { recursive: true });
+  if (existsSync(installedBicep)) {
+    symlinkSync(installedBicep, join(isolatedBin, binaryName));
   }
-  assert.equal(probe.status, 0, probe.stderr);
+  const options = {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      AZURE_CONFIG_DIR: isolatedConfig,
+      DOTNET_BUNDLE_EXTRACT_BASE_DIR: dotnetCache,
+    },
+  };
 
-  for (const file of ["metrics.bicep", "monitoring.bicep", "postgres.bicep", "security.bicep", "evidence-runners.bicep"]) {
-    const result = spawnSync(
-      "az",
-      ["bicep", "build", "--file", `${azureDirectory}${file}`, "--stdout"],
-      { encoding: "utf8" },
-    );
-    assert.equal(result.status, 0, `${file} failed to compile:\n${result.stderr}`);
-    const template = JSON.parse(result.stdout);
-    assert.equal(template.$schema.includes("deploymentTemplate.json"), true);
+  try {
+    const probe = spawnSync("az", ["bicep", "version"], options);
+    if (probe.error?.code === "ENOENT") {
+      t.skip("Azure CLI is not installed");
+      return;
+    }
+    assert.equal(probe.status, 0, probe.stderr);
+
+    for (const file of ["metrics.bicep", "monitoring.bicep", "postgres.bicep", "security.bicep", "evidence-runners.bicep"]) {
+      const result = spawnSync(
+        "az",
+        ["bicep", "build", "--file", `${azureDirectory}${file}`, "--stdout"],
+        options,
+      );
+      assert.equal(result.status, 0, `${file} failed to compile:\n${result.stderr}`);
+      const template = JSON.parse(result.stdout);
+      assert.equal(template.$schema.includes("deploymentTemplate.json"), true);
+    }
+  } finally {
+    rmSync(isolatedConfig, { recursive: true, force: true });
   }
 });
 
