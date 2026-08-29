@@ -5,6 +5,11 @@ import {
   type BackfillSourceFamily,
 } from "@/lib/backfill/plan";
 import type { IngestionEntity } from "@/lib/simpro/ingest";
+import {
+  acquireNestedRefreshQueueLock,
+  ingestionJobTransaction,
+  type IngestionJobTransaction,
+} from "@/lib/store/ingestion-jobs";
 import { queryPostgres } from "@/lib/store/postgres";
 
 export const BOUNDED_BACKFILL_MAX_MONTHS = 3;
@@ -149,6 +154,7 @@ export async function enqueueBoundedSourceWork(params: {
   query?: BoundedSourceWorkQuery;
   requestId?: string;
   now?: Date;
+  transaction?: IngestionJobTransaction;
 } = {}): Promise<BoundedSourceWorkRequest> {
   const query = options.query ?? queryPostgres;
   const requestId = options.requestId ?? randomUUID();
@@ -165,8 +171,35 @@ export async function enqueueBoundedSourceWork(params: {
     throw new BoundedSourceWorkValidationError("reason must be between 5 and 500 characters.");
   }
 
+  // A reconciliation must not recreate historical job-detail work merely
+  // because a newer direct traversal is incomplete. A completed, checksum
+  // verified bulk traversal is durable last-good authority for that exact ID.
+  // Deliberate operator requests remain available through the manual origin.
+  if (
+    work.kind === "entity_refresh"
+    && work.entityType === "job"
+    && origin === "reconciliation"
+    && await hasHistoricalBulkNestedAuthority(work.entityId, query)
+  ) {
+    return mapRequest(await recordHistoricalAuthoritySuppression({
+      query,
+      requestId,
+      now,
+      requestedBy,
+      reason,
+      origin,
+      work,
+    }));
+  }
+
   const row = work.kind === "entity_refresh"
-    ? await enqueueEntityRefresh({ query, requestId, now, requestedBy, reason, origin, work })
+    ? await ingestionJobTransaction(query, options.transaction)(async (transactionQuery) => {
+      const entity = entityQueueConfig[work.entityType].entity;
+      if (entity === "quote_nested" || entity === "job_nested") {
+        await acquireNestedRefreshQueueLock(transactionQuery);
+      }
+      return enqueueEntityRefresh({ query: transactionQuery, requestId, now, requestedBy, reason, origin, work });
+    })
     : await enqueuePeriodBackfill({ query, requestId, now, requestedBy, reason, origin, work });
 
   return mapRequest(row);
@@ -256,17 +289,43 @@ async function enqueueEntityRefresh(params: {
   const result = await params.query<EnqueueRow>(
     `with lock_scope as materialized (
        select pg_advisory_xact_lock(hashtext($1))
-     ), prior as materialized (
-       select job.id, job.status::text as status, job.generation
+     ), target_jobs as materialized (
+       select job.id, job.idempotency_key, job.status::text as status, job.generation
          from metrics.ingestion_jobs job, lock_scope
         where job.entity_type = $2::metrics.ingestion_entity_type
-          and job.idempotency_key = $3
+          and job.params->>'entityId' = $10::text
+     ), selected_key as materialized (
+       select case
+         when $2::text in ('quote_nested', 'job_nested') then coalesce(
+           (
+             select job.idempotency_key
+               from target_jobs job
+              where job.status = 'queued'
+              order by job.id desc
+              limit 1
+           ),
+           (
+             select $3 || ':after-running:' || job.id::text || ':' || job.generation::text
+               from target_jobs job
+              where job.status = 'running'
+              order by job.id desc
+              limit 1
+           ),
+           $3
+         )
+         else $3
+       end as idempotency_key
+     ), prior as materialized (
+       select job.id, job.status::text as status, job.generation
+         from metrics.ingestion_jobs job
+        where job.entity_type = $2::metrics.ingestion_entity_type
+          and job.idempotency_key = (select idempotency_key from selected_key)
      ), queued as (
        insert into metrics.ingestion_jobs (
          entity_type, operation, idempotency_key, priority, request_budget,
          continuation_token, params, source_window_start, source_window_end
        )
-       values ($2, 'bounded_refresh', $3, 50, $4, null, $5::jsonb, null, null)
+       values ($2, 'bounded_refresh', (select idempotency_key from selected_key), 50, $4, null, $5::jsonb, null, null)
        on conflict (entity_type, idempotency_key) do update set
          priority = least(metrics.ingestion_jobs.priority, excluded.priority),
          request_budget = case
@@ -375,6 +434,101 @@ async function enqueueEntityRefresh(params: {
   );
   const row = result.rows[0];
   if (!row) throw new Error("Unable to enqueue bounded entity refresh.");
+  return row;
+}
+
+async function hasHistoricalBulkNestedAuthority(jobId: number, query: BoundedSourceWorkQuery) {
+  const result = await query<{ covered: boolean }>(
+    `select exists (
+       select 1
+         from metrics.backfill_source_month_ledger ledger
+         join metrics.backfill_traversal_manifests traversal
+           on traversal.work_unit_id = ledger.id
+        where ledger.source_family = 'job_nested'
+          and ledger.month_start < date_trunc('month', now() at time zone 'America/Los_Angeles')::date
+          and ledger.status = 'completed'
+          and ledger.reconciliation_status = 'matched'
+          and traversal.manifest_status = 'completed'
+          and traversal.exact_source_ids @> jsonb_build_array($1::text)
+          and exists (
+            select 1
+              from metrics.backfill_traversal_pages page
+             where page.work_unit_id = traversal.work_unit_id
+               and page.generation = traversal.generation
+               and page.synthetic = true
+               and page.source_method = 'checksum_verified_full_universe_artifact_projection:listJobs'
+               and page.exact_ids @> jsonb_build_array($1::text)
+               and page.request_query->'_bulkArtifactEvidence'->>'provenance'
+                 = 'checksum_verified_full_universe_artifact_projection'
+               and page.request_query->'_bulkArtifactEvidence'->>'fabricatedApiResponse' = 'false'
+          )
+          and exists (
+            select 1
+              from metrics.raw_simpro_snapshots root
+             where root.entity_type = 'jobs'
+               and root.entity_id = $1::text
+               and root.source_deleted_at is null
+               and root.complete_traversal = true
+               and root.source_version like 'bulk-bootstrap:%'
+          )
+     ) as covered`,
+    [jobId],
+  );
+  return result.rows[0]?.covered === true;
+}
+
+async function recordHistoricalAuthoritySuppression(params: {
+  query: BoundedSourceWorkQuery;
+  requestId: string;
+  now: Date;
+  requestedBy: string;
+  reason: string;
+  origin: "reconciliation";
+  work: Extract<BoundedSourceWork, { kind: "entity_refresh" }>;
+}) {
+  const targetLabel = `${params.work.entityType} #${params.work.entityId}`;
+  const result = await params.query<EnqueueRow>(
+    `insert into metrics.audit_events (
+       actor_email, action, entity_type, entity_id, before_value, after_value, reason, created_at
+     ) values (
+       $1::text, 'bounded_source_work_suppressed', 'bounded_source_work', $2::text,
+       null,
+       jsonb_build_object(
+         'requestId', $2::text,
+         'kind', 'entity_refresh',
+         'origin', $3::text,
+         'entityType', 'job',
+         'entityId', $4::bigint,
+         'targetLabel', $5::text,
+         'status', 'superseded',
+         'duplicate', true,
+         'authority', 'checksum_verified_full_universe_artifact_projection'
+       ),
+       $6::text, $7::timestamptz
+     )
+     returning $2::text as request_id,
+               'entity_refresh'::text as kind,
+               $3::text as origin,
+               $1::text as requested_by,
+               $6::text as reason,
+               $5::text as target_label,
+               'superseded'::text as status,
+               true as duplicate,
+               1::integer as unit_count,
+               $7::timestamptz::text as created_at,
+               $7::timestamptz::text as updated_at`,
+    [
+      params.requestedBy,
+      params.requestId,
+      params.origin,
+      params.work.entityId,
+      targetLabel,
+      params.reason,
+      params.now.toISOString(),
+    ],
+  );
+  const row = result.rows[0];
+  if (!row) throw new Error("Unable to record bounded entity refresh suppression.");
   return row;
 }
 

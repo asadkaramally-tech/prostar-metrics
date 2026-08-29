@@ -77,6 +77,11 @@ export type CommissionTimesheetInput = {
   employeeId?: string | null;
   hours: number;
   mapped?: boolean;
+  /**
+   * Deprecated and ignored (owner rule 2026-07-20): ALL mapped recorded hours
+   * on a period job count in the job's allocation denominator and earn shares.
+   * The flag is retained for input compatibility only.
+   */
   fieldTechnician?: boolean;
 };
 
@@ -115,6 +120,13 @@ export type CommissionEfficiencyResult = {
 export type CommissionRosterEntry = {
   employeeId: string;
   displayName: string;
+  /**
+   * Deprecated and ignored (owner rule 2026-07-20): the roster is a display
+   * directory (names, positions, dates of hire) ONLY — it never gates
+   * membership or earning. Anyone with mapped recorded hours on a period job
+   * is included by default; the only exclusion mechanism is an operator
+   * `included` override (the saved session-checkbox state).
+   */
   included: boolean;
   /** Deprecated and ignored. Section 6.4 derives tiers from period rank. */
   tier?: CommissionTier;
@@ -382,7 +394,6 @@ export function buildCommissionReadModel(params: {
   let excludedWorkValueCents = 0;
   let mappedHours = 0;
   let unmappedHours = 0;
-  let nonFieldTechnicianHours = 0;
   let unmappedTimesheetEntries = 0;
   const quoteLaborCoverageByJob: Array<{
     jobId: string;
@@ -432,7 +443,6 @@ export function buildCommissionReadModel(params: {
 
     const hoursByEmployee = new Map<string, number>();
     let jobUnmappedHours = 0;
-    let jobNonFieldHours = 0;
     for (const timesheet of job.timesheets) {
       if (!Number.isFinite(timesheet.hours)) {
         throw invalidInput(`Job ${job.jobId} contains a non-finite timesheet hour value.`);
@@ -448,11 +458,9 @@ export function buildCommissionReadModel(params: {
         unmappedTimesheetEntries += 1;
         continue;
       }
-      if (timesheet.fieldTechnician === false) {
-        jobNonFieldHours += timesheet.hours;
-        nonFieldTechnicianHours += timesheet.hours;
-        continue;
-      }
+      // Owner rule (2026-07-20): every mapped recorded hour on a period job
+      // counts in jobTotalHours and earns a share — the former
+      // "non-field-technician" exclusion path is deleted.
       hoursByEmployee.set(employeeId, (hoursByEmployee.get(employeeId) ?? 0) + timesheet.hours);
       mappedHours += timesheet.hours;
     }
@@ -466,15 +474,6 @@ export function buildCommissionReadModel(params: {
         hours: jobUnmappedHours,
       });
     }
-    if (jobNonFieldHours > 0) {
-      diagnostics.push({
-        code: "NON_FIELD_TECHNICIAN_WORK",
-        severity: "info",
-        message: `Job ${job.jobId} has mapped hours excluded from field-technician allocation.`,
-        jobId: job.jobId,
-        hours: jobNonFieldHours,
-      });
-    }
 
     const jobTotalHours = sum(hoursByEmployee.values());
     if (!positiveSellValue || jobTotalHours <= 0) {
@@ -485,7 +484,7 @@ export function buildCommissionReadModel(params: {
           sellValue: fromCents(sellValueCents),
           reason: "no_mapped_technician_hours",
           unmappedHours: jobUnmappedHours,
-          nonFieldTechnicianHours: jobNonFieldHours,
+          nonFieldTechnicianHours: 0,
         });
         diagnostics.push({
           code: "EXCLUDED_JOB_NO_MAPPED_HOURS",
@@ -546,12 +545,15 @@ export function buildCommissionReadModel(params: {
     }
   }
 
+  /* FINAL OWNER RULE (2026-07-20, stated three times): worksheet membership
+     and allocation shares come ONLY from recorded hours on the schedule for
+     the period. Anyone with mapped recorded hours on a period job appears as
+     a row and earns their hours-share, INCLUDED BY DEFAULT. The roster is a
+     display directory and never gates membership; the only exclusion is an
+     operator `included` override (saved session-checkbox state). */
   const inclusionByEmployee = new Map<string, boolean>();
   for (const employeeId of knownEmployeeIds) {
-    inclusionByEmployee.set(
-      employeeId,
-      overridesByEmployee.get(employeeId)?.included ?? rosterByEmployee.get(employeeId)?.included ?? false,
-    );
+    inclusionByEmployee.set(employeeId, overridesByEmployee.get(employeeId)?.included ?? true);
   }
 
   for (const allocation of jobAllocations) {
@@ -566,7 +568,7 @@ export function buildCommissionReadModel(params: {
       diagnostics.push({
         code: "JOB_WITH_ONLY_INELIGIBLE_WORK",
         severity: "warning",
-        message: `Job ${jobId} is allocated only to ineligible technicians; its pool value is redistributed through eligible weights.`,
+        message: `Job ${jobId} is allocated only to operator-excluded technicians; its pool value redistributes through the included technicians' weights.`,
         jobId,
       });
     }
@@ -583,12 +585,12 @@ export function buildCommissionReadModel(params: {
       code: includedCount === 0 ? "NO_ELIGIBLE_TECHNICIANS" : "ZERO_ELIGIBLE_BASIS",
       severity: "error" as const,
       message: includedCount === 0
-        ? "No mapped technician is eligible for commission payout."
-        : "Eligible technicians have zero effective allocated work value.",
+        ? "Every technician is excluded from the commission payout."
+        : "Included technicians have zero effective allocated work value.",
     }];
     throw new CommissionCalculationError(
       includedCount === 0 ? "NO_ELIGIBLE_TECHNICIANS" : "ZERO_ELIGIBLE_BASIS",
-      coverageDiagnostics.at(-1)?.message ?? "Commission calculation has no eligible payout basis.",
+      coverageDiagnostics.at(-1)?.message ?? "Commission calculation has no payout basis.",
       coverageDiagnostics,
     );
   }
@@ -639,7 +641,7 @@ export function buildCommissionReadModel(params: {
     if (requiresPayoutRow && !rankedEmployeeIds.has(employeeId)) {
       throw new CommissionCalculationError(
         "OVERRIDE_CONFLICT",
-        `Payout override targets ineligible or zero-basis employee ${employeeId}.`,
+        `Payout override targets excluded or zero-basis employee ${employeeId}.`,
         diagnostics,
       );
     }
@@ -650,6 +652,13 @@ export function buildCommissionReadModel(params: {
       code: "PERMANENT_ROSTER_TIER_IGNORED",
       severity: "info",
       message: "Roster tiers were ignored; Gold, Silver, Bronze, and Standard were derived from period rank.",
+    });
+  }
+  if (params.roster.some((entry) => entry.included === false)) {
+    diagnostics.push({
+      code: "ROSTER_INCLUSION_IGNORED",
+      severity: "info",
+      message: "Roster inclusion flags were ignored; anyone with mapped recorded hours is included unless an operator override excludes them.",
     });
   }
 
@@ -861,7 +870,8 @@ export function buildCommissionReadModel(params: {
     jobsWithOnlyIneligibleWork: jobIdsWithOnlyIneligibleWork.size,
     mappedHours,
     unmappedHours,
-    nonFieldTechnicianHours,
+    /* Always 0 since 2026-07-20 — no hours are excluded on a "non-field" basis. */
+    nonFieldTechnicianHours: 0,
     unmappedTimesheetEntries,
     mappedTechnicians,
     eligibleTechnicians,

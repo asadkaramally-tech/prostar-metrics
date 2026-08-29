@@ -30,7 +30,7 @@ test("resumable seeder queues explicit completed-stage discovery and missing det
   const statements: string[] = [];
   const query = async <T = Record<string, unknown>>(text: string) => {
     statements.push(text);
-    if (statements.length === 1) {
+    if (text.includes("approved_work_units")) {
       return {
         rows: [{
           approved_work_units: 2,
@@ -43,6 +43,9 @@ test("resumable seeder queues explicit completed-stage discovery and missing det
         }] as T[],
         rowCount: 1,
       };
+    }
+    if (text.includes("pg_advisory_xact_lock") && !text.includes("simpro_profit_capacity_backfill_queued")) {
+      return { rows: [] as T[], rowCount: 1 };
     }
     return {
       rows: [{ generation: 2, discovery_queued: 31, job_details_queued: 2, employees_queued: 1 }] as T[],
@@ -59,22 +62,26 @@ test("resumable seeder queues explicit completed-stage discovery and missing det
   assert.equal(result.estimate.approvedEstimatedRequests, 10);
   assert.deepEqual(result.queued, { discovery: 31, jobDetails: 2, employees: 1 });
   assert.equal(result.generation, 2);
-  assert.match(statements[0], /source_family in \('jobs', 'job_nested'\)/);
-  assert.match(statements[1], /simpro_profit_capacity_backfill_queued/);
-  assert.match(statements[1], /'CompletedDate'/);
-  assert.match(statements[1], /'Stage', 'in\(Complete,Archived\)'/);
-  assert.doesNotMatch(statements[1], /'Status'/);
-  assert.match(statements[1], /'job_nested'::metrics\.ingestion_entity_type/);
-  assert.match(statements[1], /:simpro-profit-capacity-026/);
-  assert.match(statements[1], /profit_capacity_normalized_at is null/);
-  assert.match(statements[1], /capacity_normalized_at is null/);
-  assert.match(statements[1], /insert into metrics\.audit_events/);
-  assert.match(statements[1], /pg_advisory_xact_lock/);
-  assert.match(statements[1], /status in \('failed', 'cancelled', 'succeeded'\)/);
-  assert.match(statements[1], /when metrics\.ingestion_jobs\.status = 'succeeded' then metrics\.ingestion_jobs\.generation \+ 1/);
-  assert.match(statements[1], /dead_lettered_at = null/);
-  assert.match(statements[1], /else metrics\.ingestion_jobs\.continuation_token/);
-  assert.doesNotMatch(statements[1], /status in \('queued', 'running'/);
+  const estimateStatement = statements.find((text) => text.includes("approved_work_units")) ?? "";
+  const lockStatement = statements.find((text) => text.trim() === "select pg_advisory_xact_lock(hashtext($1))") ?? "";
+  const queueStatement = statements.find((text) => text.includes("simpro_profit_capacity_backfill_queued")) ?? "";
+  assert.match(estimateStatement, /source_family in \('jobs', 'job_nested'\)/);
+  assert.match(lockStatement, /pg_advisory_xact_lock/);
+  assert.match(queueStatement, /simpro_profit_capacity_backfill_queued/);
+  assert.match(queueStatement, /'CompletedDate'/);
+  assert.match(queueStatement, /'Stage', 'in\(Complete,Archived\)'/);
+  assert.doesNotMatch(queueStatement, /'Status'/);
+  assert.match(queueStatement, /'job_nested'::metrics\.ingestion_entity_type/);
+  assert.match(queueStatement, /:simpro-profit-capacity-026/);
+  assert.match(queueStatement, /profit_capacity_normalized_at is null/);
+  assert.match(queueStatement, /capacity_normalized_at is null/);
+  assert.match(queueStatement, /insert into metrics\.audit_events/);
+  assert.match(queueStatement, /pg_advisory_xact_lock/);
+  assert.match(queueStatement, /status in \('failed', 'cancelled', 'succeeded'\)/);
+  assert.match(queueStatement, /when metrics\.ingestion_jobs\.status = 'succeeded' then metrics\.ingestion_jobs\.generation \+ 1/);
+  assert.match(queueStatement, /dead_lettered_at = null/);
+  assert.match(queueStatement, /else metrics\.ingestion_jobs\.continuation_token/);
+  assert.doesNotMatch(queueStatement, /status in \('queued', 'running'/);
 });
 
 test("migration 026 defines lossless authoritative profit and capacity storage", async () => {

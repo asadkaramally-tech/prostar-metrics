@@ -130,8 +130,11 @@ export async function upsertSourcePeriodManifest(
   query: PostgresQuery = queryPostgres,
 ): Promise<{ rowCount: number }> {
   // The conditional DO UPDATE guard silently affects zero rows when a newer
-  // manifest generation already owns the period. Callers publishing under a
-  // claimed generation must observe the row count and abort when it is zero.
+  // manifest generation already owns the period. It also keeps historical,
+  // checksum-verified bulk evidence as last-good authority when a later
+  // partial or mismatched traversal cannot substantiate a replacement.
+  // Callers publishing under a claimed generation must observe a zero row
+  // count and avoid treating the partial traversal as authoritative.
   const result = await query(
     `insert into metrics.source_period_manifests (
        source_family, period_start, period_end, coverage_status, reconciliation_status,
@@ -167,11 +170,29 @@ export async function upsertSourcePeriodManifest(
        completed_page_count = excluded.completed_page_count,
        reconciled_at = excluded.reconciled_at,
        updated_at = now()
-     where excluded.manifest_generation > coalesce(metrics.source_period_manifests.manifest_generation, 0)
+     where not (
+          metrics.source_period_manifests.period_start
+            < date_trunc('month', now() at time zone 'America/Los_Angeles')::date
+          and metrics.source_period_manifests.coverage_status = 'complete'
+          and metrics.source_period_manifests.reconciliation_status = 'matched'
+          and metrics.source_period_manifests.evidence_json->>'authority'
+            = 'checksum_verified_full_universe_artifact_projection'
+          and metrics.source_period_manifests.evidence_json->>'authoritativeSource'
+            = 'checksum_verified_full_universe_artifact'
+          and metrics.source_period_manifests.evidence_json->>'checksumVerifiedFullUniverseArtifact' = 'true'
+          and metrics.source_period_manifests.evidence_json->>'fabricatedApiResponse' = 'false'
+          and (
+            excluded.coverage_status in ('partial', 'suspect')
+            or excluded.reconciliation_status <> 'matched'
+          )
+        )
+       and (
+          excluded.manifest_generation > coalesce(metrics.source_period_manifests.manifest_generation, 0)
         or (
           excluded.manifest_generation = metrics.source_period_manifests.manifest_generation
           and excluded.evidence_as_of >= metrics.source_period_manifests.evidence_as_of
         )
+       )
      returning source_family`,
     [
       manifest.sourceFamily,

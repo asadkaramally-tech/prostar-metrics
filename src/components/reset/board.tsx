@@ -27,6 +27,8 @@ export type LRowProps = {
   amount: ReactNode;
   open?: boolean;
   onClick?: MouseEventHandler<HTMLDivElement>;
+  ariaControls?: string;
+  ariaLabel?: string;
   className?: string;
   style?: CSSProperties;
 };
@@ -43,12 +45,30 @@ export function LRow({
   amount,
   open,
   onClick,
+  ariaControls,
+  ariaLabel,
   className,
   style,
 }: LRowProps) {
   const cls = ["rowlink", "lrow", open ? "open" : null, className].filter(Boolean).join(" ");
   return (
-    <div className={cls} style={style} onClick={onClick}>
+    <div
+      className={cls}
+      style={style}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-expanded={onClick ? Boolean(open) : undefined}
+      aria-controls={onClick ? ariaControls : undefined}
+      aria-label={onClick ? ariaLabel : undefined}
+      onKeyDown={onClick ? (event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          event.currentTarget.click();
+        }
+      } : undefined}
+    >
       <span className="lrank tnum">{rank}</span>
       <div className="lname">
         <div className="id1">{name}</div>

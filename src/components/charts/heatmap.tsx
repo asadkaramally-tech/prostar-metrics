@@ -1,14 +1,14 @@
 "use client";
 
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { heatRamp, heatReprOverlay, heatTextFor } from "./geometry";
+import { heatRamp, heatReprBackgroundImage, heatTextFor } from "./geometry";
 import { tipHide, tipRow, tipShow, tipTitle } from "./tooltip";
 
-/* Heatmap with hover tooltips — a 1:1 port of kit.js heatmap. Contrast-safe
+/* Heatmap with hover tooltips. Contrast-safe
    single-hue indigo ramp (red reserved for cells below the stated 15%
    threshold); representative cells render with a hatched overlay; empty
-   cells show — (never 0%). The kit builds rows via innerHTML — the same
-   markup is reproduced here so implementation captures overlay-diff clean. */
+   cells show — (never 0%). React renders all source labels as text so
+   database/Simpro values cannot become executable markup. */
 
 export type HeatmapCell = { v: number | null; repr?: boolean };
 export type HeatmapRow = { name: string; cells: HeatmapCell[] };
@@ -25,20 +25,6 @@ export type HeatmapProps = {
 
 export function Heatmap(props: HeatmapProps) {
   const months = props.months;
-  const head = `<div></div>` + months.map((m) => `<div class="hcol">${m}</div>`).join("");
-  const body = props.rows
-    .map((r) => {
-      const cells = r.cells
-        .map((c, i) => {
-          if (c.v == null) return `<div class="hcell na" data-m="${months[i]}" data-t="${r.name}">—</div>`;
-          const cls = "hcell" + (i === months.length - 1 && props.highlightLast ? " now" : "");
-          return `<div class="${cls}" data-m="${months[i]}" data-t="${r.name}" data-v="${c.v.toFixed(1)}" data-r="${c.repr ? 1 : ""}" style="background-color:${heatRamp(c.v)};color:${heatTextFor(c.v)}${c.repr ? ";" + heatReprOverlay(c.v) : ""}"><span class="tnum">${Math.round(c.v)}%</span></div>`;
-        })
-        .join("");
-      return `<div class="hrow"><div class="hlab">${r.name}</div>${cells}</div>`;
-    })
-    .join("");
-  const html = `<div class="hrow">${head}</div>${body}`;
 
   const onPointerOver = (e: ReactPointerEvent<HTMLDivElement>) => {
     const c = (e.target as Element).closest(".hcell") as HTMLElement | null;
@@ -66,7 +52,40 @@ export function Heatmap(props: HeatmapProps) {
       style={{ "--hm-cols": props.cols ?? months.length, ...props.style } as CSSProperties}
       onPointerOver={onPointerOver}
       onPointerOut={onPointerOut}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    >
+      <div className="hrow">
+        <div />
+        {months.map((month, index) => <div className="hcol" key={`${month}:${index}`}>{month}</div>)}
+      </div>
+      {props.rows.map((row, rowIndex) => (
+        <div className="hrow" key={`${row.name}:${rowIndex}`}>
+          <div className="hlab">{row.name}</div>
+          {row.cells.map((cell, index) => {
+            const month = months[index] ?? "";
+            if (cell.v == null) {
+              return <div className="hcell na" data-m={month} data-t={row.name} key={`${month}:${index}`}>—</div>;
+            }
+            const className = `hcell${index === months.length - 1 && props.highlightLast ? " now" : ""}`;
+            return (
+              <div
+                className={className}
+                data-m={month}
+                data-t={row.name}
+                data-v={cell.v.toFixed(1)}
+                data-r={cell.repr ? "1" : ""}
+                key={`${month}:${index}`}
+                style={{
+                  backgroundColor: heatRamp(cell.v),
+                  color: heatTextFor(cell.v),
+                  backgroundImage: cell.repr ? heatReprBackgroundImage(cell.v) : undefined,
+                }}
+              >
+                <span className="tnum">{Math.round(cell.v)}%</span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
   );
 }

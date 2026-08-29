@@ -7,16 +7,21 @@ import {
   historicalPageFreshnessRequirements,
   pageFreshnessRequirements,
 } from "../../src/lib/store/freshness-evaluator";
+import { rollupEvidence } from "../../src/lib/store/freshness";
 
 const source = readFileSync(path.join(process.cwd(), "src/lib/store/freshness.ts"), "utf8");
 
-test("page freshness serving uses the stored row instead of aggregate validation", () => {
+test("page freshness uses selected-period evidence for historical pages and the stored row for current pages", () => {
   const pageServingFunction = source.match(
     /export async function getPageFreshness[\s\S]*?export function reconciliationScopeForPage/,
   )?.[0] ?? "";
 
+  assert.match(pageServingFunction, /periodStart < currentPacificMonth\(\)/);
+  assert.match(pageServingFunction, /evaluateStoredPageFreshness\(pageKey, row, periodStart\)/);
   assert.match(pageServingFunction, /return buildStoredFreshnessStatus\(row\)/);
-  assert.doesNotMatch(pageServingFunction, /evaluateStoredPageFreshness/);
+  assert.match(source, /isAggregateFreshnessPageKey\(row\.page_key\)[\s\S]*Number\.POSITIVE_INFINITY/);
+  assert.match(source, /\[sourceFamilies, selectedPeriod, historical\]/);
+  assert.match(source, /when \$3::boolean[\s\S]*manifest\.coverage_status/);
 });
 
 test("freshness accepts a successful no-op rebuild after the latest source change", () => {
@@ -29,9 +34,33 @@ test("freshness accepts a successful no-op rebuild after the latest source chang
   assert.match(source, /and status = 'succeeded'/);
 });
 
-test("freshness serves a ready read model even when a later rebuild attempt is dead-lettered", () => {
-  assert.match(source, /Serving the latest ready read model; a later rebuild attempt is dead-lettered/);
-  assert.match(source, /row\.rebuilt_at/);
+test("queued rollups retain a ready model, while failed rollups remain warnings", () => {
+  const serving = rollupEvidence({
+    rebuilt_at: "2026-07-13T11:40:00.000Z",
+    suspect_reason: null,
+    pending_count: 2,
+    failed_count: 0,
+  });
+  assert.equal(serving.status, "ready");
+  assert.equal(serving.pendingCount, 2);
+  assert.match(serving.detail ?? "", /Serving the latest ready read model/);
+
+  const noPriorModel = rollupEvidence({
+    rebuilt_at: null,
+    suspect_reason: null,
+    pending_count: 1,
+    failed_count: 0,
+  });
+  assert.equal(noPriorModel.status, "building");
+
+  const failed = rollupEvidence({
+    rebuilt_at: "2026-07-13T11:40:00.000Z",
+    suspect_reason: null,
+    pending_count: 0,
+    failed_count: 1,
+  });
+  assert.equal(failed.status, "failed");
+  assert.match(failed.detail ?? "", /prior ready read model remains available/);
 });
 
 test("current source evidence requires authoritative page and generation proof", () => {
@@ -71,6 +100,30 @@ test("historical evidence still accepts complete authoritative legacy manifests"
   });
 
   assert.equal(historical.state, "current");
+});
+
+test("historical jobs and technicians freshness do not inherit current global completeness warnings", () => {
+  for (const pageKey of ["jobs", "technicians"] as const) {
+    const requirements = historicalPageFreshnessRequirements(pageKey);
+    const historical = evaluatePageFreshness({
+      pageKey,
+      requirements,
+      sources: requirements.map((requirement) => ({
+        sourceFamily: requirement.sourceFamily,
+        lastSuccessfulRunAt: "2026-07-01T08:00:00.000Z",
+        lastChangeAt: "2026-07-01T08:00:00.000Z",
+        dataThrough: "2026-06-30T23:59:59.000Z",
+        completeWindow: true,
+      })),
+      reconciliation: { status: "matched", checkedAt: "2026-07-01T09:00:00.000Z" },
+      rollup: { status: "ready", rebuiltAt: "2026-07-01T08:30:00.000Z" },
+      sealedHistoricalPeriod: true,
+      now: new Date("2026-07-13T12:00:00.000Z"),
+    });
+
+    assert.equal(historical.state, "current", pageKey);
+    assert.doesNotMatch(historical.detail, /Migration 026/);
+  }
 });
 
 test("freshness optimistic locking preserves PostgreSQL timestamp precision", () => {

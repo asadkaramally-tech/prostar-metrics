@@ -12,10 +12,12 @@ import {
   migrationChildEnvironment,
   monitoringManagedResourceContract,
   parseDeployArgs,
+  parseMigrationCompatibilityReport,
   preflightChildEnvironment,
   productionDeploymentSupportContract,
   productionDeploymentTargetContract,
   readyRevisionFailure,
+  requireRoutineDeploymentCertificate,
   validateAcrBuildBinding,
   validateDeploymentWhatIf,
   validateEvidenceSigningKeyIds,
@@ -35,6 +37,8 @@ import {
 } from "../../scripts/deploy-prod.mjs";
 import {
   backwardCompatibilityViolations,
+  classifyStrictlyAdditiveMigration,
+  parseMigrationCompatibilityMode,
   priorImageProbeDockerArgs,
   priorImageProbeEnvironment,
   runExecutableMigrationCompatibility,
@@ -68,7 +72,27 @@ test("production ARM create uses its operation name for release identity without
   assert.match(source, /"--name",\s*params\.deploymentName/);
 });
 
-test("production target convergence retries the exact app and 23-job state before accepting it", async () => {
+test("production firewall commands use current Azure CLI server and rule flags", () => {
+  assert.match(source, /"firewall-rule", "list"[\s\S]{0,120}"--server-name", POSTGRES_SERVER/);
+  assert.match(source, /"firewall-rule", "delete"[\s\S]{0,160}"--server-name", POSTGRES_SERVER[\s\S]{0,80}"--name", TEMP_FIREWALL_RULE/);
+  assert.match(source, /"firewall-rule",\s*"create"[\s\S]{0,220}"--server-name",\s*POSTGRES_SERVER[\s\S]{0,80}"--name",\s*TEMP_FIREWALL_RULE/);
+  assert.doesNotMatch(source, /"--rule-name"/);
+});
+
+test("migration compatibility report requires a non-negative pending count", () => {
+  assert.deepEqual(
+    parseMigrationCompatibilityReport("Accepted 0 pending migrations\nMIGRATION_COMPATIBILITY_REPORT {\"pendingMigrationCount\":0}\n"),
+    { pendingMigrationCount: 0 },
+  );
+  for (const output of [
+    "",
+    "MIGRATION_COMPATIBILITY_REPORT not-json",
+    "MIGRATION_COMPATIBILITY_REPORT {\"pendingMigrationCount\":-1}",
+    "MIGRATION_COMPATIBILITY_REPORT {\"pendingMigrationCount\":0}\nMIGRATION_COMPATIBILITY_REPORT {\"pendingMigrationCount\":0}",
+  ]) assert.throws(() => parseMigrationCompatibilityReport(output), /pending-migration report|pending migration count/);
+});
+
+test("production target convergence retries the exact app and 24-job state before accepting it", async () => {
   let calls = 0;
   const expected = { targets: [{ name: "ready" }] };
   const actual = await waitForDeploymentState({}, "pinned-image", {
@@ -158,6 +182,13 @@ test("prior-image compatibility gate supports bounded production timeout overrid
   assert.match(compatibilitySource, /MIGRATION_COMPATIBILITY_QUERY_TIMEOUT_MS/);
   assert.match(source, /MIGRATION_COMPATIBILITY_COMMAND_TIMEOUT_MS/);
   assert.match(source, /MIGRATION_COMPATIBILITY_QUERY_TIMEOUT_MS/);
+});
+
+test("production deploy discovers the pinned PostgreSQL 17 Homebrew client before unversioned libpq", () => {
+  const versioned = source.indexOf("/opt/homebrew/opt/postgresql@17/bin");
+  const unversioned = source.indexOf("/opt/homebrew/opt/libpq/bin");
+  assert.ok(versioned >= 0);
+  assert.ok(unversioned > versioned);
 });
 
 test("temporary migration firewall reconciles ambiguous creation and proves final absence", async () => {
@@ -508,7 +539,28 @@ test("pending migration compatibility gate rejects contract/destructive SQL", ()
     "031_guarded_constraint.sql",
     "update metrics.jobs set total = 0 where total is null; alter table metrics.jobs alter column total set not null;",
   ), []);
+  assert.equal(classifyStrictlyAdditiveMigration(
+    "030_additive.sql",
+    "create schema if not exists metrics; create table if not exists metrics.new_evidence (id bigint primary key); create index if not exists new_evidence_idx on metrics.new_evidence (id); comment on table metrics.new_evidence is 'semicolon; remains inside this SQL string';",
+  ).additive, true);
+  for (const sql of [
+    "alter table metrics.jobs add column if not exists extra text;",
+    "update metrics.jobs set total = 0;",
+    "create or replace view metrics.current_jobs as select * from metrics.jobs;",
+    "create table metrics.copy as select * from metrics.jobs;",
+  ]) assert.equal(classifyStrictlyAdditiveMigration("030_full.sql", sql).additive, false);
   assert.match(source, /runMigrationCompatibilityGate\(connectionString, previousImage\)/);
+  assert.match(compatibilitySource, /MIGRATION_COMPATIBILITY_MODE \?\? "static"/);
+  assert.match(compatibilitySource, /full-data clone probing is manual only/);
+  assert.equal(packageJson.scripts["migration:compatibility:clone"], "node scripts/check-migration-compatibility.mjs --clone");
+});
+
+test("full-data migration compatibility cloning is opt-in and static mode is the release default", () => {
+  assert.equal(parseMigrationCompatibilityMode(), "static");
+  assert.equal(parseMigrationCompatibilityMode(["--clone"]), "clone");
+  assert.equal(parseMigrationCompatibilityMode([], "clone"), "clone");
+  assert.throws(() => parseMigrationCompatibilityMode(["--full"]), /only --clone/);
+  assert.throws(() => parseMigrationCompatibilityMode([], "routine"), /static or clone/);
 });
 
 test("actual migrations 029 through 036 pass static defense for a migration-028 baseline", async () => {
@@ -520,6 +572,14 @@ test("actual migrations 029 through 036 pass static defense for a migration-028 
     const sql = await readFile(new URL(filename, directory), "utf8");
     assert.deepEqual(backwardCompatibilityViolations(filename, sql), [], filename);
   }
+});
+
+test("worker lease migration is strictly additive despite a semicolon in its COMMENT string", async () => {
+  const sql = await readFile(new URL("../../infra/db/migrations/046_worker_execution_leases.sql", import.meta.url), "utf8");
+  assert.deepEqual(classifyStrictlyAdditiveMigration("046_worker_execution_leases.sql", sql), {
+    additive: true,
+    statements: 2,
+  });
 });
 
 test("executable prior-image compatibility validates all probes and always removes its clone", async () => {
@@ -797,22 +857,22 @@ test("Key Vault preflight requires exact versionless references and UAMI with no
   }
 });
 
-test("production app and exact 23 jobs share one immutable target contract", () => {
+test("production app and exact 24 jobs share one immutable target contract", () => {
   const jobs = monitoringParameters.parameters.containerAppsJobNames.value;
   assert.deepEqual(assertExactProductionJobNames(jobs), [...PRODUCTION_JOB_NAMES].sort());
-  assert.equal(PRODUCTION_JOB_NAMES.length, 23);
-  assert.equal(PRODUCTION_TARGETS.length, 24);
+  assert.equal(PRODUCTION_JOB_NAMES.length, 24);
+  assert.equal(PRODUCTION_TARGETS.length, 25);
   assert.ok(PRODUCTION_JOB_NAMES.includes("job-prostar-timesheet-jobs"));
   assert.ok(Object.isFrozen(PRODUCTION_JOB_NAMES));
   assert.ok(Object.isFrozen(PRODUCTION_TARGETS));
   assert.equal(productionTargetsForApp("aca-prostar-metrics-prod"), PRODUCTION_TARGETS);
   assert.throws(() => productionTargetsForApp("aca-wrong"), /must be exactly/);
-  assert.equal(validateMonitoringTargetParameters(monitoringParameters).jobNames.length, 23);
+  assert.equal(validateMonitoringTargetParameters(monitoringParameters).jobNames.length, 24);
   const wrongMonitoringApp = structuredClone(monitoringParameters);
   wrongMonitoringApp.parameters.containerAppName.value = "aca-wrong";
   assert.throws(() => validateMonitoringTargetParameters(wrongMonitoringApp), /containerAppName must be exactly/);
   for (const invalid of [jobs.slice(1), [...jobs, "job-extra"], [...jobs.slice(0, -1), jobs[0]]]) {
-    assert.throws(() => assertExactProductionJobNames(invalid), /immutable exact 23-job/);
+    assert.throws(() => assertExactProductionJobNames(invalid), /immutable exact 24-job/);
   }
   assert.match(source, /assertExactProductionJobNames/);
   assert.match(migrationSource, /assertExactProductionTargets\(PRODUCTION_TARGETS\)/);
@@ -916,7 +976,7 @@ function monitoringWhatIfChanges(postgresId) {
   }));
 }
 
-test("monitoring preflight locks the exact PostgreSQL target and exact 70-resource change set", () => {
+test("monitoring preflight locks the exact PostgreSQL target and exact 72-resource change set", () => {
   const id = "/subscriptions/sub/resourceGroups/prostar-payroll/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-prostar-metrics-prod";
   assert.equal(validatePostgresServerTarget({
     id, name: "pg-prostar-metrics-prod", resourceGroup: "prostar-payroll",
@@ -927,7 +987,7 @@ test("monitoring preflight locks the exact PostgreSQL target and exact 70-resour
   ]) assert.throws(() => validatePostgresServerTarget(target), /must be exactly/);
 
   const contract = monitoringManagedResourceContract(id);
-  assert.equal(contract.length, 70);
+  assert.equal(contract.length, 72);
   assert.ok(contract.some((resource) => resource.resourceId.endsWith("/metricAlerts/alert-prostar-metrics-postgres-longest-query".toLowerCase())));
   assert.ok(contract.some((resource) => resource.resourceId.endsWith("/scheduledQueryRules/alert-prostar-metrics-dead-letter-immediate".toLowerCase())));
   assert.ok(contract.some((resource) => resource.resourceId.includes("/jobs/job-prostar-metrics-ingest/providers/microsoft.insights/diagnosticsettings/diag-job-prostar-metrics-ingest")));
@@ -939,7 +999,7 @@ test("monitoring preflight locks the exact PostgreSQL target and exact 70-resour
     changeType: "Ignore",
     resourceId: "/subscriptions/sub/resourceGroups/prostar-payroll/providers/Microsoft.Storage/storageAccounts/unrelated-existing-resource",
   });
-  assert.deepEqual(validateMonitoringWhatIf({ properties: { changes } }, id), { changes: 71 });
+  assert.deepEqual(validateMonitoringWhatIf({ properties: { changes } }, id), { changes: 73 });
 });
 
 test("monitoring what-if rejects every unrelated mutation and malformed representation", () => {
@@ -1230,10 +1290,10 @@ test("what-if semantic validation rejects non-image drift and malformed evidence
   assert.deepEqual(validateDeploymentWhatIf({ changes }, {
     expectedImage,
     subscriptionId: TEST_SUBSCRIPTION_ID,
-  }), { managedResourceCount: 24, supportResourceCount: 6 });
+  }), { managedResourceCount: 25, supportResourceCount: 6 });
   const targetContract = productionDeploymentTargetContract(TEST_SUBSCRIPTION_ID);
   const supportContract = productionDeploymentSupportContract(TEST_SUBSCRIPTION_ID);
-  assert.equal(targetContract.length, 24);
+  assert.equal(targetContract.length, 25);
   assert.equal(supportContract.length, 6);
   assert.ok(supportContract.every((resourceId) => resourceId.startsWith(
     `/subscriptions/${TEST_SUBSCRIPTION_ID}/resourcegroups/prostar-payroll/providers/`,
@@ -1311,7 +1371,7 @@ test("image-only comparison keeps secondary and init container images and member
     side.properties.template.containers.push(auxiliaryContainer("sidecar", "registry.example/sidecar@sha256:stable"));
     side.properties.template.initContainers.push(auxiliaryContainer("setup", "registry.example/setup@sha256:stable"));
   }
-  assert.deepEqual(validate(stable), { managedResourceCount: 24, supportResourceCount: 6 });
+  assert.deepEqual(validate(stable), { managedResourceCount: 25, supportResourceCount: 6 });
 
   const mutations = [
     {
@@ -1410,7 +1470,7 @@ test("production what-if accepts Azure nested image deltas and the app running-s
   assert.deepEqual(validateDeploymentWhatIf({ changes }, {
     expectedImage,
     subscriptionId: TEST_SUBSCRIPTION_ID,
-  }), { managedResourceCount: 24, supportResourceCount: 6 });
+  }), { managedResourceCount: 25, supportResourceCount: 6 });
 });
 
 test("production what-if rejects duplicate, misplaced, mistyped, missing, destructive, and unrelated targets", () => {
@@ -1473,7 +1533,7 @@ test("production what-if rejects duplicate, misplaced, mistyped, missing, destru
       changeType,
       resourceId: `/subscriptions/${TEST_SUBSCRIPTION_ID}/resourceGroups/prostar-payroll/providers/Microsoft.Storage/storageAccounts/unrelated`,
     });
-    assert.deepEqual(validate(harmlessSharedResource), { managedResourceCount: 24, supportResourceCount: 6 });
+    assert.deepEqual(validate(harmlessSharedResource), { managedResourceCount: 25, supportResourceCount: 6 });
   }
 
   const unrelated = structuredClone(valid);
@@ -1511,22 +1571,27 @@ test("release health requires the candidate revision itself at 100 percent traff
   }
 });
 
-test("production deploy completes monitoring and Key Vault preflight before build or migration", () => {
+test("routine deploy remains lean while --full retains exhaustive preflight and monitoring", () => {
   const releaseSource = source.slice(
     source.indexOf("async function executeProductionRelease"),
     source.indexOf("async function main()"),
   );
-  const monitoringGate = releaseSource.indexOf("await deployAndVerifyMonitoringReceivers(postgresTarget);");
   const keyVaultGate = releaseSource.indexOf("verifyProductionKeyVaultPreflight(keyVaultContract);");
   const buildCall = releaseSource.indexOf('"acr",\n      "build"');
   const postgresGate = releaseSource.indexOf("runPostgresPredeployGate(connectionString, previousImage)");
   const compatibilityCall = releaseSource.indexOf("runMigrationCompatibilityGate(connectionString, previousImage)");
   const migrationCall = releaseSource.indexOf("applyTrackedMigrations(connectionString, previousImage)");
   const deploymentCall = releaseSource.indexOf("finalizeCandidateDeployment({");
-  assert.ok(monitoringGate >= 0 && monitoringGate < keyVaultGate);
+  const migrationFirewallGate = releaseSource.slice(
+    releaseSource.indexOf("const publicIp = await getPublicIp();"),
+    releaseSource.indexOf("const deploymentName = releaseIdentity.deploymentRunId;"),
+  );
   assert.ok(keyVaultGate < buildCall && keyVaultGate < migrationCall);
   assert.match(source, /preflight: \(\) => reviewMonitoringWhatIfAndTarget\(\)/);
-  assert.match(source, /run: \(\{ preflight \}\) => executeProductionRelease\(keyVaultContract, preflight, \{/);
+  assert.match(source, /if \(args\.mode === "routine"\)/);
+  assert.match(source, /readRoutineMonitoringEvidence\(\)/);
+  assert.match(source, /else if \(args\.mode === "full"\) \{\s*runDeploymentPreflight/s);
+  assert.match(source, /requireRoutineDeploymentCertificate\(args\.mode, reusable\)/);
   const monitoringSource = source.slice(
     source.indexOf("async function deployAndVerifyMonitoringReceivers"),
     source.indexOf("function versionlessSecretUrl"),
@@ -1537,9 +1602,20 @@ test("production deploy completes monitoring and Key Vault preflight before buil
   assert.ok(monitoringDeploy < metricQuery && metricQuery < receiverVerification);
   assert.match(monitoringSource, /"test-notifications", "create"[\s\S]*"--no-wait"[\s\S]*"--output", "none"/);
   assert.doesNotMatch(source, /already-verified/);
-  assert.deepEqual(parseDeployArgs([]), {});
+  assert.deepEqual(parseDeployArgs([]), { mode: "routine" });
+  assert.deepEqual(parseDeployArgs(["--resume"]), { mode: "routine" });
+  assert.deepEqual(parseDeployArgs(["--full"]), { mode: "full" });
+  assert.throws(() => parseDeployArgs(["--full", "--resume"]), /Unknown deploy argument/);
+  assert.throws(() => parseDeployArgs(["--resume", "--resume"]), /Unknown deploy argument/);
   assert.throws(() => parseDeployArgs(["--already-verified"]), /Unknown deploy argument/);
   assert.throws(() => parseDeployArgs(["--anything"]), /Unknown deploy argument/);
+  const reusable = { sourceSha256: "source", dependencySha256: "dependencies" };
+  assert.equal(requireRoutineDeploymentCertificate("routine", reusable), reusable);
+  assert.equal(requireRoutineDeploymentCertificate("full", null), null);
+  assert.throws(
+    () => requireRoutineDeploymentCertificate("routine", null),
+    /requires an exact full-preflight certificate/,
+  );
   for (const contract of [
     /\["npm", \["test"\], "tests"\]/,
     /\["npm", \["run", "test:infra"\], "infrastructure tests"\]/,
@@ -1555,7 +1631,22 @@ test("production deploy completes monitoring and Key Vault preflight before buil
   assert.ok(postgresGate >= 0 && postgresGate < migrationCall);
   assert.ok(compatibilityCall >= 0 && compatibilityCall < postgresGate);
   assert.ok(migrationCall < deploymentCall);
+  assert.match(source, /MIGRATION_COMPATIBILITY_REPORT = "1"/);
+  assert.match(compatibilitySource, /MIGRATION_COMPATIBILITY_REPORT \$\{JSON\.stringify\(\{ pendingMigrationCount: pending\.length \}\)\}/);
+  assert.ok(migrationFirewallGate.indexOf("withReconciledTemporaryFirewall({")
+    < migrationFirewallGate.indexOf("runMigrationCompatibilityGate(connectionString, previousImage)"));
+  assert.match(migrationFirewallGate, /const publicIp = await getPublicIp\(\);[\s\S]*withReconciledTemporaryFirewall\(\{/);
+  assert.match(migrationFirewallGate, /verifyPresent: async \(\) => verifyTemporaryMigrationFirewallPresent\(publicIp\)/);
+  assert.match(migrationFirewallGate, /if \(migrationCompatibility\.pendingMigrationCount === 0\) \{\s*log\("no pending migrations; skipping the migration-only predeploy gates"\);\s*return;\s*\}/);
+  assert.match(migrationFirewallGate, /runPostgresPredeployGate\(connectionString, previousImage\)/);
+  assert.match(migrationFirewallGate, /applyTrackedMigrations\(connectionString, previousImage\)/);
+  assert.match(source, /MIGRATION_COMPATIBILITY_MODE = "static"/);
+  assert.match(releaseSource, /static prior-image compatibility classification \(no production data clone\)/);
+  assert.match(releaseSource, /dedicated empty database/);
   assert.match(source, /PostgreSQL migration and two-session concurrency predeploy gate failed/);
+  assert.match(source, /re-verifying reusable certified ACR image/);
+  assert.match(source, /computeDependencyTreeSha256/);
+  assert.match(source, /Routine deployment requires existing full-release monitoring evidence/);
 });
 
 const TEST_SUBSCRIPTION_ID = "11111111-1111-4111-8111-111111111111";

@@ -6,6 +6,7 @@ import {
   evaluateCommissionRunForServing,
   getCommissionDashboardReadModel,
 } from "../../src/lib/store/commissions-read-model";
+import { CommissionPeriodRangeError } from "../../src/lib/commissions/period";
 import {
   commissionFreshness,
   buildCommissionServingRow,
@@ -19,6 +20,23 @@ import { commissionHashJson } from "../../src/lib/store/commission-integrity";
 import { commissionCanonicalRunSelect } from "../../src/lib/store/commission-integrity";
 
 const getFreshness = async () => commissionFreshness;
+
+test("commission read models reject invalid periods instead of clamping them", async () => {
+  await assert.rejects(
+    getCommissionDashboardReadModel(
+      { year: 2026, month: 13, summaryYear: 2026 },
+      { query: commissionQuery({}), getFreshness, now: new Date("2026-07-21T12:00:00-07:00") },
+    ),
+    CommissionPeriodRangeError,
+  );
+  await assert.rejects(
+    getCommissionDashboardReadModel(
+      { year: 2022, month: 12, summaryYear: 2022 },
+      { query: commissionQuery({}), getFreshness, now: new Date("2026-07-21T12:00:00-07:00") },
+    ),
+    CommissionPeriodRangeError,
+  );
+});
 
 test("a commission store read failure returns unavailable null facts and preserves diagnostics", async () => {
   const model = await getCommissionDashboardReadModel(

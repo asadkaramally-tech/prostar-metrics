@@ -67,7 +67,7 @@ test("admin health loads with one bounded aggregate query and maps operational e
 
   assert.ok(model);
   assert.equal(queryCount, 1);
-  assert.deepEqual(capturedValues, ["2023-01-01", 8, "2026-07-01"]);
+  assert.deepEqual(capturedValues, ["2023-01-01", 8, "2026-06-01"]);
   for (const relation of [
     "metrics.ingestion_watermarks",
     "metrics.ingestion_jobs",

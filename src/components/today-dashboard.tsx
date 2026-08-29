@@ -1,22 +1,19 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { fmt, TrendChart, type TrendSeries } from "@/components/charts";
+import {
+  KpiBand,
+  KpiBandNote,
+  KpiTile,
+  KpiTiles,
+  PrimaryStatCard,
+} from "@/components/band";
 import {
   Card,
   CardBody,
-  Chipd,
-  Def,
   DefTooltipProvider,
-  DCell,
-  DGrid,
   Fnote,
-  Focal,
-  FocalCov,
-  FocalLabel,
-  FocalMeta,
-  FocalValue,
-  Hero,
-  Mgn,
   Skel,
   StateEmpty,
   StateError,
@@ -31,9 +28,20 @@ export type TodayDashboardProps = {
 };
 
 export function TodayDashboard({ model, showStates }: TodayDashboardProps) {
+  const [liveModel, setLiveModel] = useState(model);
+  useEffect(() => {
+    const refresh = async () => {
+      const response = await fetch("/api/today", { cache: "no-store" });
+      if (!response.ok) return;
+      setLiveModel(await response.json() as TodayDashboardReadModel);
+    };
+    const timer = window.setInterval(() => void refresh(), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <DefTooltipProvider>
-      {model.loadError ? <TodayLoadError detail={model.loadError} /> : <TodayContent model={model} />}
+      {liveModel.loadError ? <TodayLoadError detail={liveModel.loadError} /> : <TodayContent model={liveModel} />}
       <StatesStrip show={showStates}>
         <StateMini label="Loading">
           <Skel width="55%" />
@@ -41,7 +49,7 @@ export function TodayDashboard({ model, showStates }: TodayDashboardProps) {
           <Skel width="70%" />
         </StateMini>
         <StateMini label="Quiet morning">
-          <StateEmpty>No completions yet today; the pace chart holds the last available cumulative point.</StateEmpty>
+          <StateEmpty>No jobs have been completed today yet. The screen will fill in as completions arrive.</StateEmpty>
         </StateMini>
         <StateMini label="Partial / stale">
           <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
@@ -52,11 +60,11 @@ export function TodayDashboard({ model, showStates }: TodayDashboardProps) {
           </div>
         </StateMini>
         <StateMini label="Error">
-          <StateError>Live Simpro pull failed.</StateError>
+          <StateError>The app-owned profitability feed could not be loaded.</StateError>
         </StateMini>
       </StatesStrip>
       <div className="footline">
-        Source: Simpro · live month-to-date figures under the monthly pages’ cohort rules · comparisons are same-day-count
+        Source: app-owned PostgreSQL serving models populated by bounded Simpro workers · Pacific business date · refreshes every minute
       </div>
     </DefTooltipProvider>
   );
@@ -67,7 +75,7 @@ function TodayLoadError({ detail }: { detail: string }) {
     <Card>
       <CardBody>
         <StateError onRetry={() => window.location.reload()}>
-          Live Simpro pull failed. <span className="sr-only">{detail}</span>
+          Today&apos;s profitability feed could not be loaded. <span className="sr-only">{detail}</span>
         </StateError>
       </CardBody>
     </Card>
@@ -75,89 +83,103 @@ function TodayLoadError({ detail }: { detail: string }) {
 }
 
 function TodayContent({ model }: { model: TodayDashboardReadModel }) {
-  const { mtd } = model;
-  const monthLong = monthName(model.month, "long");
-  const monthShort = monthName(model.month, "short");
-  const priorMonthKey = model.sameDayComparisons.priorMonth.month;
-  const priorYearKey = model.sameDayComparisons.priorYearSameMonth.month;
-  const priorLong = monthName(priorMonthKey, "long");
-  const curSeriesName = seriesName(model.month);
-  const priorMonthSeriesName = seriesName(priorMonthKey);
-  const priorYearSeriesName = seriesName(priorYearKey);
-  const day = model.elapsedDays;
-  const margin = mtd.revenue > 0 ? (mtd.netProfit / mtd.revenue) * 100 : null;
-  const capacityPct = mtd.mtdCapacityHours > 0 ? (mtd.teamRecordedHours / mtd.mtdCapacityHours) * 100 : null;
+  const daily = model.today;
+  const revenueCovered = daily.revenueCoveredJobs === daily.completedJobs;
+  const grossCovered = daily.grossProfitCoveredJobs === daily.completedJobs;
+  const netCovered = daily.netProfitCoveredJobs === daily.completedJobs;
 
   return (
     <>
-      <Hero split>
-        <Focal style={{ paddingBottom: 24 }}>
-          <FocalLabel>
-            <Def def={`Completed-job revenue from ${monthShort} 1 through ${day}, using the Jobs page completion cohort rule.`}>
-              Revenue
-            </Def>
-            {" · "}
-            {monthLong} to date
-          </FocalLabel>
-          <FocalValue>{fmt.moneyFull(mtd.revenue)}</FocalValue>
-          <FocalMeta>
-            <Mgn>
-              {fmt.moneyFull(mtd.netProfit)} net{margin !== null ? ` · ${margin.toFixed(1)}% margin` : ""}
-            </Mgn>
-            <DeltaChip current={mtd.revenue} prior={model.sameDayComparisons.priorYearSameMonth.cumulativeRevenue} label={priorYearSeriesName} day={day} />
-            <DeltaChip current={mtd.revenue} prior={model.sameDayComparisons.priorMonth.cumulativeRevenue} label={priorMonthSeriesName} day={day} />
-          </FocalMeta>
-          <DGrid>
-            <DCell
-              label="Completed Jobs"
-              def={`Jobs completed ${monthShort} 1 through ${day}.`}
-              value={String(mtd.jobsCount)}
-              s={mtd.avgJobValue !== null ? `avg ${fmt.moneyFull(mtd.avgJobValue)}` : "none yet"}
-            />
-            <DCell
-              label="Quotes Sent"
-              def={mtd.quotesSentBasis}
-              value={String(mtd.quotesSent)}
-              s={`${fmt.moneyFull(mtd.quotesSentValue)} total`}
-            />
-            <DCell
-              label="Pool So Far"
-              def={`${mtd.poolPercent.toFixed(2)}% of completed-work value to date.`}
-              value={fmt.cents(mtd.poolSoFar)}
-              s={`${mtd.poolPercent.toFixed(2)}% rate`}
-            />
-            <DCell
-              label="Team Hours"
-              def={`${mtd.capacityRule} MTD capacity = ${fmt.hrs(mtd.mtdCapacityHours)}.`}
-              value={fmt.hrs(mtd.teamRecordedHours)}
-              s={capacityPct !== null ? `${Math.round(capacityPct)}% of cap` : "no capacity basis"}
-              sStyle={capacityPct !== null && capacityPct > 100 ? { color: "#e6c07a" } : undefined}
-            />
-          </DGrid>
-          <FocalCov style={{ paddingTop: 14 }}>
-            Day {day} of {model.daysInMonth} · same-day comparisons use {priorLong} and {priorYearSeriesName}
-          </FocalCov>
-        </Focal>
-        <PaceCard model={model} names={[priorYearSeriesName, priorMonthSeriesName, curSeriesName]} />
-      </Hero>
+      <KpiBand ariaLabel="Today's completed-job profitability">
+        <PrimaryStatCard
+          label="Net profit today"
+          labelDef="Σ Simpro NetProfit Actual for jobs whose CompletedDate is today in Pacific time and whose stage is Complete or Archived."
+          value={netCovered ? fmt.moneyFull(daily.netProfit) : "N/A"}
+          sub={daily.netMargin !== null ? `${daily.netMargin.toFixed(1)}% net margin` : "net margin unavailable"}
+        />
+        <KpiTiles>
+          <KpiTile
+            label="Revenue"
+            value={revenueCovered ? fmt.moneyFull(daily.revenue) : "N/A"}
+            sub={daily.averageJobValue !== null ? `avg ${fmt.moneyFull(daily.averageJobValue)}` : "no completions yet"}
+          />
+          <KpiTile
+            label="Gross profit"
+            value={grossCovered ? fmt.moneyFull(daily.grossProfit) : "N/A"}
+            sub={daily.grossMargin !== null ? `${daily.grossMargin.toFixed(1)}% gross margin` : "gross margin unavailable"}
+          />
+          <KpiTile
+            label="Completed jobs"
+            value={String(daily.completedJobs)}
+            sub={`Pacific date ${formatBusinessDate(model.asOfDate)}`}
+          />
+          <KpiTile
+            label="Net-negative jobs"
+            value={String(daily.netNegativeJobs)}
+            sub={daily.netNegativeJobs > 0 ? `${fmt.moneyFull(daily.netNegativeTotal)} total` : "none today"}
+            alert={daily.netNegativeJobs > 0}
+          />
+        </KpiTiles>
+      </KpiBand>
+      <KpiBandNote>
+        Auto-refreshes every minute. Source workers currently poll completed jobs on their bounded schedule; the freshness pill shows the latest verified load. Profit values remain N/A unless every completed job has the required Simpro financial field.
+      </KpiBandNote>
+
+      <TodayJobsCard model={model} />
 
       <div className="g3">
         <EconomicsMiniCard model={model} />
         <VolumeMiniCard model={model} />
         <CapacityMiniCard model={model} />
       </div>
+      <div className="grid12">
+        <PaceCard model={model} names={[
+          seriesName(model.sameDayComparisons.priorYearSameMonth.month),
+          seriesName(model.sameDayComparisons.priorMonth.month),
+          seriesName(model.month),
+        ]} />
+      </div>
     </>
   );
 }
 
-function DeltaChip({ current, prior, label, day }: { current: number; prior: number; label: string; day: number }) {
-  if (prior <= 0) return <Chipd tone="neutral">no {label} day-{day} basis</Chipd>;
-  const pct = ((current - prior) / prior) * 100;
+function TodayJobsCard({ model }: { model: TodayDashboardReadModel }) {
+  const jobs = model.today.jobs;
   return (
-    <Chipd tone={pct >= 0 ? "up" : "dn"}>
-      {pct >= 0 ? "↑" : "↓"} {Math.abs(pct).toFixed(1)}% vs {label} · day {day}
-    </Chipd>
+    <Card
+      title="Today's Completed Jobs"
+      subtitle={`${jobs.length} ${jobs.length === 1 ? "job" : "jobs"} completed on ${formatBusinessDate(model.asOfDate)} · newest source updates first`}
+      footer="CompletedDate assigns the business day; stage must be Complete or Archived. Net profit is Simpro NetProfit Actual."
+    >
+      {jobs.length === 0 ? (
+        <CardBody><StateEmpty>No jobs have been completed today yet.</StateEmpty></CardBody>
+      ) : (
+        <div className="tblwrap">
+          <table>
+            <thead><tr><th>Job</th><th className="hide-sm">Site</th><th className="num">Revenue</th><th className="num hide-sm">Gross</th><th className="num">Net</th><th className="num">Net margin</th></tr></thead>
+            <tbody>
+              {jobs.map((job) => (
+                <tr key={job.jobId}>
+                  <td><div className="id1">{job.name}</div><div className="id2">Job {job.jobNo}</div></td>
+                  <td className="hide-sm">{job.siteName}</td>
+                  <td className="num tnum">{job.sellValue !== null ? fmt.moneyFull(job.sellValue) : "N/A"}</td>
+                  <td className="num tnum hide-sm">{job.grossProfit !== null ? fmt.moneyFull(job.grossProfit) : "N/A"}</td>
+                  <td className="num tnum" style={job.netProfit !== null && job.netProfit < 0 ? { color: "var(--down)", fontWeight: 700 } : undefined}>{job.netProfit !== null ? fmt.moneyFull(job.netProfit) : "N/A"}</td>
+                  <td className="num tnum">{job.netMargin !== null ? `${job.netMargin.toFixed(1)}%` : "N/A"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
+}
+
+function formatBusinessDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })
+    .format(new Date(Date.UTC(year, month - 1, day)));
 }
 
 function PaceCard({ model, names }: { model: TodayDashboardReadModel; names: [string, string, string] }) {
@@ -169,6 +191,7 @@ function PaceCard({ model, names }: { model: TodayDashboardReadModel; names: [st
   ];
   return (
     <Card
+      className="span12"
       style={{ marginTop: 0 }}
       title="Cumulative Revenue Pace"
       subtitle={`Day ${model.elapsedDays} · same-day cumulative revenue`}

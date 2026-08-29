@@ -67,6 +67,7 @@ export type ReconciliationOptions = {
   endpoints?: SimproEndpoints;
   leaseOwner?: string;
   onlyIfNeeded?: boolean;
+  restartDirectTraversal?: boolean;
   dependencies?: ReconciliationRuntimeDependencies;
 };
 
@@ -81,6 +82,8 @@ type SourceEntity = {
   stageName?: string | null;
 };
 
+const summaryValuesById = Symbol("summaryValuesById");
+
 type SourceSummary = {
   complete: boolean;
   incompleteReason?: string;
@@ -92,12 +95,14 @@ type SourceSummary = {
   generation: number;
   totalRequestsUsed: number;
   excludedByStage?: Array<{ id: string; stageName: string | null }>;
+  [summaryValuesById]: ReadonlyMap<string, number>;
 };
 
 type StoreSummary = {
   count: number;
   totalValue: number;
   ids: string[];
+  [summaryValuesById]: ReadonlyMap<string, number>;
 };
 
 type NestedSourceAuthority = {
@@ -155,7 +160,15 @@ export async function runSimproReconciliation(options: ReconciliationOptions = {
         results.push(incompleteResult(scope, period, budget.used, "Current-run jobs reconciliation is incomplete."));
         continue;
       }
-      results.push(await reconcileScope(scope, period, endpoints, budget, leaseOwner, dependencies));
+      results.push(await reconcileScope(
+        scope,
+        period,
+        endpoints,
+        budget,
+        leaseOwner,
+        dependencies,
+        options.restartDirectTraversal === true,
+      ));
     } catch (error) {
       results.push(incompleteResult(
         scope,
@@ -176,16 +189,22 @@ async function reconcileScope(
   budget: RequestBudget,
   leaseOwner: string,
   dependencies: ResolvedReconciliationDependencies,
+  restartDirectTraversal: boolean,
 ): Promise<ReconciliationResult> {
   switch (scope) {
     case "quotes":
-      return reconcileQuotes(period, endpoints, budget, leaseOwner, dependencies);
+      return reconcileQuotes(period, endpoints, budget, leaseOwner, dependencies, restartDirectTraversal);
     case "jobs":
-      return reconcileJobs(period, endpoints, budget, leaseOwner, dependencies);
+      return reconcileJobs(period, endpoints, budget, leaseOwner, dependencies, restartDirectTraversal);
     case "technicians":
       return reconcileTechnicians(period, dependencies);
     case "commissions":
       return reconcileCommissions(period, dependencies);
+    case "materials":
+      // The materials mirror is authored by full live month walks
+      // (workers/ingest-materials.ts); there is no sampled reconciliation and
+      // the scope is never scheduled here (allScopes excludes it).
+      throw new Error("Materials has no sampled reconciliation; rerun the materials month walk instead.");
     default:
       assertNever(scope);
   }
@@ -384,6 +403,7 @@ async function reconcileQuotes(
   budget: RequestBudget,
   leaseOwner: string,
   dependencies: ResolvedReconciliationDependencies,
+  restartDirectTraversal = false,
 ) {
   const traversal = await collectDirectSourceMonth({
     scope: "quotes",
@@ -392,6 +412,7 @@ async function reconcileQuotes(
     budget,
     leaseOwner,
     store: dependencies.continuationStore,
+    restart: restartDirectTraversal,
   });
   if (!traversal.complete || !traversal.source || !traversal.claim) {
     return incompleteResult("quotes", period, budget.used, traversal.reason ?? "Quote traversal is incomplete.", {
@@ -405,15 +426,19 @@ async function reconcileQuotes(
   // summaries, the manifests, and the authoritative check all describe the
   // exact database state that is published (mirrors reconcileTechnicians).
   const publication = await dependencies.transaction(async (query) => {
-    const [metricsQuotes, quoteSnapshots, dashboard] = await Promise.all([
+    const [metricsQuotes, quoteSnapshots, quoteActivity, dashboard] = await Promise.all([
       getMetricsQuoteSummary(period, query),
       getQuoteSnapshotSummary(period, query),
+      getMetricsQuoteActivitySummary(period, query),
       getDashboardPayload("quotes", period.start, query),
     ]);
     const dashboardSummary = dashboardQuoteSummary(dashboard);
     const metricsComparison = compareSummaries(source, metricsQuotes);
     const snapshotComparison = compareSummaries(source, quoteSnapshots);
-    const dashboardComparison = compareDashboard(source, dashboardSummary);
+    // The source-coverage cohort is DateApproved ∪ DateIssued. DateApproved is
+    // the quote-created date in Simpro; the sent-quotes dashboard is keyed by
+    // DateIssued, so compare it to that matching app-owned subset.
+    const dashboardComparison = compareDashboard(quoteActivity, dashboardSummary);
     const status: "matched" | "mismatch" =
       metricsComparison.matched && snapshotComparison.matched && dashboardComparison.matched
         ? "matched"
@@ -427,11 +452,12 @@ async function reconcileQuotes(
       snapshotValue: metricsQuotes.totalValue,
       upstreamSampleValue: source.totalValue,
       detail: {
-        sourceBasis: "Simpro quotes by DateApproved, detail Total ExTax preferred.",
+        sourceBasis: "Simpro quotes in the deduplicated DateApproved/DateIssued daily union; detail Total ExTax preferred. Dashboard sent activity is DateIssued-only.",
         source,
         appOwned: {
           metricsQuotes,
           quoteSnapshots,
+          quoteActivity,
         },
         dashboard: dashboardSummary,
         comparisons: {
@@ -446,7 +472,7 @@ async function reconcileQuotes(
       claim,
       source,
       normalizedIds: metricsQuotes.ids,
-      exactMissingIds: exactMissingIds(metricsComparison, snapshotComparison),
+      exactRepairIds: exactRepairIds(metricsComparison, snapshotComparison),
     }, dependencies, query);
   });
   if (publication.result.status === "mismatch") {
@@ -461,6 +487,7 @@ async function reconcileJobs(
   budget: RequestBudget,
   leaseOwner: string,
   dependencies: ResolvedReconciliationDependencies,
+  restartDirectTraversal = false,
 ) {
   const traversal = await collectDirectSourceMonth({
     scope: "jobs",
@@ -469,6 +496,7 @@ async function reconcileJobs(
     budget,
     leaseOwner,
     store: dependencies.continuationStore,
+    restart: restartDirectTraversal,
   });
   if (!traversal.complete || !traversal.source || !traversal.claim) {
     return incompleteResult("jobs", period, budget.used, traversal.reason ?? "Job traversal is incomplete.", {
@@ -523,7 +551,7 @@ async function reconcileJobs(
       claim,
       source,
       normalizedIds: metricsJobs.ids,
-      exactMissingIds: exactMissingIds(metricsComparison, snapshotComparison),
+      exactRepairIds: exactRepairIds(metricsComparison, snapshotComparison),
     }, dependencies, query);
   });
   if (publication.result.status === "mismatch") {
@@ -671,6 +699,7 @@ export async function collectDirectSourceMonth(params: {
   budget: RequestBudget;
   leaseOwner: string;
   store: ReconciliationContinuationStore;
+  restart?: boolean;
 }): Promise<{
   complete: boolean;
   reason?: string;
@@ -678,12 +707,15 @@ export async function collectDirectSourceMonth(params: {
   source?: SourceSummary;
   totalRequestsUsed: number;
 }> {
-  const claimed = await params.store.claim({
+  const claimParams = {
     scope: params.scope,
     periodStart: params.period.start,
     periodEnd: params.period.end,
     leaseOwner: params.leaseOwner,
-  });
+  };
+  const claimed = params.restart
+    ? { acquired: true as const, claim: await params.store.restartGeneration(claimParams) }
+    : await params.store.claim(claimParams);
   if (!claimed.acquired) {
     return { complete: false, reason: "Another worker owns the active reconciliation generation.", totalRequestsUsed: 0 };
   }
@@ -692,6 +724,7 @@ export async function collectDirectSourceMonth(params: {
   const durableRequestLimit = claim.requestsUsed + (params.budget.limit - params.budget.used);
   const state: ReconciliationContinuationState = {
     cursorDay: claim.cursorDay,
+    cursorSourceDate: claim.cursorSourceDate,
     cursorPage: claim.cursorPage,
     cursorPhase: claim.cursorPhase,
     cursorDetailIndex: claim.cursorDetailIndex,
@@ -741,7 +774,9 @@ export async function collectDirectSourceMonth(params: {
               page: state.cursorPage,
               pageSize: 250,
               budget: params.budget,
-              query: { DateApproved: day },
+              query: state.cursorSourceDate === "date_issued"
+                ? { DateIssued: day }
+                : { DateApproved: day },
             })
           : await params.endpoints.listJobs({
               page: state.cursorPage,
@@ -751,7 +786,13 @@ export async function collectDirectSourceMonth(params: {
             });
         const pageIds = page.rows.map((row) => pickId(row)).filter((id): id is string => Boolean(id));
         state.listedSourceIds = sortedNumericIds([...state.listedSourceIds, ...pageIds]);
-        state.pendingDetailIds = sortedNumericIds(pageIds);
+        // A quote can be returned by both DateApproved and DateIssued (and by
+        // overlapping pages). Fetch it once; the source cohort itself is the
+        // set union of both daily result streams.
+        const detailedIds = new Set(Object.keys(state.sourceEntities));
+        state.pendingDetailIds = sortedNumericIds(
+          pageIds.filter((id) => !detailedIds.has(id)),
+        );
         state.cursorDetailIndex = 0;
         state.continuationPage = page.continuationToken?.page ?? null;
         state.cursorPhase = "details";
@@ -791,9 +832,14 @@ export async function collectDirectSourceMonth(params: {
       state.cursorPage = state.continuationPage;
       state.continuationPage = null;
       state.cursorPhase = "list";
+    } else if (params.scope === "quotes" && state.cursorSourceDate === "date_approved") {
+      state.cursorSourceDate = "date_issued";
+      state.cursorPage = 1;
+      state.cursorPhase = "list";
     } else {
       state.completedDayCount += 1;
       state.cursorDay = nextDay(day, params.period.end);
+      state.cursorSourceDate = "date_approved";
       state.cursorPage = 1;
       state.cursorPhase = state.cursorDay ? "list" : "complete";
     }
@@ -844,6 +890,7 @@ function summarizeSource(
     totalValue: roundMoney(sum(unique.map((row) => row.totalValue))),
     ids: unique.map((row) => row.id),
     detailsFetched: entities.length,
+    [summaryValuesById]: new Map(unique.map((row) => [row.id, row.totalValue])),
     ...continuation,
   };
 }
@@ -852,7 +899,8 @@ async function getMetricsQuoteSummary(period: Period, query: PostgresQuery): Pro
   const result = await query<{ quote_id: string; total: string }>(
     `select quote_id::text, total::text
        from metrics.metrics_quotes
-      where date_approved between $1::date and $2::date
+      where (date_approved between $1::date and $2::date
+             or date_issued between $1::date and $2::date)
         and source_deleted_at is null
       order by quote_id`,
     [period.start, period.end],
@@ -864,11 +912,24 @@ async function getQuoteSnapshotSummary(period: Period, query: PostgresQuery): Pr
   const result = await query<{ quote_id: string; total_value: string | null }>(
     `select quote_id::text, total_value::text
        from metrics.quote_snapshots
-      where date_approved between $1::date and $2::date
+      where (date_approved between $1::date and $2::date
+             or date_issued between $1::date and $2::date)
       order by quote_id`,
     [period.start, period.end],
   );
   return summarizeStore(result.rows.map((row) => ({ id: row.quote_id, totalValue: Number(row.total_value) || 0 })));
+}
+
+async function getMetricsQuoteActivitySummary(period: Period, query: PostgresQuery): Promise<StoreSummary> {
+  const result = await query<{ quote_id: string; total: string }>(
+    `select quote_id::text, total::text
+       from metrics.metrics_quotes
+      where date_issued between $1::date and $2::date
+        and source_deleted_at is null
+      order by quote_id`,
+    [period.start, period.end],
+  );
+  return summarizeStore(result.rows.map((row) => ({ id: row.quote_id, totalValue: Number(row.total) || 0 })));
 }
 
 async function getMetricsJobSummary(period: Period, query: PostgresQuery): Promise<StoreSummary> {
@@ -1207,7 +1268,7 @@ async function persistDirectReconciliation(params: {
   claim: ReconciliationContinuationClaim;
   source: SourceSummary;
   normalizedIds: string[];
-  exactMissingIds: string[];
+  exactRepairIds: string[];
 }, dependencies: ResolvedReconciliationDependencies, query: PostgresQuery): Promise<{
   result: ReconciliationResult;
   repairIds: string[];
@@ -1275,7 +1336,7 @@ async function persistDirectReconciliation(params: {
   }
   return {
     result,
-    repairIds: sortedNumericIds([...params.exactMissingIds, ...nestedAuthority.invalidProjectIds]),
+    repairIds: sortedNumericIds([...params.exactRepairIds, ...nestedAuthority.invalidProjectIds]),
   };
 }
 
@@ -1636,7 +1697,7 @@ async function scheduleRepair(
           await dependencies.enqueueBoundedWork({
             work: { kind: "entity_refresh", entityType, entityId: Number(id) },
             requestedBy: "metrics-reconciliation-worker",
-            reason: `Repair exact missing ${entityType} ${id} from reconciliation ${result.checkId ?? "unknown"}.`,
+            reason: `Repair exact ${entityType} ${id} from reconciliation ${result.checkId ?? "unknown"}.`,
             origin: "reconciliation",
           });
         }
@@ -1695,6 +1756,7 @@ function summarizeStore(rows: Array<{ id: string; totalValue: number }>): StoreS
     count: rows.length,
     totalValue: roundMoney(sum(rows.map((row) => row.totalValue))),
     ids: rows.map((row) => row.id).sort((a, b) => Number(a) - Number(b)),
+    [summaryValuesById]: new Map(rows.map((row) => [row.id, row.totalValue])),
   };
 }
 
@@ -1759,19 +1821,31 @@ function dashboardCommissionSummary(row: DashboardPayloadRow | null) {
 
 function compareSummaries(source: SourceSummary, store: StoreSummary) {
   const idDiff = compareIds(source.ids, store.ids);
+  const valueMismatchIds = source.ids.filter((id) => {
+    const storeValue = store[summaryValuesById].get(id);
+    return storeValue !== undefined
+      && !numericMatches(source[summaryValuesById].get(id) ?? 0, storeValue);
+  });
   const totalValueDelta = roundMoney(store.totalValue - source.totalValue);
   return {
-    matched: idDiff.idsMatched && numericMatches(store.totalValue, source.totalValue),
+    matched: idDiff.idsMatched
+      && valueMismatchIds.length === 0
+      && numericMatches(store.totalValue, source.totalValue),
     countDelta: store.count - source.count,
     totalValueDelta,
+    valueMismatchCount: valueMismatchIds.length,
+    valueMismatchIds: valueMismatchIds.slice(0, 50),
     ...idDiff,
   };
 }
 
-function exactMissingIds(
-  ...comparisons: Array<{ missingIds: string[] }>
+function exactRepairIds(
+  ...comparisons: Array<{ missingIds: string[]; valueMismatchIds: string[] }>
 ) {
-  return sortedNumericIds(comparisons.flatMap((comparison) => comparison.missingIds));
+  return sortedNumericIds(comparisons.flatMap((comparison) => [
+    ...comparison.missingIds,
+    ...comparison.valueMismatchIds,
+  ]));
 }
 
 function compareDashboard(source: { count: number; totalValue: number }, dashboard: { count: number; totalValue: number; present?: boolean }) {

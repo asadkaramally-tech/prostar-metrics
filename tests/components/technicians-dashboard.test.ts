@@ -5,16 +5,19 @@ import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
+  activityBuckets,
+  activitySplitText,
   archivedTechnicianRows,
-  deriveExceptionFlags,
   deriveTeamFacts,
   punctualityBuckets,
   punctualityFnote,
+  SCORE_SORT_KEYS,
   scoreSortValue,
   sortScoreRows,
   technicianPayload,
   technicianScoreRows,
   TechniciansDashboard,
+  utilizationComparison,
 } from "../../src/components/technicians-dashboard";
 import {
   buildTechnicianPerformanceReadModel,
@@ -56,7 +59,7 @@ function juneFixture(): TechnicianPerformanceReadModel {
     ],
     jobs: [
       {
-        jobId: "j1", jobNo: "1001", jobName: "Boiler service", completedDate: "2026-06-10",
+        jobId: "j1", jobNo: "1001", jobName: "<div style=\"font-size:10pt;\"><span>Boiler&nbsp;service</span></div>", completedDate: "2026-06-10",
         sellValue: 1000, sellValueCovered: true, grossProfit: 400, netProfit: 200,
         quoteId: "q1", quotedHours: 10,
         timesheets: [{ employeeId: "1", displayName: "Alice Field", hours: 8, inPeriodHours: 8 }],
@@ -127,54 +130,87 @@ test("outside-roster and archived people are never promoted into the scorecard",
   assert.match(html, /Otto Outsider \(\$800\) is not on the recorded-work roster/);
 });
 
-test("hero renders the payload's utilization, capacity, unbilled and efficiency facts", () => {
+test("KPI band renders the payload's utilization, unbilled split and efficiency facts — no capacity model", () => {
   const payload = juneFixture();
   const html = render(dashboardModel(payload));
 
-  // Roster totals: job 258h, recorded 378h → 68% productive utilization.
-  assert.match(html, /Productive Utilization/);
+  // Primary card: 258h job of 378h recorded → 68% productive utilization.
+  assert.match(html, /Productive utilization/);
   assert.match(html, /258h on jobs of 378h recorded/);
   assert.match(html, />68%</);
-  // Capacity: 22 workdays × 8h × 3 techs = 528h; 378/528 = 72%.
-  assert.match(html, /3 technicians · 22 workdays · capacity 8h\/day \(Mon–Fri 8:30–5:00, 30-min lunch\) = 528h/);
-  assert.match(html, /72%(<\/div>| of capacity)/);
-  // Unbilled 120h at 31.7% of recorded.
+  // No supplied comparison data means unavailable, not permanently "pending".
+  assert.match(html, /May ’26 unavailable · Jun ’25 unavailable/);
+  assert.match(html, /No prior-period technician model is available for comparison\./);
+  // Unbilled tile (spans 2): 120h with the REAL activity split, never lumped.
   assert.match(html, />120h</);
-  assert.match(html, /31\.7% of recorded/);
-  // Bob is the only tech above 115% capacity (210/176 = 119%).
-  assert.match(html, /1 tech <span class="c">above 115%<\/span>/);
-  // Team quote-linked efficiency: (10+6) ÷ (8+8) = 1.00× over 2 of 2 jobs.
+  assert.match(html, /Travel 120h/);
+  // Quote labor efficiency tile: (10+6) ÷ (8+8) = 1.00× over 2 of 2 jobs.
   assert.match(html, /1\.00×/);
   assert.match(html, /team · 2 of 2 quote-linked jobs/);
-  // Honest no-history line and example target stay disclosed.
-  assert.match(html, /No prior-period comparison yet — timesheet history verification is pending\./);
-  assert.match(html, /Target 65% \(example\)/);
-  // No visit coverage in this fixture → the stat is "—", never 0% or 100%.
+  // No visit coverage in this fixture → the tile is "—", never 0% or 100%.
   assert.match(html, /no verified visits/);
+
+  // OWNER RULINGS: the capacity model and the alert banners are gone.
+  assert.doesNotMatch(html, /of capacity|Capacity Used|Capacity use|capacity 8h|above 115%|\(example\)|Target 65%/);
+  assert.doesNotMatch(html, /is an active technician with|recorded 210h vs 176h capacity|archived but worked/);
 });
 
-test("exception flags derive from the payload, not hardcoded names", () => {
+test("lean comparison summaries render historical utilization without serializing employee history", () => {
   const payload = juneFixture();
-  const flags = deriveExceptionFlags(technicianScoreRows(payload), archivedTechnicianRows(payload));
-  assert.deepEqual(flags.map((flag) => flag.kind), ["over_capacity", "low_hours", "archived_with_work"]);
-  assert.equal(flags[0].name, "Bob Overtime");
-  assert.equal(flags[1].name, "Cara Quiet");
-  assert.equal(flags[2].name, "Vic Archived");
+  const model = dashboardModel(payload);
+  model.technicianHistory = {
+    availableFrom: "2023-01-01",
+    comparisons: [
+      { periodStart: "2025-06-01", jobHours: 75, recordedHours: 100 },
+      { periodStart: "2026-05-01", jobHours: 60, recordedHours: 100 },
+    ],
+  };
 
-  const html = render(dashboardModel(payload));
-  assert.match(html, /Bob Overtime<\/b> recorded 210h vs 176h capacity/);
-  assert.match(html, /\+34h over/);
-  assert.match(html, /Cara Quiet<\/b> is an active technician with <b>8h<\/b> recorded in June/);
-  assert.match(html, /Vic Archived<\/b> is archived but worked\s+1 June job\s+— history kept, no current capacity/);
+  assert.deepEqual(utilizationComparison(model.technicianHistory, payload.periodStart, -1), {
+    periodStart: "2026-05-01", utilizationPercent: 60,
+  });
+  assert.deepEqual(utilizationComparison(model.technicianHistory, payload.periodStart, -12), {
+    periodStart: "2025-06-01", utilizationPercent: 75,
+  });
+
+  const html = render(model);
+  assert.match(html, /May ’26 60% · Jun ’25 75%/);
+  assert.match(html, /data is available from January 2023/);
+  assert.doesNotMatch(html, /pending timesheet verification/);
 });
 
-test("scorecard sorts every metric column both ways with null rows always last", () => {
+test("recorded-time rows split job / travel / other unbilled and mark the primary visualization", () => {
+  const payload = juneFixture();
+  const html = render(dashboardModel(payload));
+
+  assert.match(html, /Recorded Time by Technician/);
+  assert.match(html, /sorted by job hours · click a row for the full activity split/);
+  assert.match(html, /data-primary-viz/);
+  // Legend carries the three fills; travel renders in --series-2.
+  assert.match(html, /Job-assigned/);
+  assert.match(html, /Travel/);
+  assert.match(html, /Other unbilled/);
+  assert.match(html, /#0e9aae/);
+  // Right meta: job-assigned hours first, then the recorded-hours denominator.
+  assert.match(html, /150h job hrs/);
+  assert.match(html, /71% of 210h recorded/);
+  assert.match(html, /100h job hrs/);
+  assert.match(html, /63% of 160h recorded/);
+  // Cara is inactive → faint row with recorded hours only.
+  assert.match(html, /8h recorded/);
+  // Rows are keyboard-activatable drills.
+  assert.match(html, /open the full Alice Field drilldown/);
+  // No capacity tick and no amber over-capacity rule anywhere in the card.
+  assert.doesNotMatch(html, /Recorded Time vs Capacity|dark tick|monthly capacity|amber = above/);
+});
+
+test("scorecard sorts every metric column both ways with null rows always last — no capacity column", () => {
   const payload = juneFixture();
   const rows = technicianScoreRows(payload);
 
+  assert.deepEqual([...SCORE_SORT_KEYS], ["job", "unb", "util", "effQ", "ot"]);
   // Default: job hours descending.
   assert.deepEqual(sortScoreRows(rows, "job", -1).map((row) => row.name), ["Bob Overtime", "Alice Field", "Cara Quiet"]);
-  // Ascending job hours.
   assert.deepEqual(sortScoreRows(rows, "job", 1).map((row) => row.name), ["Cara Quiet", "Alice Field", "Bob Overtime"]);
   // Cara is inactive → null utilization sorts last in BOTH directions.
   assert.equal(scoreSortValue(rows.find((row) => row.name === "Cara Quiet")!, "util"), null);
@@ -187,39 +223,74 @@ test("scorecard sorts every metric column both ways with null rows always last",
   assert.ok(rows.every((row) => scoreSortValue(row, "ot") === null));
 
   const html = render(dashboardModel(payload));
-  // Default sort marker on the Job Hrs column, descending (no .asc).
   assert.match(html, /class="num sortable sorted" data-sort="job"/);
-  assert.match(html, /sorted by job hours \(descending\) — click a column to re-sort/);
+  assert.match(html, /data-sort="job"[^]*?<button type="button">Job Hrs<\/button>/);
+  assert.match(html, /sorted by job hours \(descending\) — select a column to re-sort/);
+  assert.doesNotMatch(source, /<th[^>]*onClick=/);
   assert.match(html, /Roster: 3 people with recorded work/);
-  // Inactive row marker and em-dash cells render.
   assert.match(html, /· inactive/);
   assert.match(html, />—</);
-  // Computed team footer: 258h job, 120h unbilled, 68% util, 72% capacity, 1.00× eff.
+  // Capacity-use is gone from the table (owner ruling).
+  assert.doesNotMatch(html, /Capacity Use/);
+  // Computed team footer: 258h job, 120h unbilled, 68% util, 1.00× eff.
   assert.match(html, /Team · 3 technicians/);
-  assert.match(html, /Team · 3 technicians<\/td>[\s\S]*?258h[\s\S]*?120h[\s\S]*?68%[\s\S]*?72%[\s\S]*?1\.00×/);
+  assert.match(html, /Team · 3 technicians<\/td>[\s\S]*?258h[\s\S]*?120h[\s\S]*?68%[\s\S]*?1\.00×/);
 });
 
-test("drilldown replaces the scorecard with per-technician facts from the payload", () => {
+test("activity buckets derive from the real per-tech fields and never invent a type", () => {
+  const payload = juneFixture();
+  const alice = technicianScoreRows(payload).find((row) => row.name === "Alice Field")!;
+  assert.deepEqual(activityBuckets(alice.tech), [{ label: "Travel", hours: 60 }]);
+  assert.equal(activitySplitText(activityBuckets(alice.tech)), "Travel 60h");
+  assert.equal(activitySplitText([]), "no unbilled activity recorded");
+  assert.equal(
+    activitySplitText(
+      [
+        { label: "Travel", hours: 240.5 },
+        { label: "Holiday", hours: 72 },
+        { label: "Support / office", hours: 29.8 },
+        { label: "Lunch", hours: 24.5 },
+        { label: "Sick / personal", hours: 13.8 },
+        { label: "PTO", hours: 10.2 },
+        { label: "Pickup parts", hours: 9.8 },
+      ],
+      5,
+    ),
+    "Travel 240.5h · Holiday 72h · Support / office 29.8h · Lunch 24.5h · Sick / personal 13.8h · 2 more types",
+  );
+});
+
+test("drilldown keeps the full roster visible and opens per-technician facts in a drawer", () => {
   const payload = juneFixture();
   const html = render(dashboardModel(payload), { initialDrillEmployeeId: "1" });
 
-  // Drill card replaces the scorecard.
-  assert.doesNotMatch(html, /Technician Scorecard/);
-  assert.match(html, /← All technicians/);
+  assert.match(html, /Technician Scorecard/);
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /class="drawer open tech-drawer"/);
+  assert.match(html, /class="tech-drill"/);
+  assert.match(html, /All technicians/);
+  const drawerHtml = html.slice(html.indexOf('role="dialog"'));
+  assert.doesNotMatch(drawerHtml, /class="card"/, "technician detail must not nest a full card inside the drawer");
   assert.match(html, /hired May 2020 · viewing June 2026/);
-  // 8 KPIs from the payload: 100h job, 60h unbilled, 160h recorded, 63% util, 91% capacity, 3 jobs.
+  // KPIs from the payload: 100h job, 60h unbilled, 160h recorded, 63% util, 3 jobs.
   assert.match(html, /Job hours<\/div><div class="v tnum">100h/);
   assert.match(html, /Unbilled<\/div><div class="v tnum">60h/);
   assert.match(html, /Recorded<\/div><div class="v tnum">160h/);
   assert.match(html, /Utilization<\/div><div class="v tnum">63%/);
-  assert.match(html, /Capacity use<\/div><div class="v tnum">91%/);
   assert.match(html, /June jobs<\/div><div class="v tnum">3/);
+  // No capacity fact anywhere in the drill (owner ruling).
+  assert.doesNotMatch(html, /Capacity use/);
+  // Real per-activity breakdown from the payload fields.
+  assert.match(html, /June unbilled activity — per recorded type/);
+  assert.match(html, /Travel<\/span><b class="tnum"[^>]*>60h/);
+  assert.match(html, /Total unbilled<\/span><b class="tnum"[^>]*>60h/);
   // Covered quote-linked jobs table is honest per the payload (j1 only).
   assert.match(html, /June efficiency — quote-linked jobs/);
   assert.match(html, /1001 · Boiler service/);
+  assert.doesNotMatch(drawerHtml, /&lt;div|&lt;span|&amp;nbsp;/);
   assert.match(html, /10h<\/td><td class="num tnum">8h/);
   assert.match(html, /1\.25×/);
-  assert.match(html, /Alice’s <span class="repr"[^>]*>1\.25× is representative<\/span>; the verified team ratio is 1\.00× across 2 covered jobs\./);
+  assert.match(html, /Alice’s <span[^>]*>1\.25× uses the hour-share allocation<\/span>; the team ratio is 1\.00× across 2 covered jobs\./);
   // Economics context prose incl. the pre-month-hours disclosure (6h outside June on j6).
   assert.match(html, /Completed-job economics — separate cohort/);
   assert.match(html, /\$1,500/);
@@ -247,7 +318,7 @@ test("punctuality buckets keep early separate and merge the ≤15-minute bands",
   ]);
 });
 
-test("punctuality footnote states the verified rate, the uncovered floor and the heavier late band", () => {
+test("punctuality card offers the per-technician drill and the footnote states the verified rate", () => {
   const payload = juneFixture();
   const facts = {
     ...deriveTeamFacts(payload, technicianScoreRows(payload)),
@@ -261,16 +332,18 @@ test("punctuality footnote states the verified rate, the uncovered floor and the
   };
   assert.equal(
     punctualityFnote(punctuality, facts),
-    "On-time is 89% of verified visits (79% if every uncovered visit were late) — the 26-visit 30+ tail outweighs the 16–30 band.",
+    "On-time counts verified visits only (79% if every uncovered visit were late) — the 26-visit 30+ tail outweighs the 16–30 band.",
   );
   const reversed = punctualityFnote({ ...punctuality, late16To30: 30, lateOver30: 4 }, facts);
   assert.match(reversed, /30-visit 16–30 band outweighs the 30\+ tail/);
-  // Fixture has no visit coverage: the card shows the honest no-coverage state.
+  // The card always states its drill affordance; the fixture has no coverage so
+  // the honest empty state renders instead of the distribution.
   const html = render(dashboardModel(payload));
+  assert.match(html, /click for per-technician detail/);
   assert.match(html, /No verified arrivals in June — punctuality has no coverage/);
 });
 
-test("economics ranks roster technicians by allocated net and discloses everyone else", () => {
+test("economics ranks roster technicians by allocated net with hatched single-series bars", () => {
   const payload = juneFixture();
   const html = render(dashboardModel(payload));
 
@@ -283,8 +356,11 @@ test("economics ranks roster technicians by allocated net and discloses everyone
   assert.ok(aliceAt > -1 && bobAt > -1 && aliceAt < bobAt);
   assert.match(econ, /class="hatch"/);
   assert.match(econ, /\$330<\/b> net · <b[^>]*>77%<\/b> of\s*team net/);
-  assert.match(econ, /hatched = interim allocation/);
-  assert.match(econ, /interim hours-share split/);
+  assert.match(econ, /hatched = hours-share allocation/);
+  assert.match(econ, /hours-share split/);
+  // Single Net profit legend — the revenue series moved to the hover detail.
+  assert.match(econ.slice(0, econ.indexOf("Alice Field")), /Net profit/);
+  assert.doesNotMatch(econ.slice(0, econ.indexOf("Alice Field")), /Revenue/);
   // Disclosure line: real coverage total + names from outsideRoster[], archived and no-allocation members.
   assert.equal(payload.coverage.outsideRosterAllocatedSellValue, 800);
   assert.match(econ, /\$800 sits outside the 3-tech roster — Otto Outsider \(\$800\) is not on the recorded-work roster/);
@@ -294,20 +370,19 @@ test("economics ranks roster technicians by allocated net and discloses everyone
   assert.doesNotMatch(econ.slice(0, econ.indexOf("Allocation is an")), /Cara Quiet|Vic Archived/);
 });
 
-test("capacity and efficiency charts render payload-driven rows and defs", () => {
+test("labor efficiency renders payload-driven diverging bars", () => {
   const payload = juneFixture();
   const html = render(dashboardModel(payload));
 
-  assert.match(html, /Recorded Time vs Capacity/);
-  assert.match(html, /Sorted by job hours · dark tick = 176h monthly capacity · amber = above 115% · hover or tap any row/);
-  assert.match(html, /inactive · 8h/);
   assert.match(html, /Labor Efficiency/);
-  assert.match(html, /per-tech split representative/);
+  assert.match(html, /per-tech hour-share allocation/);
   assert.match(html, /1\.00× — estimate met exactly/);
   assert.match(html, /Quote-linked/);
   assert.match(html, /Recurring/);
+  assert.match(html, /click a row for technician detail/);
+  assert.match(html, /role="button" tabindex="0" aria-label="Alice Field — open labor efficiency detail"/);
   assert.match(html, /2 covered jobs \(team\)/);
-  assert.match(html, /the team’s 1\.00× is verified, the per-tech split is not yet\./);
+  assert.match(html, /team and per-technician figures use the recorded-time allocation\./);
   // Only technicians with allocated jobs appear as efficiency bars: Alice 1.25×, Bob 0.75×.
   assert.match(html, /1\.25×/);
   assert.match(html, /0\.75×/);
@@ -322,7 +397,7 @@ test("states strip renders only with the ?states=1 gate and the footline names t
   assert.match(shown, /class="states show"/);
   assert.match(shown, /State treatments \(design reference\)/);
   assert.match(shown, /never 0% or 100%/);
-  assert.match(shown, /capacity accrues through the 13th only/);
+  assert.match(shown, /hours through the 13th only/);
   for (const html of [hidden, shown]) {
     assert.match(
       html,
@@ -341,7 +416,7 @@ test("payloads without the detailed contract render the honest error state, neve
     const html = render(model);
     assert.match(html, /Technician data could not be loaded\./);
     assert.match(html, /Try again/);
-    assert.doesNotMatch(html, /Legacy Technician|Technician Scorecard|Productive Utilization/);
+    assert.doesNotMatch(html, /Legacy Technician|Technician Scorecard|Productive utilization/);
   }
 });
 
@@ -356,14 +431,19 @@ test("empty month technician payloads render an empty state, not a load error", 
   const visible = html.slice(0, html.indexOf('<div class="states"'));
   assert.equal(technicianPayload(dashboardModel(emptyPayload)), null);
   assert.match(html, /No technician activity is recorded for August\. Pick another month\./);
-  assert.doesNotMatch(visible, /Technician data could not be loaded\.|Try again|Technician Scorecard|Productive Utilization/);
+  assert.doesNotMatch(visible, /Technician data could not be loaded\.|Try again|Technician Scorecard|Productive utilization/);
 });
 
-test("rejected diagnostic surfaces stay deleted from the dashboard source", () => {
+test("rejected surfaces stay deleted from the dashboard source", () => {
   for (const banned of [/heatmap/i, /reconciliation/i, /methodology/i, /diagnostic/i, /coverage table/i, /recharts/i]) {
+    assert.doesNotMatch(source, banned);
+  }
+  // The capacity model and the alert-flag strip are owner-removed for good.
+  for (const banned of [/grossCapacityHours\s*>\s*0\s*\?\s*\(rec \/ cap\)/, /CAP_TICK/, /deriveExceptionFlags/, /Flags/, /EXAMPLE_TARGET/, /184h/]) {
     assert.doesNotMatch(source, banned);
   }
   // The old gross-profit fallback patterns must not return.
   assert.doesNotMatch(source, /allocatedNetProfit\s*\?\?\s*.*allocatedGrossProfit/);
   assert.match(source, /netProfitBasis !== "simpro_job_net_profit_actual"/);
+  assert.doesNotMatch(source, /label="On-time"[\s\S]{0,220}className="repr"/);
 });

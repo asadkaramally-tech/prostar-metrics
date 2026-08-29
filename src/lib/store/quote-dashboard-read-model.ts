@@ -167,7 +167,8 @@ export type QuoteClassificationRow = {
   quoteId: number;
   quoteNo: string;
   name: string;
-  dateApproved: string;
+  dateIssued: string;
+  dateApproved: string | null;
   value: number;
   status: string;
   category: string;
@@ -263,7 +264,7 @@ export type QuoteMetricsReadModel = {
   };
   acceptanceByCategory: Array<QuoteTierMetric & { category: "HVAC" | "Water Heating" | "Unclassified"; acceptanceRateCount: number | null; acceptanceRateValue: number | null }>;
   acceptancePaths: Array<{ path: QuoteAcceptancePath; label: string; count: number; value: number }>;
-  largestNotAccepted: Array<{ rank: number; quoteId: number; quoteNo: string; name: string; dateApproved: string; ageDays: number; value: number; category: string; tier: QuoteDealTier; evidence: string }>;
+  largestNotAccepted: Array<{ rank: number; quoteId: number; quoteNo: string; name: string; dateIssued: string; ageDays: number; value: number; category: string; tier: QuoteDealTier; evidence: string }>;
   classificationRows: QuoteClassificationRow[];
   filters: QuoteDashboardFilters;
   pagination: { page: number; pageSize: number; classificationPages: number; classificationTotal: number };
@@ -285,6 +286,22 @@ export type QuoteMetricsReadModel = {
 type OverrideSummaryRow = { active_count: string; latest_at: string | null };
 type NormalizedQuote = ReturnType<typeof normalizeCanonicalRow>;
 type PersistedQuoteDashboardRow = { dashboard: QuoteMetricsReadModel | null };
+type PersistedQuoteRecordsRow = { period_start: string; quote_records: unknown };
+
+/**
+ * Compact, app-classified quote facts stored alongside each monthly dashboard
+ * payload. They are sufficient for all supported API filters and avoid
+ * rebuilding the 2023-current canonical quote corpus on page/filter changes.
+ */
+export type PersistedQuoteDashboardRecord = Pick<QuoteClassificationRow,
+  "quoteId" | "quoteNo" | "name" | "dateApproved" | "value" | "status" |
+  "category" | "categoryBasis" | "tier" | "outcome" | "acceptancePath" |
+  "evidence" | "linkedJobId" | "inverseConversionMatch" | "override"
+> & {
+  dateIssued: string | null;
+  customer: string;
+  siteName: string;
+};
 
 const monthFormatter = new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 
@@ -301,6 +318,7 @@ type QuoteFollowUpQueueDbRow = {
   linked_job_id: string | number | null;
   linked_job_match: boolean | null;
   inverse_conversion_match: boolean | null;
+  date_issued: string | null;
   date_approved: string | null;
   customer_name: string | null;
   site_name: string | null;
@@ -350,9 +368,8 @@ export async function loadQuoteDashboardRows(
        left join active_exclusions o
          on o.quote_id = q.quote_id
       where q.source_deleted_at is null
-        and (q.date_approved >= date '2023-01-01'
-          or (q.date_approved is null and q.date_issued >= date '2023-01-01'))
-      order by q.date_approved desc nulls last, q.quote_id desc`,
+        and q.date_issued >= date '2023-01-01'
+      order by q.date_issued desc, q.quote_id desc`,
   );
   return result.rows;
 }
@@ -383,7 +400,7 @@ export async function getQuoteFollowUpQueue(
             q.linked_job_id::text as linked_job_id,
             (linked_job.job_id is not null) as linked_job_match,
             (inverse_job.job_id is not null) as inverse_conversion_match,
-            q.date_approved::text,
+            q.date_issued::text, q.date_approved::text,
             nullif(btrim(q.customer_name), '') as customer_name,
             nullif(btrim(q.site_name), '') as site_name,
             q.total::text as total_value, q.deal_tier,
@@ -397,17 +414,17 @@ export async function getQuoteFollowUpQueue(
        left join active_exclusions o
          on o.quote_id = q.quote_id
       where q.source_deleted_at is null
-        and q.date_approved >= $1::date
-        and q.date_approved < $2::date
-      order by q.date_approved asc, q.quote_id asc`,
+        and q.date_issued >= $1::date
+        and q.date_issued < $2::date
+      order by q.date_issued asc, q.quote_id asc`,
     [`${month}-01`, `${addMonthsKey(month, 1)}-01`],
   );
 
   const asOfDate = losAngelesDate(options.now ?? new Date());
   const rows = result.rows
     .flatMap((row): QuoteFollowUpQueueRow[] => {
-      const approved = parseDate(row.date_approved);
-      if (!approved) return [];
+      const issued = parseDate(row.date_issued);
+      if (!issued) return [];
       const totalValue = finiteNumber(row.total_value);
       const classification = classifyQuote({
         quoteId: row.quote_id,
@@ -425,8 +442,8 @@ export async function getQuoteFollowUpQueue(
         customer: cleanDisplayText(row.customer_name) ?? "Customer unavailable",
         site: cleanDisplayText(row.site_name) ?? "Site unavailable",
         status: cleanDisplayText(row.status_name) ?? "Not provided",
-        sentDate: row.date_approved?.slice(0, 10) ?? approved.toISOString().slice(0, 10),
-        ageDays: calendarAgeInDays(approved, asOfDate),
+        sentDate: row.date_issued?.slice(0, 10) ?? issued.toISOString().slice(0, 10),
+        ageDays: calendarAgeInDays(issued, asOfDate),
         value: totalValue,
         tier: normalizeTier(row.deal_tier, totalValue),
       }];
@@ -437,22 +454,27 @@ export async function getQuoteFollowUpQueue(
 }
 
 export async function getQuoteMetricsReadModel(options: QuoteMetricsReadModelOptions = {}): Promise<QuoteMetricsReadModel> {
-  const selectedMonth = normalizeMonthKey(options.selectedMonth) ?? monthKey(losAngelesDate(options.now ?? new Date()));
+  const now = options.now ?? new Date();
+  const currentCalendarMonth = monthKey(losAngelesDate(now));
+  const selectedMonth = normalizeMonthKey(options.selectedMonth) ?? currentCalendarMonth;
   const freshnessPromise = getPageFreshness(
     "quotes",
     `${selectedMonth}-01`,
   );
-  if (!hasInteractiveDashboardFilters(options)) {
-    try {
-      const [freshness, persisted] = await Promise.all([
-        freshnessPromise,
-        getPersistedQuoteDashboard(selectedMonth),
-      ]);
-      if (persisted) return { ...persisted, freshness };
-    } catch {
-      // Fall back to canonical reconstruction when the serving model is absent
-      // or temporarily unreadable.
-    }
+  try {
+    const [freshness, records, overrideSummary] = await Promise.all([
+      freshnessPromise,
+      getPersistedQuoteDashboardRecords(selectedMonth, currentCalendarMonth),
+      getQuoteOverrideSummary(),
+    ]);
+    // Reclassify persisted facts at read time. This keeps accepted-status
+    // normalization correct even when a prior dashboard payload was built with
+    // an older classifier; a missing monthly fact set still falls back below.
+    if (records) return buildQuoteMetricsReadModelFromPersistedRecords(freshness, records, overrideSummary, options);
+  } catch {
+    // A complete persisted corpus is required for exact filtered results. Fall
+    // back to canonical reconstruction whenever a monthly model is missing or
+    // unreadable rather than silently filtering a partial history.
   }
 
   try {
@@ -494,21 +516,48 @@ export async function getPersistedQuoteDashboard(
   return isUsablePersistedQuoteDashboard(dashboard, selectedMonth) ? dashboard : null;
 }
 
-function hasInteractiveDashboardFilters(options: QuoteMetricsReadModelOptions): boolean {
-  const entries: Array<[keyof QuoteMetricsReadModelOptions, string | number | undefined, string | null]> = [
-    ["search", options.search, ""],
-    ["category", options.category, ""],
-    ["tier", options.tier, ""],
-    ["outcome", options.outcome, ""],
-    ["acceptancePath", options.acceptancePath, ""],
-    ["sort", options.sort, "date-desc"],
-    ["page", options.page, "1"],
-  ];
-  return entries.some(([, value, defaultValue]) => {
-    if (value === undefined || value === null) return false;
-    const normalized = String(value).trim();
-    return normalized !== "" && normalized !== defaultValue;
-  });
+export async function getPersistedQuoteDashboardRecords(
+  selectedMonth: string,
+  throughMonthOrQuery: string | QuoteDashboardRowsQuery = selectedMonth,
+  query: QuoteDashboardRowsQuery = queryPostgres,
+): Promise<PersistedQuoteDashboardRecord[] | null> {
+  const throughMonth = typeof throughMonthOrQuery === "function" ? selectedMonth : throughMonthOrQuery;
+  const effectiveQuery = typeof throughMonthOrQuery === "function" ? throughMonthOrQuery : query;
+  const through = throughMonth > selectedMonth ? throughMonth : selectedMonth;
+  const months: string[] = [];
+  for (let month = "2023-01"; month <= through; month = addMonthsKey(month, 1)) months.push(month);
+  const result = await effectiveQuery<PersistedQuoteRecordsRow>(
+    `select period_start::text, values_json -> 'quoteRecords' as quote_records
+       from metrics.dashboard_read_models
+      where metric_family = 'quotes'
+        and period_grain = 'month'
+        and period_start = any($1::date[])
+        and superseded_at is null
+        and jsonb_typeof(values_json -> 'quoteRecords') = 'array'
+      order by period_start`,
+    [months.map((month) => `${month}-01`)],
+  );
+  if (result.rows.length !== months.length) return null;
+  const byMonth = new Map(result.rows.map((row) => [row.period_start.slice(0, 7), row.quote_records]));
+  if (months.some((month) => !byMonth.has(month))) return null;
+  const records: PersistedQuoteDashboardRecord[] = [];
+  for (const month of months) {
+    const value = byMonth.get(month);
+    if (!Array.isArray(value) || !value.every(isPersistedQuoteDashboardRecord)) return null;
+    records.push(...value);
+  }
+  return records;
+}
+
+async function getQuoteOverrideSummary(
+  query: QuoteDashboardRowsQuery = queryPostgres,
+): Promise<OverrideSummaryRow> {
+  const result = await query<OverrideSummaryRow>(
+    `select count(*)::text as active_count, max(created_at)::text as latest_at
+       from metrics.quote_classification_overrides
+      where active = true`,
+  );
+  return result.rows[0] ?? { active_count: "0", latest_at: null };
 }
 
 function isUsablePersistedQuoteDashboard(
@@ -535,6 +584,63 @@ export function buildQuoteMetricsReadModel(
   overrideSummary: OverrideSummaryRow = { active_count: "0", latest_at: null },
   options: QuoteMetricsReadModelOptions = {},
 ): QuoteMetricsReadModel {
+  return buildQuoteMetricsReadModelFromNormalized(
+    freshness,
+    rows.map(normalizeCanonicalRow),
+    overrideSummary,
+    options,
+  );
+}
+
+export function buildQuoteMetricsReadModelFromPersistedRecords(
+  freshness: FreshnessStatus,
+  records: PersistedQuoteDashboardRecord[],
+  overrideSummary: OverrideSummaryRow = { active_count: "0", latest_at: null },
+  options: QuoteMetricsReadModelOptions = {},
+): QuoteMetricsReadModel {
+  return buildQuoteMetricsReadModelFromNormalized(
+    freshness,
+    uniquePersistedQuoteRecords(records).map(normalizePersistedQuoteDashboardRecord),
+    overrideSummary,
+    options,
+  );
+}
+
+export function buildPersistedQuoteDashboardRecords(
+  rows: QuoteCanonicalRow[],
+  periodStart: string,
+): PersistedQuoteDashboardRecord[] {
+  const month = periodStart.slice(0, 7);
+  return rows.map(normalizeCanonicalRow)
+    .filter((quote) => quote.monthKey === month || quote.issuedMonthKey === month)
+    .map((quote) => ({
+      quoteId: quote.quoteId,
+      quoteNo: quote.quoteNo,
+      name: quote.name,
+      dateApproved: quote.dateApproved ?? "",
+      dateIssued: quote.dateIssued,
+      value: quote.totalValue,
+      status: quote.status,
+      customer: quote.customer,
+      siteName: quote.siteName,
+      category: quote.category,
+      categoryBasis: quote.categoryBasis,
+      tier: quote.tier,
+      outcome: quote.outcome,
+      acceptancePath: quote.acceptancePath,
+      evidence: quote.evidence,
+      linkedJobId: quote.linkedJobId,
+      inverseConversionMatch: quote.inverseConversionMatch,
+      override: quote.override,
+    }));
+}
+
+function buildQuoteMetricsReadModelFromNormalized(
+  freshness: FreshnessStatus,
+  normalized: NormalizedQuote[],
+  overrideSummary: OverrideSummaryRow,
+  options: QuoteMetricsReadModelOptions,
+): QuoteMetricsReadModel {
   const now = options.now ?? new Date();
   const localToday = losAngelesDate(now);
   const currentCalendarMonth = monthKey(localToday);
@@ -542,10 +648,9 @@ export function buildQuoteMetricsReadModel(
   const daysInMonth = getDaysInMonth(parseMonthKey(selectedMonth));
   const isCurrentMonthPartial = selectedMonth === currentCalendarMonth;
   const elapsedDays = isCurrentMonthPartial ? localToday.getUTCDate() : daysInMonth;
-  const normalized = rows.map(normalizeCanonicalRow);
   const requestedFilters = normalizeDashboardFilters(options);
   const filtered = normalized.filter((quote) => matchesDashboardFilters(quote, requestedFilters));
-  const warnings = rows.length === 0 ? ["No quote rows are available for the dashboard."] : [];
+  const warnings = normalized.length === 0 ? ["No quote rows are available for the dashboard."] : [];
   const unclassifiedCount = normalized.filter((quote) => quote.category === "Unclassified").length;
   const contractGaps = unclassifiedCount > 0
     ? [`${unclassifiedCount} quote records are Unclassified; that group remains visible in category acceptance.`]
@@ -567,7 +672,7 @@ export function buildQuoteMetricsReadModel(
   const stableEnd = isCurrentMonthPartial ? addMonthsKey(selectedMonth, -1) : selectedMonth;
   const stableMonthKeys = buildMonthKeys(stableEnd, 12).reverse();
   const stableTrailing = stableMonthKeys.map((month) => buildMonthlyMetric(month, filtered, false));
-  const selectedActivity = filtered.filter((quote) => quote.monthKey === selectedMonth && (!isCurrentMonthPartial || quote.approved.getUTCDate() <= elapsedDays));
+  const selectedActivity = filtered.filter((quote) => quote.issuedMonthKey === selectedMonth && (!isCurrentMonthPartial || quote.issuedDay !== null && quote.issuedDay <= elapsedDays));
   const allClassificationRows = buildClassificationRows(selectedActivity, requestedFilters.sort);
   const classificationPages = Math.max(1, Math.ceil(allClassificationRows.length / quoteDashboardPageSize));
   const page = Math.min(requestedFilters.page, classificationPages);
@@ -581,7 +686,7 @@ export function buildQuoteMetricsReadModel(
     selectedMonth,
     warnings,
     contractGaps,
-    quotesLoaded: rows.length,
+    quotesLoaded: normalized.length,
     currentMonth,
     priorMonth,
     priorYearSameDay,
@@ -598,13 +703,13 @@ export function buildQuoteMetricsReadModel(
       acceptedValue: month.acceptedValue,
       notAcceptedValue: month.notAcceptedValue,
     })),
-    sentMonthly: chartMonths.map((month) => buildSentMonthlyMetric(
-      month.month,
-      month.label,
-      filtered,
-      month.provisional,
-      month.provisional ? elapsedDays : undefined,
-    )),
+    sentMonthly: chartMonths.map((month) => ({
+      month: month.month,
+      label: month.label,
+      provisional: month.provisional,
+      sentCount: month.quoteCount,
+      sentValue: month.quoteValue,
+    })),
     sentBasis: "DateIssued",
     followUpQueue: buildFollowUpQueue(selectedActivity, selectedMonth, localToday),
     monthlyTierTrends: chartMonths.map(buildMonthlyTierTrend),
@@ -632,8 +737,8 @@ export function buildQuoteMetricsReadModel(
     filterOptions,
     methodology: {
       acceptanceDefinition: "After an explicit Excluded override, Accepted requires normalized status exactly Quote Accepted Online, a current direct LinkedJobID relationship, or a current inverse ConvertedFrom Quote job relationship. Descriptive JobNo equality is never evidence. Every other quote is Not Accepted. Legacy acceptance overrides are audit history only.",
-      acceptanceDenominator: "Count acceptance is Accepted divided by all non-excluded DateApproved quotes. Value acceptance is accepted value divided by all non-excluded DateApproved quote value. No activity record is removed as Open or Unknown.",
-      dateBasis: "Monthly quote activity is assigned only by DateApproved. Records without DateApproved are outside monthly activity.",
+      acceptanceDenominator: "Count acceptance is Accepted divided by all non-excluded DateIssued quotes. Value acceptance is accepted value divided by all non-excluded DateIssued quote value. No activity record is removed as Open or Unknown.",
+      dateBasis: "Monthly quote activity is assigned only by DateIssued. Records without DateIssued are outside monthly activity.",
       provisionalHandling: "Current-month pace uses actual month-to-date values. Same-day YoY uses the same calendar days in both years; the stable trailing 12 excludes a partial current month.",
       overrides: {
         activeCount: Number(overrideSummary.active_count) || 0,
@@ -670,6 +775,8 @@ function normalizeCanonicalRow(row: QuoteCanonicalRow) {
     inverseConversionMatch,
     approved: approved ?? new Date("1900-01-01T00:00:00Z"),
     hasApprovedDate: approved !== null,
+    issued: issued ?? new Date("1900-01-01T00:00:00Z"),
+    hasIssuedDate: issued !== null,
     dateApproved: row.date_approved,
     dateIssued: row.date_issued ?? null,
     issuedMonthKey: issued ? monthKey(issued) : null,
@@ -695,8 +802,96 @@ function normalizeCanonicalRow(row: QuoteCanonicalRow) {
   };
 }
 
+function uniquePersistedQuoteRecords(records: PersistedQuoteDashboardRecord[]) {
+  // Monthly persistence can contain a quote in both its issued and approved
+  // month. Records are loaded oldest-to-newest, so the later approved-month
+  // classification wins without double-counting it in filter totals.
+  const byQuoteId = new Map<number, PersistedQuoteDashboardRecord>();
+  for (const record of records) byQuoteId.set(record.quoteId, record);
+  return [...byQuoteId.values()];
+}
+
+function normalizePersistedQuoteDashboardRecord(record: PersistedQuoteDashboardRecord): NormalizedQuote {
+  const approved = parseDate(record.dateApproved);
+  const issued = parseDate(record.dateIssued);
+  const classification = classifyQuote({
+    quoteId: record.quoteId,
+    totalValue: record.value,
+    statusName: record.status,
+    linkedJobId: record.linkedJobId,
+    convertedFromJobId: record.inverseConversionMatch ? "matched" : null,
+    outcomeOverride: record.override?.effective && record.override.requestedEffect === "excluded"
+      ? "excluded"
+      : null,
+  });
+  return {
+    quoteId: record.quoteId,
+    quoteNo: record.quoteNo,
+    name: record.name,
+    status: record.status,
+    customer: record.customer,
+    siteName: record.siteName,
+    linkedJobId: record.linkedJobId,
+    inverseConversionMatch: record.inverseConversionMatch,
+    approved: approved ?? new Date("1900-01-01T00:00:00Z"),
+    hasApprovedDate: approved !== null,
+    issued: issued ?? new Date("1900-01-01T00:00:00Z"),
+    hasIssuedDate: issued !== null,
+    dateApproved: approved ? record.dateApproved : null,
+    dateIssued: record.dateIssued,
+    issuedMonthKey: issued ? monthKey(issued) : null,
+    issuedDay: issued ? issued.getUTCDate() : null,
+    monthKey: approved ? monthKey(approved) : null,
+    totalValue: record.value,
+    tier: record.tier,
+    category: normalizeCategory(record.category),
+    categoryBasis: record.categoryBasis,
+    outcome: classification.acceptanceOutcome,
+    acceptancePath: classification.path,
+    evidence: acceptanceEvidence(classification.path),
+    override: record.override,
+  };
+}
+
+function isPersistedQuoteDashboardRecord(value: unknown): value is PersistedQuoteDashboardRecord {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const row = value as Record<string, unknown>;
+  return Number.isSafeInteger(row.quoteId) && Number(row.quoteId) > 0
+    && typeof row.quoteNo === "string"
+    && typeof row.name === "string"
+    && typeof row.dateApproved === "string"
+    && (row.dateIssued === null || typeof row.dateIssued === "string")
+    && typeof row.value === "number" && Number.isFinite(row.value)
+    && typeof row.status === "string"
+    && typeof row.customer === "string"
+    && typeof row.siteName === "string"
+    && typeof row.category === "string"
+    && typeof row.categoryBasis === "string"
+    && quoteDealTiers.includes(row.tier as QuoteDealTier)
+    && quoteAcceptanceOutcomes.includes(row.outcome as QuoteAcceptanceOutcome)
+    && quoteAcceptancePaths.includes(row.acceptancePath as QuoteAcceptancePath)
+    && typeof row.evidence === "string"
+    && (row.linkedJobId === null || Number.isSafeInteger(row.linkedJobId))
+    && typeof row.inverseConversionMatch === "boolean"
+    && isPersistedQuoteOverride(row.override);
+}
+
+function isPersistedQuoteOverride(value: unknown): boolean {
+  if (value === null) return true;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const override = value as Record<string, unknown>;
+  return Number.isSafeInteger(override.id)
+    && (override.requestedEffect === "excluded" || override.requestedEffect === "legacy_accept" || override.requestedEffect === "legacy_not_accept")
+    && typeof override.effective === "boolean"
+    && typeof override.reason === "string"
+    && (override.evidenceUrl === null || typeof override.evidenceUrl === "string")
+    && typeof override.actorEmail === "string"
+    && Number.isSafeInteger(override.revision)
+    && typeof override.createdAt === "string";
+}
+
 function buildMonthlyMetric(month: string, quotes: NormalizedQuote[], provisional: boolean, maxDay?: number): QuoteMonthlyMetric {
-  const sourceRows = quotes.filter((quote) => quote.hasApprovedDate && quote.monthKey === month && (!maxDay || quote.approved.getUTCDate() <= maxDay));
+  const sourceRows = quotes.filter((quote) => quote.hasIssuedDate && quote.issuedMonthKey === month && (!maxDay || quote.issued.getUTCDate() <= maxDay));
   const activity = sourceRows.filter((quote) => quote.outcome !== "excluded");
   const excluded = sourceRows.filter((quote) => quote.outcome === "excluded");
   const byTier = Object.fromEntries(quoteDealTiers.map((tier) => [tier, emptyTierMetric()])) as Record<QuoteDealTier, QuoteTierMetric>;
@@ -717,25 +912,6 @@ function buildMonthlyMetric(month: string, quotes: NormalizedQuote[], provisiona
   };
 }
 
-function buildSentMonthlyMetric(
-  month: string,
-  label: string,
-  quotes: NormalizedQuote[],
-  provisional: boolean,
-  maxDay?: number,
-): QuoteSentMonthlyMetric {
-  const sent = quotes.filter((quote) => quote.outcome !== "excluded"
-    && quote.issuedMonthKey === month
-    && (!maxDay || (quote.issuedDay !== null && quote.issuedDay <= maxDay)));
-  return {
-    month,
-    label,
-    provisional,
-    sentCount: sent.length,
-    sentValue: sum(sent.map((quote) => quote.totalValue)),
-  };
-}
-
 function buildFollowUpQueue(quotes: NormalizedQuote[], selectedMonth: string, asOfDate: Date): QuoteFollowUpQueue {
   const rows = quotes
     .filter((quote) => quote.outcome === "not_accepted")
@@ -746,8 +922,8 @@ function buildFollowUpQueue(quotes: NormalizedQuote[], selectedMonth: string, as
       customer: quote.customer,
       site: quote.siteName,
       status: quote.status,
-      sentDate: quote.dateApproved ?? "",
-      ageDays: calendarAgeInDays(quote.approved, asOfDate),
+      sentDate: quote.dateIssued ?? "",
+      ageDays: calendarAgeInDays(quote.issued, asOfDate),
       value: quote.totalValue,
       tier: quote.tier,
     }))
@@ -772,7 +948,7 @@ function summarizeFollowUpQueue(rows: QuoteFollowUpQueueRow[], selectedMonth: st
     byCustomer.set(row.customer, entry);
   }
   return {
-    scope: `${selectedMonth} cohort: every non-excluded DateApproved quote without acceptance evidence, oldest first. Age is calendar days since DateApproved (the Simpro send event) as of the stated date; a quote leaves the queue on any acceptance or exclusion activity.`,
+    scope: `${selectedMonth} cohort: every non-excluded DateIssued quote without acceptance evidence, oldest first. Age is calendar days since DateIssued as of the stated date; a quote leaves the queue on any acceptance or exclusion activity.`,
     asOf: asOfDate.toISOString().slice(0, 10),
     totalCount: rows.length,
     totalValue: sum(rows.map((row) => row.value)),
@@ -916,7 +1092,7 @@ function buildAcceptancePaths(quotes: NormalizedQuote[]): QuoteMetricsReadModel[
 
 function buildLargestNotAccepted(quotes: NormalizedQuote[], asOfDate: Date): QuoteMetricsReadModel["largestNotAccepted"] {
   return quotes.filter((q) => q.outcome === "not_accepted").sort((a, b) => b.totalValue - a.totalValue || a.quoteId - b.quoteId).slice(0, 15).map((q, index) => ({
-    rank: index + 1, quoteId: q.quoteId, quoteNo: q.quoteNo, name: q.name, dateApproved: q.dateApproved!, ageDays: calendarAgeInDays(q.approved, asOfDate), value: q.totalValue, category: q.category, tier: q.tier, evidence: q.evidence,
+    rank: index + 1, quoteId: q.quoteId, quoteNo: q.quoteNo, name: q.name, dateIssued: q.dateIssued!, ageDays: calendarAgeInDays(q.issued, asOfDate), value: q.totalValue, category: q.category, tier: q.tier, evidence: q.evidence,
   }));
 }
 
@@ -925,7 +1101,8 @@ function buildClassificationRows(quotes: NormalizedQuote[], sort: QuoteSort): Qu
     quoteId: q.quoteId,
     quoteNo: q.quoteNo,
     name: q.name,
-    dateApproved: q.dateApproved!,
+    dateIssued: q.dateIssued!,
+    dateApproved: q.dateApproved,
     value: q.totalValue,
     status: q.status,
     category: q.category,
@@ -986,12 +1163,12 @@ function matchesDashboardFilters(quote: NormalizedQuote, filters: QuoteDashboard
 
 function compareRows(a: QuoteClassificationRow, b: QuoteClassificationRow, sort: QuoteSort) {
   const byId = a.quoteId - b.quoteId;
-  if (sort === "date-asc") return a.dateApproved.localeCompare(b.dateApproved) || byId;
+  if (sort === "date-asc") return a.dateIssued.localeCompare(b.dateIssued) || byId;
   if (sort === "value-desc") return b.value - a.value || byId;
   if (sort === "value-asc") return a.value - b.value || byId;
   if (sort === "quote-asc") return a.quoteNo.localeCompare(b.quoteNo) || byId;
   if (sort === "quote-desc") return b.quoteNo.localeCompare(a.quoteNo) || byId;
-  return b.dateApproved.localeCompare(a.dateApproved) || b.quoteId - a.quoteId;
+  return b.dateIssued.localeCompare(a.dateIssued) || b.quoteId - a.quoteId;
 }
 
 function acceptanceSegment(tier: QuoteDealTier, metric: QuoteTierMetric) {
@@ -1076,7 +1253,7 @@ function emptyQuoteMetricsReadModel(freshness: FreshnessStatus, warning: string,
       outcomes: [...quoteAcceptanceOutcomes],
       acceptancePaths: quoteAcceptancePaths.map((path) => ({ path, label: quoteAcceptancePathLabels[path] })),
     }, filters),
-    methodology: { acceptanceDefinition: "Pending quote data.", acceptanceDenominator: "All non-excluded DateApproved quotes.", dateBasis: "DateApproved.", provisionalHandling: "Pending quote data.", overrides: { activeCount: 0, latestAt: null, affordance: "Only Excluded can change dashboard classification." } },
+    methodology: { acceptanceDefinition: "Pending quote data.", acceptanceDenominator: "All non-excluded DateIssued quotes.", dateBasis: "DateIssued.", provisionalHandling: "Pending quote data.", overrides: { activeCount: 0, latestAt: null, affordance: "Only Excluded can change dashboard classification." } },
   };
 }
 
@@ -1093,7 +1270,7 @@ function buildMonthKeys(end: string, count: number) { return Array.from({ length
 function getDaysInMonth(date: Date) { return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate(); }
 function parseDate(value: string | null) { if (!value) return null; const d = new Date(`${value.slice(0, 10)}T00:00:00Z`); return Number.isNaN(d.getTime()) ? null : d; }
 function losAngelesDate(now: Date) { const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now); const get = (type: string) => Number(parts.find((p) => p.type === type)?.value); return new Date(Date.UTC(get("year"), get("month") - 1, get("day"))); }
-function calendarAgeInDays(dateApproved: Date, asOfDate: Date) { return Math.max(0, Math.floor((asOfDate.getTime() - dateApproved.getTime()) / 86_400_000)); }
+function calendarAgeInDays(dateIssued: Date, asOfDate: Date) { return Math.max(0, Math.floor((asOfDate.getTime() - dateIssued.getTime()) / 86_400_000)); }
 function nullableRate(numerator: number, denominator: number) { return denominator > 0 ? numerator / denominator * 100 : null; }
 function nullableDivide(numerator: number, denominator: number) { return denominator > 0 ? numerator / denominator : null; }
 function percentChange(current: number | null, previous: number | null) { if (current === null || previous === null || previous === 0) return null; return (current - previous) / previous * 100; }

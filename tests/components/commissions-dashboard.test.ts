@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { fmt } from "../../src/components/charts";
 import {
   buildSessionInputs,
+  commissionAllocationDetailSearch,
   buildSummaryCsv,
   buildSummaryVM,
   buildWorksheetRows,
@@ -12,9 +15,10 @@ import {
   compositeAdjustment,
   controlsMatchSaved,
   persistedWorksheetRows,
-  RANK_RAMP,
+  priorCommissionPool,
   runCommissionSessionEngine,
   savedControls,
+  savedExcludedIds,
   summaryQuarters,
   type CommissionSessionControls,
 } from "../../src/components/commissions-dashboard";
@@ -22,18 +26,46 @@ import { buildCommissionReadModel, type CommissionPeriodConfig } from "../../src
 import { commissionHashJson, type CommissionHashManifestEntry } from "../../src/lib/store/commission-integrity";
 import {
   getCommissionDashboardReadModel,
+  withoutCommissionAllocationDetails,
   type CommissionDashboardReadModel,
   type CommissionReadyWorksheetModel,
 } from "../../src/lib/store/commissions-read-model";
 import {
   buildCommissionServingRow,
   commissionFreshness,
+  commissionPayoutServingRow,
   commissionQuery,
   commissionServingRow,
 } from "../helpers/commission-serving";
 
+const commissionSource = readFileSync(path.join(process.cwd(), "src/components/commissions-dashboard.tsx"), "utf8");
+const boardSource = readFileSync(path.join(process.cwd(), "src/components/reset/board.tsx"), "utf8");
+
 /* ── June-like fixture (cent-clean splits so the disclosure-rounded payload
-      weights equal the server's exact weights) ─────────────────────────── */
+      weights equal the server's exact weights). FINAL OWNER RULE fixture
+      shape: Stephen Furtado's hours carry the legacy non-field flag — those
+      hours must still earn their share of job 100's denominator; Roberto
+      Villalta is a zero-hours directory row. (The roster-flag-is-ignored
+      proof lives in tests/metrics/commissions.test.ts — the serving fixture
+      reconstructs its roster from technicianWork, so it is always
+      post-normalization.) ───────────── */
+
+test("commission allocation detail requests use the canonical YYYY-MM key", () => {
+  assert.equal(
+    commissionAllocationDetailSearch("2026-06-01", "42").toString(),
+    "month=2026-06&employeeId=42",
+  );
+});
+
+test("commission allocation requests and disclosure state are isolated per technician", () => {
+  assert.match(commissionSource, /allocationRequests\.current\.has\(employeeId\)/);
+  assert.match(commissionSource, /allocationErrors\[row\.employeeId\] \?\? null/);
+  assert.match(commissionSource, /allocationLoading\.has\(row\.employeeId\)/);
+  assert.match(commissionSource, /ariaControls=\{detailId\}/);
+  assert.match(boardSource, /role=\{onClick \? "button" : undefined\}/);
+  assert.match(boardSource, /aria-expanded=\{onClick \? Boolean\(open\) : undefined\}/);
+  assert.match(boardSource, /event\.key === "Enter" \|\| event\.key === " "/);
+});
 
 const SAVED_CONFIG: CommissionPeriodConfig = {
   poolPercent: 0.5,
@@ -49,7 +81,7 @@ const ROSTER = [
   { employeeId: "3", displayName: "Cole Bender", included: true },
   { employeeId: "4", displayName: "Tadeo Jimenez", included: true },
   { employeeId: "5", displayName: "Roberto Villalta", included: true },
-  { employeeId: "9", displayName: "Stephen Furtado", included: false },
+  { employeeId: "9", displayName: "Stephen Furtado", included: true },
 ];
 
 const JOBS = [
@@ -58,7 +90,7 @@ const JOBS = [
     quoteId: "700", quotedHours: 10,
     timesheets: [
       { employeeId: "1", hours: 6, mapped: true, fieldTechnician: true },
-      { employeeId: "9", hours: 2, mapped: true, fieldTechnician: true },
+      { employeeId: "9", hours: 2, mapped: true, fieldTechnician: false },
     ],
   },
   {
@@ -145,13 +177,81 @@ function cents(value: number): number {
   return Math.round(value * 100);
 }
 
+/* ── FINAL OWNER RULE: membership from recorded hours only ─ */
+
+test("everyone with recorded hours is a worksheet row with an hours-share — the roster flag never gates", async () => {
+  const { worksheet } = await readyModel(SAVED_CONFIG);
+  // Furtado (roster included:false, non-field flag) earns his 2h/8h share of job 100.
+  const furtado = worksheet.technicians.find((technician) => technician.displayName === "Stephen Furtado");
+  assert.ok(furtado, "Furtado must be a payout row — hours alone decide membership");
+  assert.equal(furtado.allocatedValue, 9000);
+  assert.equal(furtado.included, true);
+  assert.ok(furtado.finalBonus > 0);
+  // All five people with hours are payout rows; nobody was pre-filtered.
+  assert.equal(worksheet.technicians.length, 5);
+  assert.deepEqual(savedExcludedIds(worksheet), []);
+  // The pool conserves to the cent across the full recorded-hours roster.
+  const totalCents = worksheet.technicians.reduce((sum, technician) => sum + cents(technician.finalBonus), 0);
+  assert.equal(totalCents, cents(worksheet.commissionPool));
+  // Zero-hours directory row renders in the session inputs but earns nothing.
+  const inputs = buildSessionInputs(worksheet);
+  const villalta = inputs.find((input) => input.displayName === "Roberto Villalta");
+  assert.ok(villalta);
+  assert.equal(villalta.effectiveValue, 0);
+  assert.equal(inputs.length, 6);
+});
+
+test("page payload omits all technician allocations without changing worksheet totals", async () => {
+  const { model, worksheet } = await readyModel(SAVED_CONFIG);
+  const slim = withoutCommissionAllocationDetails(model);
+  assert.equal(slim.worksheet.servingStatus, "ready");
+  if (slim.worksheet.servingStatus !== "ready") return;
+  assert.equal(slim.worksheet.commissionPool, worksheet.commissionPool);
+  assert.equal(slim.worksheet.totalWorkValue, worksheet.totalWorkValue);
+  assert.deepEqual(slim.worksheet.technicians.map((technician) => technician.jobAllocations),
+    slim.worksheet.technicians.map(() => []));
+  assert.equal(slim.worksheet.allocationBasis, worksheet.allocationBasis);
+});
+
+test("saved-state controls carry any persisted checkbox exclusions and detect session changes", async () => {
+  const { worksheet } = await readyModel(SAVED_CONFIG);
+  const saved = savedControls(worksheet.config, savedExcludedIds(worksheet));
+  assert.equal(controlsMatchSaved(saved, worksheet.config, savedExcludedIds(worksheet)), true);
+  // Session unchecking is a change from saved state…
+  assert.equal(
+    controlsMatchSaved({ ...saved, excludedEmployeeIds: ["1"] }, worksheet.config, savedExcludedIds(worksheet)),
+    false,
+  );
+  // …and a persisted exclusion set matches only itself.
+  assert.equal(controlsMatchSaved(savedControls(worksheet.config, ["9"]), worksheet.config, ["9"]), true);
+  assert.equal(controlsMatchSaved(savedControls(worksheet.config, ["9"]), worksheet.config, []), false);
+});
+
+test("unchecking a technician redistributes the unchanged pool across everyone still included", async () => {
+  const { worksheet } = await readyModel(SAVED_CONFIG);
+  const before = engineAt(worksheet, savedControls(worksheet.config));
+  const after = engineAt(worksheet, { ...savedControls(worksheet.config), excludedEmployeeIds: ["1"] });
+  assert.equal(after.pool, before.pool, "the pool total never changes");
+  const excluded = after.rows.find((row) => row.employeeId === "1");
+  assert.ok(excluded);
+  assert.equal(excluded.excluded, true);
+  assert.equal(excluded.final, 0);
+  const totalCents = after.rows.reduce((sum, row) => sum + cents(row.final), 0);
+  assert.equal(totalCents, cents(after.pool));
+  for (const row of after.rows) {
+    if (row.employeeId === "1" || row.effectiveValue <= 0) continue;
+    const prior = before.rows.find((candidate) => candidate.employeeId === row.employeeId);
+    assert.ok(prior && row.final > prior.final, `${row.displayName} must absorb part of the redistribution`);
+  }
+});
+
 /* ── Session engine ⇄ server-verified run ──────────────── */
 
 test("at the saved defaults the session engine reproduces the persisted run exactly (efficiency off)", async () => {
   const { worksheet } = await readyModel(SAVED_CONFIG);
   const engine = engineAt(worksheet, savedControls(worksheet.config));
   assert.equal(engine.pool, worksheet.commissionPool);
-  assert.equal(worksheet.technicians.length, 4);
+  assert.equal(worksheet.technicians.length, 5);
   for (const technician of worksheet.technicians) {
     const row = engine.rows.find((candidate) => candidate.employeeId === technician.employeeId);
     assert.ok(row, `engine row missing for ${technician.displayName}`);
@@ -162,13 +262,15 @@ test("at the saved defaults the session engine reproduces the persisted run exac
     assert.equal(row.belowMinimum, technician.belowMinimum);
   }
   // buildWorksheetRows serves the persisted numbers verbatim at the defaults.
-  assert.equal(controlsMatchSaved(savedControls(worksheet.config), worksheet.config), true);
+  assert.equal(controlsMatchSaved(savedControls(worksheet.config), worksheet.config, savedExcludedIds(worksheet)), true);
   const displayed = buildWorksheetRows(worksheet, savedControls(worksheet.config));
   const persisted = persistedWorksheetRows(worksheet);
   assert.deepEqual(
     displayed.rows.map((row) => ({ id: row.employeeId, final: row.final })).sort((a, b) => a.id.localeCompare(b.id)),
     persisted.rows.map((row) => ({ id: row.employeeId, final: row.final })).sort((a, b) => a.id.localeCompare(b.id)),
   );
+  // The zero-hours directory row is present in the persisted view too.
+  assert.ok(persisted.rows.some((row) => row.displayName === "Roberto Villalta" && row.final === 0 && !row.excluded));
 });
 
 test("at saved defaults with efficiency on the session engine still matches the persisted run", async () => {
@@ -281,25 +383,46 @@ test("a below-minimum bonus is forfeited to zero, marked, and redistributed with
 
 /* ── Rendering (approved mockup contract) ──────────────── */
 
-test("the default render is the approved worksheet with the persisted numbers and no rejected surfaces", async () => {
+test("the default render is the approved band + worksheet with the persisted numbers and no rejected surfaces", async () => {
   const { model, worksheet } = await readyModel(SAVED_CONFIG);
   const html = renderToStaticMarkup(createElement(CommissionsDashboard, { model }));
 
-  assert.match(html, /Calculated Commission Due/);
+  // KPI band: primary card + tiles per the mockup.
+  assert.match(html, /What-if commission preview/);
+  assert.match(html, /0\.50% pool of completed work value/);
+  assert.match(html, /Completed revenue/);
+  assert.match(html, /\$88,000/);
+  assert.match(html, /4 completed jobs/);
+  assert.match(html, /Technicians earning/);
+  assert.match(html, /of 6 technicians/);
+  assert.match(html, /Top calculated payout/);
+  assert.match(html, /Juan Serrato · Gold/);
+  assert.match(html, /Year to date/);
+  assert.match(html, /Rank boosts: Gold ×1\.30 · Silver ×1\.20 · Bronze\s*×1\.10\./);
+  // Prior-year has no run → honest ghost caption, never an invented tick.
+  assert.match(html, /no run/);
+
+  // Worksheet leaderboard.
   assert.match(html, /Commission by Technician/);
   assert.match(html, /Ranked by calculated payout/);
-  assert.match(html, /completed work value/);
-  assert.match(html, /of 5 eligible/);
+  assert.match(html, /data-primary-viz/);
+  assert.match(html, /type="checkbox"/);
+  assert.match(html, /aria-label="Include Juan Serrato in the commission calculation"/);
   for (const technician of worksheet.technicians) {
     assert.ok(html.includes(fmt.cents(technician.finalBonus)), `${technician.displayName} payout rendered`);
   }
-  // No-work roster row stays visible with no tier chip content.
-  assert.match(html, /Roberto Villalta/);
-  assert.match(html, /no completed-job allocation/);
-  // Outside-roster disclosure comes from the payload ($9,000 → $9.0K).
-  assert.match(html, /\$9\.0K of June’s revenue came from people outside the roster/);
+  // Furtado is an ordinary earning row (hours-only membership, owner rule).
   assert.match(html, /Stephen Furtado/);
-  // Footline (approved).
+  // Zero-hours directory row renders as an ordinary $0.00 row with a checkbox.
+  assert.match(html, /Roberto Villalta/);
+  assert.match(html, /no June work/);
+  assert.match(html, /\$0\.00/);
+
+  // "Eligibility" is not a thing — the word may not appear anywhere.
+  assert.doesNotMatch(html, /eligib/i);
+  // The old top-3 hero strip and the outside-roster narrative are gone.
+  assert.doesNotMatch(html, /outside the roster/);
+  // Footline (approved, verbatim).
   assert.match(html, /Source: Simpro completed jobs · pool = completed work value × pool percent · calculated amounts are not payment records/);
   // Efficiency-only UI is gated off while the toggle is off.
   assert.doesNotMatch(html, /Efficiency \+/);
@@ -312,7 +435,7 @@ test("the default render is the approved worksheet with the persisted numbers an
 });
 
 test("with efficiency saved on, the ×-column, legend entries, helper text, and effect chart render", async () => {
-  const { model, worksheet } = await readyModel({ ...SAVED_CONFIG, efficiencyEnabled: true });
+  const { model } = await readyModel({ ...SAVED_CONFIG, efficiencyEnabled: true });
   const html = renderToStaticMarkup(createElement(CommissionsDashboard, { model }));
 
   assert.match(html, /Efficiency \+/);
@@ -323,15 +446,9 @@ test("with efficiency saved on, the ×-column, legend entries, helper text, and 
   assert.match(html, /effects sum to \$0 after re-scaling/);
   assert.match(html, /Faster than the estimate boosts the share, slower trims it — the pool total never changes\./);
   assert.match(html, /×\d\.\d{5}/);
-  // The default-open top row's trace reproduces its printed arithmetic.
-  const top = [...worksheet.technicians].sort((a, b) => b.finalBonus - a.finalBonus)[0];
-  const ceff = compositeAdjustment(top.postForfeitureBonus, top.finalBonus);
-  assert.ok(ceff !== null);
-  assert.ok(html.includes(`×${ceff.toFixed(5)}`), "composite factor printed in the trace");
-  assert.match(html, /How this was calculated:/);
 });
 
-test("an unready worksheet renders an honest state — no hero, no fabricated $0.00 payouts", async () => {
+test("an unready worksheet renders an honest state — no band, no fabricated $0.00 payouts", async () => {
   const row = commissionServingRow({
     current_run_id: null,
     run_id: null,
@@ -346,14 +463,8 @@ test("an unready worksheet renders an honest state — no hero, no fabricated $0
   assert.notEqual(model.worksheet.servingStatus, "ready");
   const html = renderToStaticMarkup(createElement(CommissionsDashboard, { model }));
   assert.match(html, /still building|Commission data could not be loaded/);
-  assert.doesNotMatch(html, /Calculated Commission Due/);
+  assert.doesNotMatch(html, /Calculated commission due/);
   assert.doesNotMatch(html, /\$0\.00/);
-});
-
-test("the hero rank ramp is monotonic and never reuses the rank-boost legend color", () => {
-  assert.equal(RANK_RAMP.length, 8);
-  assert.ok(RANK_RAMP.every((color) => color.toLowerCase() !== "#4b52c0"));
-  assert.equal(new Set(RANK_RAMP.map((color) => color.toLowerCase())).size, RANK_RAMP.length);
 });
 
 /* ── Summary (monthly | quarterly | annual + CSV) ──────── */
@@ -372,7 +483,7 @@ test("summary view model keeps missing months as N/A (never $0) and marks the la
   assert.equal(vm.ytd, vm.months[5].pool);
   assert.equal(vm.average, vm.months[5].pool);
   assert.equal(vm.peak?.short, "Jun");
-  assert.equal(vm.earningYtd, 4);
+  assert.equal(vm.earningYtd, 5);
   const quarters = summaryQuarters(vm);
   assert.deepEqual(quarters.map((quarter) => quarter.loaded), [0, 1, 0, 0]);
   assert.equal(quarters[1].pool, vm.months[5].pool);
@@ -392,6 +503,28 @@ test("summary CSV export is client-buildable for every mode and preserves N/A mo
   assert.ok(quarterly.includes("Q3 2026,N/A,0 of 3"));
   const annual = buildSummaryCsv(vm, "annual");
   assert.ok(annual.includes(`2026,${pool},N/A,${pool},Jun ${pool}`));
+});
+
+test("January prior-month comparison uses the supplied previous-year December pool", () => {
+  const vm = buildSummaryVM({
+    year: 2026,
+    months: [],
+  } as unknown as CommissionDashboardReadModel["summary"]);
+  assert.equal(priorCommissionPool(1, vm, 4321.09), 4321.09);
+  assert.equal(priorCommissionPool(1, vm, null), null);
+});
+
+test("January read model loads the prior December immutable pool", async () => {
+  const january = commissionPayoutServingRow({ period_start: "2026-01-01", period_end: "2026-01-31" });
+  const december = commissionPayoutServingRow({ period_start: "2025-12-01", period_end: "2025-12-31" });
+  const model = await getCommissionDashboardReadModel(
+    { year: 2026, month: 1, summaryYear: 2026 },
+    {
+      query: commissionQuery({ selectedRows: [january], summaryRows: [january], priorMonthRows: [december] }),
+      getFreshness: async () => commissionFreshness,
+    },
+  );
+  assert.equal(model.priorMonthCommissionPool, (december.read_model as { poolAmount: number }).poolAmount);
 });
 
 test("draft months are marked draft between loaded history and the current month", () => {

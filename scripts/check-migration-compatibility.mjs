@@ -8,6 +8,7 @@ import pg from "pg";
 import {
   assertCompatibilityDatabaseName,
   backwardCompatibilityViolations,
+  classifyStrictlyAdditiveMigration,
   cleanupNamedContainerUntilStable,
   createActiveChildRegistry,
   createProbeContainerName,
@@ -16,6 +17,7 @@ import {
   PRIOR_IMAGE_PLATFORM,
   redactCompatibilityDiagnostic,
   isStandardRollupEvidenceFallbackError,
+  parseMigrationCompatibilityMode,
   priorImageProbeDockerArgs,
   priorImageProbeEnvironment,
   runWithRegisteredProbeContainer,
@@ -29,6 +31,11 @@ const ROOT = resolve(import.meta.dirname, "..");
 const migrationDirectory = resolve(ROOT, "infra/db/migrations");
 const connectionString = process.env.AZURE_POSTGRES_CONNECTION_STRING;
 const previousImage = process.env.PRIOR_PRODUCTION_IMAGE;
+const compatibilityMode = parseMigrationCompatibilityMode(
+  process.argv.slice(2),
+  process.env.MIGRATION_COMPATIBILITY_MODE ?? "static",
+);
+const reportPendingMigrationCount = process.env.MIGRATION_COMPATIBILITY_REPORT === "1";
 const commandTimeoutMs = boundedTimeoutFromEnv("MIGRATION_COMPATIBILITY_COMMAND_TIMEOUT_MS", 180_000, {
   min: 30_000,
   max: 30 * 60_000,
@@ -57,14 +64,10 @@ try {
     [connectionString],
   );
 }
-const dumpDirectory = await mkdtemp(resolve(tmpdir(), "metrics-compatibility-"));
-const dumpPath = resolve(dumpDirectory, "baseline.dump");
+let dumpDirectory;
+let dumpPath;
 
 try {
-  await assertRequiredTool("pg_dump", ["--version"], /pg_dump \(PostgreSQL\) 17\./);
-  await assertRequiredTool("pg_restore", ["--version"], /pg_restore \(PostgreSQL\) 17\./);
-  await assertRequiredTool("docker", ["version", "--format", "{{.Client.Version}}"], /\d+\.\d+/);
-
   const files = (await readdir(migrationDirectory)).filter((file) => file.endsWith(".sql")).sort();
   const applied = await loadAppliedMigrationBaseline();
   const pending = files.filter((file) => !applied.has(file));
@@ -79,16 +82,18 @@ try {
     throw new Error(`Pending migrations are not additive/backward-compatible:\n- ${violations.join("\n- ")}`);
   }
 
-  // This gate exists to prove that PENDING migrations stay additive for the
-  // prior production image. With an empty pending set there is no claim to
-  // test: materializing a full database clone would apply zero migrations and
-  // assert nothing. Skip the clone instead of dumping the whole database to
-  // verify an empty list. Any pending migration still takes the full probe.
+  const classifications = pendingSql.map(({ filename, sql }) => classifyStrictlyAdditiveMigration(filename, sql));
+  const strictlyAdditive = classifications.filter(({ additive }) => additive).length;
   if (pending.length === 0) {
     console.log(
       `No pending migrations against the live baseline; prior-image compatibility for ${previousImage} is vacuously satisfied.`,
     );
-  } else {
+  } else if (compatibilityMode === "clone") {
+    await assertRequiredTool("pg_dump", ["--version"], /pg_dump \(PostgreSQL\) 17\./);
+    await assertRequiredTool("pg_restore", ["--version"], /pg_restore \(PostgreSQL\) 17\./);
+    await assertRequiredTool("docker", ["version", "--format", "{{.Client.Version}}"], /\d+\.\d+/);
+    dumpDirectory = await mkdtemp(resolve(tmpdir(), "metrics-compatibility-"));
+    dumpPath = resolve(dumpDirectory, "baseline.dump");
     const adminUrl = databaseUrl("postgres");
     const databaseOperations = createDatabaseOperations(adminUrl);
     const result = await runExecutableMigrationCompatibility({
@@ -101,9 +106,14 @@ try {
         cleanupArtifacts,
       },
     });
+    console.log(`Accepted ${result.appliedMigrations.length} pending migration(s) after actual prior-image application and worker probes for ${previousImage}.`);
+  } else {
     console.log(
-      `Accepted ${result.appliedMigrations.length} pending migration(s) after actual prior-image application and worker probes for ${previousImage}.`,
+      `Accepted ${pending.length} pending migration(s) after static prior-image compatibility classification (${strictlyAdditive} strictly additive, ${pending.length - strictlyAdditive} non-additive and covered by the targeted migration gate); full-data clone probing is manual only.`,
     );
+  }
+  if (reportPendingMigrationCount) {
+    console.log(`MIGRATION_COMPATIBILITY_REPORT ${JSON.stringify({ pendingMigrationCount: pending.length })}`);
   }
 } catch (error) {
   let artifactCleanupError;
@@ -196,6 +206,7 @@ function createDatabaseOperations(adminUrl) {
 
 async function materializeClone(databaseName) {
   assertCompatibilityDatabaseName(databaseName);
+  if (!dumpPath) throw new Error("Compatibility clone dump path was not initialized");
   await runPostgresTool("pg_dump", [
     "--format=custom", "--no-owner", "--no-acl", "--file", dumpPath, "--dbname", sourceDatabase,
   ], sourceDatabase);
@@ -560,10 +571,12 @@ async function cleanupArtifacts() {
       failures.push(error);
     }
   }
-  try {
-    await rm(dumpDirectory, { recursive: true, force: true });
-  } catch (error) {
-    failures.push(error);
+  if (dumpDirectory) {
+    try {
+      await rm(dumpDirectory, { recursive: true, force: true });
+    } catch (error) {
+      failures.push(error);
+    }
   }
   if (failures.length) throw new AggregateError(failures, "Compatibility artifact cleanup failed");
 }

@@ -16,3 +16,8 @@ output/
 tsconfig.tsbuildinfo
 docs/prostar-metrics/verification/deployment-manifest.json
 docs/prostar-metrics/verification/monitoring/*.json
+
+# Local preservation payloads may contain internal design/operational material.
+# Keep human-readable manifests, but never publish the binary payloads.
+/preservation/**/overlays/*.gz
+/preservation/**/unreachable/*.gz

@@ -13,6 +13,7 @@ export type ReconciliationContinuationStatus =
   | "superseded"
   | "failed";
 export type ReconciliationCursorPhase = "list" | "details" | "complete";
+export type ReconciliationCursorSourceDate = "date_approved" | "date_issued";
 
 export type ReconciliationContinuationEntity = {
   id: string;
@@ -22,6 +23,8 @@ export type ReconciliationContinuationEntity = {
 
 export type ReconciliationContinuationState = {
   cursorDay: string | null;
+  /** Quotes scan DateApproved then DateIssued; jobs use only date_approved. */
+  cursorSourceDate: ReconciliationCursorSourceDate;
   cursorPage: number;
   cursorPhase: ReconciliationCursorPhase;
   cursorDetailIndex: number;
@@ -93,6 +96,7 @@ type ContinuationRow = {
   fence_token: number | string;
   status: ReconciliationContinuationStatus;
   cursor_day: Date | string | null;
+  cursor_source_date: ReconciliationCursorSourceDate;
   cursor_page: number | string;
   cursor_phase: ReconciliationCursorPhase;
   cursor_detail_index: number | string;
@@ -108,7 +112,7 @@ type ContinuationRow = {
 };
 
 const continuationColumns = `scope, period_start::text, period_end::text, generation,
-  fence_token, status, cursor_day::text, cursor_page, cursor_phase,
+  fence_token, status, cursor_day::text, cursor_source_date, cursor_page, cursor_phase,
   cursor_detail_index, continuation_page, pending_detail_ids,
   listed_source_ids, source_entities, requests_used,
   completed_page_count, completed_day_count, lease_owner`;
@@ -169,11 +173,11 @@ export function createPostgresReconciliationContinuationStore(options: {
         const inserted = await transactionQuery<ContinuationRow>(
           `insert into metrics.reconciliation_continuations (
              scope, period_start, period_end, generation, fence_token, status,
-             cursor_day, cursor_page, cursor_phase, cursor_detail_index,
+             cursor_day, cursor_source_date, cursor_page, cursor_phase, cursor_detail_index,
              lease_owner, lease_expires_at
            ) values (
              $1, $2::date, $3::date, $4, 1, 'collecting',
-             $2::date, 1, 'list', 0, $5,
+             $2::date, 'date_approved', 1, 'list', 0, $5,
              clock_timestamp() + ($6::integer * interval '1 millisecond')
            )
            returning ${continuationColumns}`,
@@ -194,18 +198,19 @@ export function createPostgresReconciliationContinuationStore(options: {
       const result = await (queryOverride ?? query)(
         `update metrics.reconciliation_continuations continuation
             set cursor_day = $6::date,
-                cursor_page = $7,
-                cursor_phase = $8,
-                cursor_detail_index = $9,
-                continuation_page = $10,
-                pending_detail_ids = $11::jsonb,
-                listed_source_ids = $12::jsonb,
-                source_entities = $13::jsonb,
-                requests_used = $14,
-                completed_page_count = $15,
-                completed_day_count = $16,
+                cursor_source_date = $7,
+                cursor_page = $8,
+                cursor_phase = $9,
+                cursor_detail_index = $10,
+                continuation_page = $11,
+                pending_detail_ids = $12::jsonb,
+                listed_source_ids = $13::jsonb,
+                source_entities = $14::jsonb,
+                requests_used = $15,
+                completed_page_count = $16,
+                completed_day_count = $17,
                 status = case when status = 'repair_pending' then 'repair_pending' else 'collecting' end,
-                lease_expires_at = clock_timestamp() + ($17::integer * interval '1 millisecond'),
+                lease_expires_at = clock_timestamp() + ($18::integer * interval '1 millisecond'),
                 updated_at = clock_timestamp()
           where continuation.scope = $1
             and continuation.period_start = $2::date
@@ -226,6 +231,7 @@ export function createPostgresReconciliationContinuationStore(options: {
           claim.fenceToken,
           claim.leaseOwner,
           state.cursorDay,
+          state.cursorSourceDate,
           state.cursorPage,
           state.cursorPhase,
           state.cursorDetailIndex,
@@ -345,11 +351,11 @@ export function createPostgresReconciliationContinuationStore(options: {
         const inserted = await transactionQuery<ContinuationRow>(
           `insert into metrics.reconciliation_continuations (
              scope, period_start, period_end, generation, fence_token, status,
-             cursor_day, cursor_page, cursor_phase, cursor_detail_index,
+             cursor_day, cursor_source_date, cursor_page, cursor_phase, cursor_detail_index,
              lease_owner, lease_expires_at
            ) values (
              $1, $2::date, $3::date, $4, 1, 'collecting',
-             $2::date, 1, 'list', 0, $5,
+             $2::date, 'date_approved', 1, 'list', 0, $5,
              clock_timestamp() + ($6::integer * interval '1 millisecond')
            ) returning ${continuationColumns}`,
           [params.scope, params.periodStart, params.periodEnd, generation, params.leaseOwner, leaseMs],
@@ -444,6 +450,7 @@ function mapClaim(row: ContinuationRow, leaseOwner: string): ReconciliationConti
     status: row.status,
     leaseOwner,
     cursorDay: row.cursor_day ? dateText(row.cursor_day) : null,
+    cursorSourceDate: row.cursor_source_date,
     cursorPage: numericInteger(row.cursor_page, 1),
     cursorPhase: row.cursor_phase,
     cursorDetailIndex: numericInteger(row.cursor_detail_index, 0),
@@ -460,6 +467,9 @@ function mapClaim(row: ContinuationRow, leaseOwner: string): ReconciliationConti
 function validateState(state: ReconciliationContinuationState, periodStart: string, periodEnd: string) {
   if (state.cursorDay && (state.cursorDay < periodStart || state.cursorDay > periodEnd)) {
     throw new Error(`Reconciliation cursor day ${state.cursorDay} is outside ${periodStart} through ${periodEnd}.`);
+  }
+  if (state.cursorSourceDate !== "date_approved" && state.cursorSourceDate !== "date_issued") {
+    throw new Error("Reconciliation cursor source date is invalid.");
   }
   for (const [label, value, minimum] of [
     ["cursorPage", state.cursorPage, 1],

@@ -7,6 +7,7 @@ import {
   type JobCostCenterInput,
   type JobFilters,
   type JobMetricsDashboardReadModel,
+  type JobDrilldownRow,
   type JobQuoteLaborInput,
   type JobReconciliationInput,
   type JobTimesheetInput,
@@ -194,6 +195,33 @@ export async function getJobDashboardReadModel(params: {
   }
 }
 
+/**
+ * The jobs screen needs the complete record roster only for its drilldown
+ * table, CSV export, and recurring-labor view.  Keep that payload separate
+ * from the (much larger) dashboard wrapper so it is one bounded request.
+ */
+export async function getJobDrilldownRecords(selectedMonth: string): Promise<JobDrilldownRow[]> {
+  const persisted = await getPersistedJobDrilldownRecords(selectedMonth);
+  if (persisted) return persisted;
+
+  // A dashboard rebuild may not have run yet. Preserve the previous live
+  // reconstruction behavior as a fallback, but do not send its wrapper to
+  // the browser.
+  const periodEnd = monthEnd(selectedMonth);
+  const [jobs, reconciliations, issuedQuotes] = await Promise.all([
+    getJobMetricInputs({ periodStart: "2023-01-01", periodEnd }),
+    getJobReconciliations("2023-01-01", periodEnd),
+    getIssuedQuoteInputs(),
+  ]);
+  return buildJobMetricsDashboard({
+    jobs,
+    reconciliations,
+    issuedQuotes,
+    selectedMonth,
+    filters: {},
+  }).selected.records;
+}
+
 export function overlayJobReconciliations(
   model: JobMetricsDashboardReadModel,
   reconciliations: JobReconciliationInput[],
@@ -280,6 +308,23 @@ async function getPersistedJobDashboard(selectedMonth: string, requestedPage: nu
     : null;
 }
 
+async function getPersistedJobDrilldownRecords(selectedMonth: string): Promise<JobDrilldownRow[] | null> {
+  const result = await queryPostgres<{ records: JobDrilldownRow[] | null }>(
+    `select values_json #> '{dashboard,selected,records}' as records
+       from metrics.dashboard_read_models
+      where metric_family = 'jobs'
+        and period_grain = 'month'
+        and period_start = $1::date
+        and superseded_at is null
+        and jsonb_typeof(values_json #> '{dashboard,selected,records}') = 'array'
+      order by rebuilt_at desc
+      limit 1`,
+    [`${selectedMonth}-01`],
+  );
+  const records = result.rows[0]?.records;
+  return Array.isArray(records) ? records : null;
+}
+
 function paginateDrilldown(
   model: Omit<JobDashboardReadModel, "drilldownPagination">,
   requestedPage: number | undefined,
@@ -292,11 +337,33 @@ function paginateDrilldown(
   const offset = (page - 1) * pageSize;
   return {
     ...model,
+    // Prior-period detail has already been reduced into `comparisons`,
+    // `trends`, and the trailing aggregates. Keeping hundreds of historical
+    // job rows here made the initial Jobs response ~1.6 MB for no UI benefit.
+    priorMonth: compactComparisonMonth(model.priorMonth),
+    priorYearSameDay: compactComparisonMonth(model.priorYearSameDay),
+    priorYearFull: compactComparisonMonth(model.priorYearFull),
     selected: {
       ...model.selected,
       records: totalRecords === undefined ? model.selected.records.slice(offset, offset + pageSize) : model.selected.records,
     },
     drilldownPagination: { page, pageSize, total, totalPages },
+  };
+}
+
+function compactComparisonMonth(month: JobMetricsDashboardReadModel["priorMonth"]): JobMetricsDashboardReadModel["priorMonth"] {
+  return {
+    ...month,
+    categoryRows: [],
+    costCenterRows: [],
+    jobSourceRows: [],
+    customerRows: [],
+    siteRows: [],
+    netMarginDistribution: [],
+    lossRecords: [],
+    quoteLinkedLabor: { ...month.quoteLinkedLabor, perJob: [] },
+    directServiceFollowUps: { ...month.directServiceFollowUps, links: [] },
+    records: [],
   };
 }
 

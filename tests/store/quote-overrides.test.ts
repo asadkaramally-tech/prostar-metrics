@@ -56,6 +56,7 @@ test("persistQuoteOverrideAction writes an atomic audited exclusion with caller 
   assert.match(capturedSql, /\$2 = 'reinstate'/);
   assert.match(capturedSql, /manual_reinstated/);
   assert.match(capturedSql, /lower\(trim\(coalesce\(q\.status_name/);
+  assert.match(capturedSql, /like 'quote:%'/);
   assert.match(capturedSql, /authoritative_quote_linked_job_id/);
   assert.match(capturedSql, /authoritative_job_source_quote_id/);
   assert.match(capturedSql, /complete_traversal = true/);
@@ -406,6 +407,7 @@ async function createOverrideTestSchema(db: PGlite) {
       linked_job_id bigint,
       job_no text,
       outcome text not null default 'unknown',
+      date_issued date,
       date_approved date,
       total numeric(14, 2) not null default 0,
       source_deleted_at timestamptz,
@@ -580,14 +582,14 @@ async function seedClassificationPaths(db: PGlite) {
       (9002, '9002', null, null),
       (9003, 'J-9003', ' Quote ', 703);
     insert into metrics.metrics_quotes (
-      quote_id, category, status_name, linked_job_id, job_no, outcome, date_approved, total,
+      quote_id, category, status_name, linked_job_id, job_no, outcome, date_issued, date_approved, total,
       outcome_reason, won_reason
     ) values
-      (700, 'HVAC', ' Quote Accepted Online ', null, null, 'lost', '2026-06-10', 1000, 'manual_lost', 'manual_lost'),
-      (701, 'HVAC', 'Other', 9001, null, 'lost', '2026-06-11', 1100, 'manual_lost', 'manual_lost'),
-      (702, 'HVAC', 'Other', null, '9002', 'lost', '2026-06-12', 1200, 'manual_lost', 'manual_lost'),
-      (703, 'HVAC', 'Other', null, null, 'lost', '2026-06-13', 1300, 'manual_lost', 'manual_lost'),
-      (704, 'HVAC', 'Other', null, null, 'won', '2026-06-14', 1400, 'manual_won', 'manual_won');
+      (700, 'HVAC', ' Quote: Quote Accepted Online ', null, null, 'lost', '2026-06-10', '2026-06-10', 1000, 'manual_lost', 'manual_lost'),
+      (701, 'HVAC', 'Other', 9001, null, 'lost', '2026-06-11', '2026-06-11', 1100, 'manual_lost', 'manual_lost'),
+      (702, 'HVAC', 'Other', null, '9002', 'lost', '2026-06-12', '2026-06-12', 1200, 'manual_lost', 'manual_lost'),
+      (703, 'HVAC', 'Other', null, null, 'lost', '2026-06-13', '2026-06-13', 1300, 'manual_lost', 'manual_lost'),
+      (704, 'HVAC', 'Other', null, null, 'won', '2026-06-14', '2026-06-14', 1400, 'manual_won', 'manual_won');
     insert into metrics.raw_simpro_snapshots (
       entity_type, entity_id, payload, complete_traversal, extracted_at
     ) values

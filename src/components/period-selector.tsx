@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
 import { CalendarGlyph } from "@/components/nav-items";
 
-/* Approved month stepper (tokens.css .ctl.stepper): ‹ month ›. Same GET
-   semantics and params as the old period form — stepping navigates to
-   `${action}?${name}=YYYY-MM` with any hidden fields preserved as query
-   params. The forward step is disabled on the live month (the mockups'
-   opacity-.35 treatment), and never navigates past it. */
+/* Direct month/year picker with adjacent month steps. Its GET form preserves
+   page-specific query fields while allowing keyboard users to enter any
+   available month rather than stepping through history one month at a time. */
 
 type PeriodSelectorProps = {
   action: string;
@@ -16,6 +14,7 @@ type PeriodSelectorProps = {
 };
 
 export function PeriodSelector({ action, value, label = "Period", name = "month", hiddenFields = {} }: PeriodSelectorProps) {
+  const firstMonth = "2023-01";
   const liveMonth = losAngelesMonthKey(new Date());
   const selected = isMonthKey(value) ? (value as string) : liveMonth;
   const prev = shiftMonthKey(selected, -1);
@@ -23,15 +22,35 @@ export function PeriodSelector({ action, value, label = "Period", name = "month"
   const atLiveMonth = selected >= liveMonth;
   const monthToDateSuffix = next === liveMonth ? " (month to date)" : "";
   return (
-    <MonthStepper
-      label={label}
-      prevHref={monthHref(action, name, prev, hiddenFields)}
-      prevTitle={formatMonthKey(prev)}
-      nextHref={atLiveMonth ? undefined : monthHref(action, name, next, hiddenFields)}
-      nextTitle={atLiveMonth ? `${formatMonthKey(next)} has not started` : `${formatMonthKey(next)}${monthToDateSuffix}`}
-    >
-      {formatMonthKey(selected)}
-    </MonthStepper>
+    <form className="ctl stepper period-picker" action={action} method="get" aria-label={label}>
+      {Object.entries(hiddenFields).map(([fieldName, fieldValue]) => fieldValue ? (
+        <input key={fieldName} type="hidden" name={fieldName} value={fieldValue} />
+      ) : null)}
+      <StepButton
+        href={selected <= firstMonth ? undefined : monthHref(action, name, prev, hiddenFields)}
+        title={selected <= firstMonth ? `${formatMonthKey(prev)} is outside available history` : formatMonthKey(prev)}
+        glyph="‹"
+      />
+      <label className="lbl">
+        <CalendarGlyph className="i" />
+        <span className="sr-only">{label}</span>
+        <input
+          className="period-input"
+          type="month"
+          name={name}
+          defaultValue={selected}
+          min={firstMonth}
+          max={liveMonth}
+          aria-label={`${label} month and year`}
+        />
+      </label>
+      <button type="submit" className="period-go">Go</button>
+      <StepButton
+        href={atLiveMonth ? undefined : monthHref(action, name, next, hiddenFields)}
+        title={atLiveMonth ? `${formatMonthKey(next)} has not started` : `${formatMonthKey(next)}${monthToDateSuffix}`}
+        glyph="›"
+      />
+    </form>
   );
 }
 

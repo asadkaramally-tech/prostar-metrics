@@ -15,10 +15,13 @@ test("today jobs SQL enforces CompletedDate plus Complete or Archived stage and 
   assert.match(storeSource, /lower\(trim\(j\.stage\)\) in \('complete', 'archived'\)/);
   assert.match(storeSource, /j\.source_deleted_at is null/);
   assert.doesNotMatch(storeSource, /status_name\s*=/i);
+  assert.match(storeSource, /j\.gross_profit_actual::text/);
+  assert.match(storeSource, /j\.net_profit_actual::text/);
+  assert.match(storeSource, /j\.updated_from_source_at::text/);
 });
 
-test("today quotes-sent SQL uses DateApproved scoped to the live month window", () => {
-  assert.match(storeSource, /q\.date_approved between \$1::date and \$2::date/);
+test("today quotes-sent SQL uses DateIssued scoped to the live month window", () => {
+  assert.match(storeSource, /q\.date_issued between \$1::date and \$2::date/);
   assert.match(storeSource, /q\.source_deleted_at is null/);
 });
 

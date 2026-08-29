@@ -1,6 +1,6 @@
 import { queryPostgres } from "@/lib/store/postgres";
 
-export type RollupScope = "quotes" | "jobs" | "technicians" | "commissions";
+export type RollupScope = "quotes" | "jobs" | "technicians" | "commissions" | "materials";
 
 export type RollupRow = {
   period_start: string;

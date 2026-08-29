@@ -64,7 +64,7 @@ export type QuoteMonthlyReadModel = {
   acceptanceRateByCount: number;
   acceptanceRateByValue: number;
   averageAcceptedDeal: number;
-  dateBasis: "DateApproved";
+  dateBasis: "DateIssued";
   tiers: Record<QuoteAcceptanceClassification["dealTier"], {
     quoteCount: number;
     quoteValue: number;
@@ -75,7 +75,7 @@ export type QuoteMonthlyReadModel = {
   }>;
   acceptancePaths: Record<QuoteAcceptancePath, number>;
   overrideCount: number;
-  excludedWithoutDateApproved: number;
+  excludedWithoutDateIssued: number;
   /** @deprecated Internal compatibility accessor; omitted from serialized payloads. */
   wonCount: number;
   /** @deprecated Internal compatibility accessor; omitted from serialized payloads. */
@@ -83,9 +83,13 @@ export type QuoteMonthlyReadModel = {
 };
 
 export const ACCEPTED_ONLINE_STATUS = "quote accepted online";
+const QUOTE_STATUS_NAMESPACE = "quote:";
 
 export function normalizeQuoteStatusName(value: string | null | undefined): string {
-  return value?.trim().toLowerCase() ?? "";
+  const normalized = value?.trim().toLowerCase() ?? "";
+  return normalized.startsWith(QUOTE_STATUS_NAMESPACE)
+    ? normalized.slice(QUOTE_STATUS_NAMESPACE.length).trim()
+    : normalized;
 }
 
 export function isAcceptedOnlineStatus(value: string | null | undefined): boolean {
@@ -93,7 +97,13 @@ export function isAcceptedOnlineStatus(value: string | null | undefined): boolea
 }
 
 export function acceptedOnlineStatusSql(columnExpression: string): string {
-  return `lower(trim(coalesce(${columnExpression}, ''))) = '${ACCEPTED_ONLINE_STATUS}'`;
+  const trimmed = `trim(coalesce(${columnExpression}, ''))`;
+  const normalized = `lower(${trimmed})`;
+  return `lower(trim(case
+    when ${normalized} like '${QUOTE_STATUS_NAMESPACE}%'
+      then substr(${trimmed}, position(':' in ${trimmed}) + 1)
+    else ${trimmed}
+  end)) = '${ACCEPTED_ONLINE_STATUS}'`;
 }
 
 export function classifyQuote(input: QuoteClassificationInput): QuoteAcceptanceClassification {
@@ -182,15 +192,15 @@ export function buildQuoteMonthlyReadModel(params: {
   let notAcceptedValue = 0;
   let excludedCount = 0;
   let overrideCount = 0;
-  let excludedWithoutDateApproved = 0;
+  let excludedWithoutDateIssued = 0;
 
   for (const quote of params.quotes) {
     if (quote.sourceDeletedAt) continue;
-    if (!quote.dateApproved) {
-      excludedWithoutDateApproved += 1;
+    if (!quote.dateIssued) {
+      excludedWithoutDateIssued += 1;
       continue;
     }
-    if (!isDateInRange(quote.dateApproved, params.periodStart, params.periodEnd)) continue;
+    if (!isDateInRange(quote.dateIssued, params.periodStart, params.periodEnd)) continue;
 
     const result = classifyQuote(quote);
     const value = finiteNumber(quote.totalValue);
@@ -234,11 +244,11 @@ export function buildQuoteMonthlyReadModel(params: {
     acceptanceRateByCount: quoteCount > 0 ? acceptedCount / quoteCount * 100 : 0,
     acceptanceRateByValue: quoteValue > 0 ? acceptedValue / quoteValue * 100 : 0,
     averageAcceptedDeal: acceptedCount > 0 ? acceptedValue / acceptedCount : 0,
-    dateBasis: "DateApproved",
+    dateBasis: "DateIssued",
     tiers,
     acceptancePaths,
     overrideCount,
-    excludedWithoutDateApproved,
+    excludedWithoutDateIssued,
   } as QuoteMonthlyReadModel;
   Object.defineProperties(model, {
     wonCount: { enumerable: false, get: () => model.acceptedCount },

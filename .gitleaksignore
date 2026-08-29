@@ -1,0 +1,13 @@
+# Reviewed false positives from the 2026-08-28 full-history scan.
+# Keep these fingerprint-specific: do not suppress an entire rule or file.
+64574fd0e5074bea309219fcfe5a73c630048911:scripts/deploy-evidence-runners.mjs:generic-api-key:34
+64574fd0e5074bea309219fcfe5a73c630048911:scripts/migrate-key-vault-secrets.mjs:generic-api-key:22
+64574fd0e5074bea309219fcfe5a73c630048911:redesign-handoff/prostar-redesign.patch:generic-api-key:2964
+64574fd0e5074bea309219fcfe5a73c630048911:redesign-handoff/prostar-redesign.patch:generic-api-key:3423
+64574fd0e5074bea309219fcfe5a73c630048911:tests/infra/key-vault.test.mjs:generic-api-key:75
+64574fd0e5074bea309219fcfe5a73c630048911:tests/infra/key-vault.test.mjs:generic-api-key:77
+64574fd0e5074bea309219fcfe5a73c630048911:tests/scripts/browser-evidence-sanitization.test.mjs:jwt:137
+64574fd0e5074bea309219fcfe5a73c630048911:tests/scripts/browser-evidence-sanitization.test.mjs:generic-api-key:93
+64574fd0e5074bea309219fcfe5a73c630048911:tests/infra/key-vault-migration.test.mjs:generic-api-key:94
+64574fd0e5074bea309219fcfe5a73c630048911:tests/scripts/release-evidence-fixture.mjs:generic-api-key:48
+64574fd0e5074bea309219fcfe5a73c630048911:tests/store/quote-overrides.test.ts:generic-api-key:270

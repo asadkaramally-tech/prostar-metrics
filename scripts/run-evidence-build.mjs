@@ -8,7 +8,10 @@ import { releaseGateAssertionEvent } from "./lib/release-gate-assertions.mjs";
 const root = resolve(import.meta.dirname, "..");
 const buildRoot = resolve(root, ".next");
 const startedAt = Date.now();
-const child = spawn(process.execPath, [resolve(root, "node_modules/next/dist/bin/next"), "build"], {
+// Use Next's supported webpack build explicitly. Turbopack's CSS evaluation
+// starts an internal listener, which makes the release gate depend on whether
+// the CI/release sandbox permits local port binding.
+const child = spawn(process.execPath, [resolve(root, "node_modules/next/dist/bin/next"), "build", "--webpack"], {
   cwd: root,
   env: process.env,
   stdio: "inherit",

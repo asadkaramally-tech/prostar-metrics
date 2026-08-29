@@ -28,7 +28,7 @@ Do not build or publish a production image separately, deploy `metrics.bicep` di
 - immutable source hashing, ACR build, run lookup, tag binding, and digest pinning;
 - local, integration, infrastructure, migration, and prior-image compatibility gates;
 - monitoring validation and deployment;
-- exact semantic what-if validation for the web app and all 23 jobs;
+- exact semantic what-if validation for the web app and all 24 jobs;
 - database migration and rollback-protected app-plus-job deployment;
 - database-aware health, Easy Auth, target-contract, ACR, and ARM provenance checks; and
 - atomic deployment-manifest publication only after final verification.
@@ -39,7 +39,7 @@ One-time security, Key Vault migration, and restore-drill prerequisites are docu
 
 ## Database Migrations
 
-Production migrations are part of `npm run deploy:prod`. Do not apply migration files manually as part of a routine release. The orchestrator runs the PostgreSQL migration suite, executable prior-image compatibility check, and ordered migration application before changing the application image.
+Production migrations are part of `npm run deploy:prod`. Do not apply migration files manually as part of a routine release. The orchestrator runs static prior-image SQL compatibility, the disposable empty-database migration/concurrency suite, and ordered migration application before changing the application image. The expensive production-data clone/probe is not part of deployment; it is an explicit diagnostic command, `npm run migration:compatibility:clone`.
 
 ## Monitoring
 
@@ -47,7 +47,7 @@ Monitoring resources are defined in `monitoring.bicep` and are deployed through 
 
 ## Scheduled Work
 
-The nightly trailing-24-month reconciliation, monthly stable-history reconciliation, DST-safe commission rebuild, ingestion, rollup, backfill, and operational-health modes are declared as the exact 23-job production target set in `metrics.bicep`.
+The nightly trailing-24-month reconciliation, monthly stable-history reconciliation, DST-safe commission rebuild, ingestion, materials month-walk, rollup, backfill, and operational-health modes are declared as the exact 24-job production target set in `metrics.bicep`.
 
 Review [CADENCE.md](./CADENCE.md) for schedule and idempotency contracts. A release must update and verify the web app and every managed job together.
 

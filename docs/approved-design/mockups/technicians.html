@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Technician Performance — Pro Star Metrics (redesign mockup)</title>
+<link rel="stylesheet" href="assets/tokens.css?v=8">
+</head>
+<body>
+
+<nav class="appnav">
+  <div class="brand"><span>PRO<span class="star">★</span>STAR</span><span style="letter-spacing:.22em;font-weight:500">METRICS</span></div>
+  <div class="navlinks">
+    <a href="quotes.html">Quotes</a>
+    <a href="jobs.html">Jobs</a>
+    <a href="materials.html">Materials</a>
+    <a class="on" href="technicians.html" aria-current="page">Technicians</a>
+    <a href="commissions.html">Commissions</a>
+  </div>
+  <div class="right">
+    <button class="health btn" style="all:unset" aria-label="Data health, 5 active alerts"><span class="health">Data health <span class="badge">5 active</span></span></button>
+    <div class="user"><div class="av">A</div><div class="who"><b>asad</b><span>Owner · Admin</span></div></div>
+  </div>
+</nav>
+
+<main class="container">
+  <header class="pagehead">
+    <div>
+      <div class="eyebrow">Operations</div>
+      <h1>Technician Performance</h1>
+      <div class="sub">Capacity, productive time, efficiency and punctuality across the 11-technician roster.</div>
+    </div>
+    <div class="controls">
+      <div class="stepper"><button aria-label="Previous month">‹</button><span class="lbl">📅 July 2026</span><button aria-label="Next month" disabled style="opacity:.35">›</button></div>
+      <div class="updated"><span class="dot"></span>Updated 2 days ago</div>
+    </div>
+  </header>
+
+  <!-- Row 1 — KPI band (5 tiles) -->
+  <section class="kpis hero" aria-label="July key metrics">
+    <a class="kpi primary" href="#capacity" title="Job-assigned hours ÷ recorded hours">
+      <span class="lblrow"><span class="lbl">Productive utilization</span></span>
+      <span class="val tnum">62%</span>
+      <span class="sub">694h on jobs of 1,111.3h recorded</span>
+      <div class="bullet" data-viz aria-label="Productive utilization 62%; prior-period ticks pending timesheet verification">
+        <div class="btrack"><i style="width:62%"></i></div>
+        <div class="bcap"><span class="bkey">Jun ’26 · Jul ’25 ticks pending timesheet verification</span></div>
+      </div>
+    </a>
+    <div class="ktiles">
+      <div class="kpi" style="grid-column: span 2">
+        <span class="lbl">Unbilled hours</span>
+        <span class="val tnum">417.3h</span>
+        <span class="sub">Travel 240.5h · Holiday 72h · Office 29.8h · Lunch 24.5h · Training 13.8h · 6 more types</span>
+      </div>
+      <div class="kpi">
+        <span class="lbl">Quote labor efficiency</span>
+        <span class="val tnum">0.91×</span>
+        <span class="sub">team · 27 of 28 quote-linked jobs</span>
+      </div>
+      <div class="kpi">
+        <span class="lbl">On-time arrival</span>
+        <span class="val tnum">88%</span>
+        <span class="sub">167 of 189 verified visits</span>
+      </div>
+    </div>
+  </section>
+  <p class="kpiband-note">No prior-period comparison yet — timesheet history verification is pending.</p>
+
+
+  <!-- Row 2 — Recorded time vs capacity -->
+  <div class="grid12">
+    <section class="cardx span12" id="capacity" aria-label="Recorded time vs capacity">
+      <div class="hd">
+        <div>
+          <div class="ti">Recorded Time vs Capacity</div>
+          <div class="st">Job-assigned vs travel vs other unbilled (from Simpro activity schedules) · sorted by job hours · click a row for the full activity split</div>
+        </div>
+        <div class="tools">
+          <div class="legend">
+            <span><span class="sw" style="background:var(--acc)"></span>Job-assigned</span>
+            <span><span class="sw" style="background:var(--series-2)"></span>Travel</span>
+            <span><span class="sw" style="background:var(--series-weak)"></span>Other unbilled</span>
+          </div>
+        </div>
+      </div>
+      <div class="caprows" data-viz>
+        <!-- widths: hours / 205h track max; capacity tick at 184/205 = 89.7% -->
+        <div class="crow" data-split="Travel 36.8h|Holiday 8h|Lunch 6.5h|Pickup Parts 1h|Office 0.8h|Marketing 0.5h|Delivery 0.2h"><span class="cname">Jeffrey Perry</span><div class="ctrack"><span class="job" style="width:44.9%"></span><span class="unb trav" style="left:44.9%;width:18.0%"></span><span class="unb" style="left:62.9%;width:8.3%"></span></div><span class="cmeta">92h · 63% on jobs</span></div>
+        <div class="crow" data-split="Travel 45.8h|Holiday 8h|Office 1.5h|Lunch 1.5h|Pickup Parts 0.8h"><span class="cname">Cole Bender</span><div class="ctrack"><span class="job" style="width:44.8%"></span><span class="unb trav" style="left:44.8%;width:22.3%"></span><span class="unb" style="left:67.1%;width:5.7%"></span></div><span class="cmeta">91.8h · 61% on jobs</span></div>
+        <div class="crow" data-split="Travel 14.5h|Holiday 8h|Pickup Parts 2.2h|Vehicle Maintenance 1.8h"><span class="cname">Rob Sires</span><div class="ctrack"><span class="job" style="width:44.0%"></span><span class="unb trav" style="left:44.0%;width:7.1%"></span><span class="unb" style="left:51.1%;width:5.9%"></span></div><span class="cmeta">90.3h · 77% on jobs</span></div>
+        <div class="crow" data-split="Travel 20.8h|Holiday 8h|Lunch 5.5h|Hold 3.5h|Office 1.5h|Pickup Parts 0.5h|Marketing 0.2h"><span class="cname">Jim Ochoa</span><div class="ctrack"><span class="job" style="width:42.3%"></span><span class="unb trav" style="left:42.3%;width:10.1%"></span><span class="unb" style="left:52.4%;width:9.4%"></span></div><span class="cmeta">86.8h · 68% on jobs</span></div>
+        <div class="crow" data-split="Travel 34.5h|Holiday 8h|Office 2h|Lunch 1.5h|Pickup Parts 0.5h"><span class="cname">Justin Molina</span><div class="ctrack"><span class="job" style="width:41.5%"></span><span class="unb trav" style="left:41.5%;width:16.8%"></span><span class="unb" style="left:58.3%;width:5.9%"></span></div><span class="cmeta">85h · 65% on jobs</span></div>
+        <div class="crow" data-split="Travel 51h|Holiday 8h|Office 2.5h|Sick / Personal Leave 1.8h|Lunch 1.5h|Pickup Parts 0.5h"><span class="cname">Juan Serrato</span><div class="ctrack"><span class="job" style="width:39.5%"></span><span class="unb trav" style="left:39.5%;width:24.9%"></span><span class="unb" style="left:64.4%;width:6.9%"></span></div><span class="cmeta">81h · 55% on jobs</span></div>
+        <div class="crow" data-split="Travel 20h|Sick / Personal Leave 8.5h|Holiday 8h|Lunch 2h|Office 1.5h|Pickup Parts 1.2h"><span class="cname">Ismael Contreras</span><div class="ctrack"><span class="job" style="width:38.0%"></span><span class="unb trav" style="left:38.0%;width:9.8%"></span><span class="unb" style="left:47.8%;width:10.3%"></span></div><span class="cmeta">78h · 65% on jobs</span></div>
+        <div class="crow" data-split="Office 19.2h|Travel 17.2h|Training 13.8h|Holiday 8h|Hold 2.2h|Pickup Parts 1.2h|Lunch 1h|Delivery 0.8h"><span class="cname">Tadeo Jimenez</span><div class="ctrack"><span class="job" style="width:37.3%"></span><span class="unb trav" style="left:37.3%;width:8.4%"></span><span class="unb" style="left:45.7%;width:22.6%"></span></div><span class="cmeta">76.5h · 55% on jobs</span></div>
+        <div class="crow inactive" data-split=""><span class="cname">Stephen Furtado</span><div class="ctrack"><span class="job" style="width:3.7%"></span></div><span class="cmeta">inactive · 7.5h</span></div>
+        <div class="crow inactive" data-split="Holiday 8h|Pickup Parts 0.2h"><span class="cname">David Jarquin</span><div class="ctrack"><span class="job" style="width:1.6%"></span><span class="unb" style="left:1.6%;width:4.0%"></span></div><span class="cmeta">inactive · 11.5h</span></div>
+        <div class="crow inactive" data-split="Delivery 6h|Lunch 5h|Vehicle Maintenance 1.5h|Pickup Parts 1.5h|Office 0.8h"><span class="cname">Piel Sarmiento</span><div class="ctrack"><span class="job" style="width:0.9%"></span><span class="unb" style="left:0.9%;width:7.2%"></span></div><span class="cmeta">inactive · 16.5h</span></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Row 3 — efficiency + punctuality -->
+  <div class="grid12">
+    <section class="cardx span6" aria-label="Labor efficiency">
+      <div class="hd">
+        <div>
+          <div class="ti">Labor Efficiency</div>
+          <div class="st">Estimated ÷ actual hours — above 1.00× beats the estimate · per-tech split representative</div>
+        </div>
+        <div class="tools">
+          <div class="seg"><button class="on">Quote-linked</button><button>Recurring</button></div>
+        </div>
+      </div>
+      <div data-viz>
+        <!-- centered diverging bars: the 1.00× line + caption anchor at 58% of the BAR column (see .effwrap in tokens.css) -->
+        <div class="effwrap">
+          <div class="effline" aria-hidden="true"></div>
+          <div class="effgrid">
+            <span class="ename">Jim Ochoa</span><div class="ecell"><i style="position:absolute;left:58%;width:6.5%;height:100%;background:var(--up);border-radius:0 4px 4px 0"></i><span style="position:absolute;left:65.5%;margin-left:8px;font-size:12px;font-weight:600" class="tnum">1.04×</span></div>
+            <span class="ename">Rob Sires</span><div class="ecell"><i style="position:absolute;right:42%;width:9.8%;height:100%;background:var(--down);border-radius:4px 0 0 4px"></i><span style="position:absolute;right:52.2%;margin-right:8px;font-size:12px;font-weight:600" class="tnum">0.94×</span></div>
+            <span class="ename">Jeffrey Perry</span><div class="ecell"><i style="position:absolute;right:42%;width:11.4%;height:100%;background:var(--down);border-radius:4px 0 0 4px"></i><span style="position:absolute;right:53.8%;margin-right:8px;font-size:12px;font-weight:600" class="tnum">0.93×</span></div>
+            <span class="ename">Cole Bender</span><div class="ecell"><i style="position:absolute;right:42%;width:16.3%;height:100%;background:var(--down);border-radius:4px 0 0 4px"></i><span style="position:absolute;right:58.7%;margin-right:8px;font-size:12px;font-weight:600" class="tnum">0.90×</span></div>
+            <span class="ename">Juan Serrato</span><div class="ecell"><i style="position:absolute;right:42%;width:19.6%;height:100%;background:var(--down);border-radius:4px 0 0 4px"></i><span style="position:absolute;right:62%;margin-right:8px;font-size:12px;font-weight:600" class="tnum">0.88×</span></div>
+            <span class="ename">Justin Molina</span><div class="ecell"><i style="position:absolute;right:42%;width:19.6%;height:100%;background:var(--down);border-radius:4px 0 0 4px"></i><span style="position:absolute;right:62%;margin-right:8px;font-size:12px;font-weight:600" class="tnum">0.88×</span></div>
+            <span class="ename">Tadeo Jimenez</span><div class="ecell"><i style="position:absolute;right:42%;width:29.4%;height:100%;background:var(--down);border-radius:4px 0 0 4px"></i><span style="position:absolute;right:min(71.8%, calc(100% - 52px));margin-right:8px;font-size:12px;font-weight:600;background:var(--surface);padding:1px 3px;border-radius:3px" class="tnum">0.82×</span></div>
+            <span class="ename">Ismael Contreras</span><div class="ecell"><i style="position:absolute;right:42%;width:31.0%;height:100%;background:var(--down);border-radius:4px 0 0 4px"></i><span style="position:absolute;right:min(73.4%, calc(100% - 52px));margin-right:8px;font-size:12px;font-weight:600;background:var(--surface);padding:1px 3px;border-radius:3px" class="tnum">0.81×</span></div>
+            <span class="ename">Piel Sarmiento</span><div class="ecell"><i style="position:absolute;right:42%;width:42%;height:100%;background:var(--down);border-radius:4px 0 0 4px"></i><span style="position:absolute;right:min(84.5%, calc(100% - 52px));margin-right:8px;font-size:12px;font-weight:600;background:var(--surface);padding:1px 3px;border-radius:3px" class="tnum">0.74×</span></div>
+            <span class="ename" style="color:var(--faint)">Stephen Furtado</span><div class="ecell"><span class="enote">no covered jobs</span></div>
+            <span class="ename" style="color:var(--faint)">David Jarquin</span><div class="ecell"><span class="enote">no covered jobs</span></div>
+          </div>
+          <div class="effcap"><span>1.00× — estimate met exactly</span></div>
+        </div>
+      </div>
+      <p class="fnote"><span style="color:var(--success-fg)">●</span> right of the line = beat the estimate&nbsp;&nbsp;<span style="color:var(--state-failed-fg)">●</span> left = over · 27 covered jobs (team) — the team figure is verified, the per-tech split is not yet.</p>
+    </section>
+
+    <section class="cardx span6" aria-label="Punctuality">
+      <div class="hd">
+        <div>
+          <div class="ti">Punctuality</div>
+          <div class="st">Verified arrivals vs planned start · representative until mobile-event matching is re-verified · click for per-technician detail</div>
+        </div>
+      </div>
+      <div class="hist" data-viz id="punct" style="cursor:pointer" tabindex="0" role="button" aria-label="Arrival distribution — open per-technician punctuality">
+        <div class="hcol"><span class="hnum">75</span><div class="htrack"><div class="hbar" style="height:62.0%"></div></div><span class="hlbl">Early</span></div>
+        <div class="hcol"><span class="hnum">92</span><div class="htrack"><div class="hbar" style="height:76.0%"></div></div><span class="hlbl">≤ 15 min</span></div>
+        <div class="hcol"><span class="hnum">7</span><div class="htrack"><div class="hbar bad" style="height:5.8%"></div></div><span class="hlbl">16–30 min</span></div>
+        <div class="hcol"><span class="hnum">15</span><div class="htrack"><div class="hbar bad" style="height:12.4%"></div></div><span class="hlbl">30+ min</span></div>
+      </div>
+      <div style="text-align:center;font-size:11.5px;color:var(--faint);margin-top:6px">minutes vs planned start</div>
+      <div class="covrow"><span style="color:var(--muted)">Coverage</span><div class="cbar"><i style="width:75.3%"></i></div><b class="tnum">189 of 251 verified</b></div>
+      <p class="fnote">On-time counts verified visits only (67% if every uncovered visit were late) — the 15-visit 30+ tail outweighs the 16–30 band.</p>
+    </section>
+  </div>
+
+  <!-- Row 4 — scorecard -->
+  <div class="grid12">
+    <section class="cardx span12" aria-label="Technician scorecard">
+      <div class="hd">
+        <div>
+          <div class="ti">Technician Scorecard</div>
+          <div class="st">The month in one table — hours, utilization, efficiency, punctuality · click a technician for the full drilldown</div>
+        </div>
+      </div>
+      <div class="tblwrap">
+        <!-- implementation note: sortable column headers must be real <button> elements inside each <th>
+             (with aria-sort on the th) — the plain text + ▾ glyph here is mockup-only -->
+        <table class="data">
+          <thead><tr><th>Technician</th><th class="num">Job hrs ▾</th><th class="num">Unbilled</th><th class="num">Utilization</th><th class="num">Quote eff.</th><th class="num">On-time</th></tr></thead>
+          <tbody>
+            <tr class="click"><td><b>Jeffrey Perry</b><span class="cellsub">25 jobs</span></td><td class="num">92h</td><td class="num">53.8h</td><td class="num">63%</td><td class="num">0.93×</td><td class="num">97%</td></tr>
+            <tr class="click"><td><b>Cole Bender</b><span class="cellsub">22 jobs</span></td><td class="num">91.8h</td><td class="num">57.5h</td><td class="num">61%</td><td class="num">0.90×</td><td class="num">92%</td></tr>
+            <tr class="click"><td><b>Rob Sires</b><span class="cellsub">21 jobs</span></td><td class="num">90.3h</td><td class="num">26.5h</td><td class="num">77%</td><td class="num">0.94×</td><td class="num">94%</td></tr>
+            <tr class="click"><td><b>Jim Ochoa</b><span class="cellsub">22 jobs</span></td><td class="num">86.8h</td><td class="num">40h</td><td class="num">68%</td><td class="num">1.04×</td><td class="num">81%</td></tr>
+            <tr class="click"><td><b>Justin Molina</b><span class="cellsub">19 jobs</span></td><td class="num">85h</td><td class="num">46.5h</td><td class="num">65%</td><td class="num">0.88×</td><td class="num">83%</td></tr>
+            <tr class="click"><td><b>Juan Serrato</b><span class="cellsub">21 jobs</span></td><td class="num">81h</td><td class="num">65.3h</td><td class="num">55%</td><td class="num">0.88×</td><td class="num">89%</td></tr>
+            <tr class="click"><td><b>Ismael Contreras</b><span class="cellsub">14 jobs</span></td><td class="num">78h</td><td class="num">41.3h</td><td class="num">65%</td><td class="num">0.81×</td><td class="num">87%</td></tr>
+            <tr class="click"><td><b>Tadeo Jimenez</b><span class="cellsub">12 jobs</span></td><td class="num">76.5h</td><td class="num">63.5h</td><td class="num">55%</td><td class="num">0.82×</td><td class="num">81%</td></tr>
+            <tr class="click"><td><b>Stephen Furtado</b><span class="cellsub">4 jobs · inactive</span></td><td class="num">7.5h</td><td class="num">0h</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr class="click"><td><b>David Jarquin</b><span class="cellsub">2 jobs · inactive</span></td><td class="num">3.3h</td><td class="num">8.3h</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr class="click"><td><b>Piel Sarmiento</b><span class="cellsub">1 job · inactive</span></td><td class="num">1.8h</td><td class="num">14.8h</td><td class="num">—</td><td class="num">0.74×</td><td class="num">—</td></tr>
+            <tr class="total"><td>Team · 11 technicians</td><td class="num">694h</td><td class="num">417h</td><td class="num">62%</td><td class="num">0.91×</td><td class="num">88%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fnote">Roster: 11 people with recorded work · sorted by job hours (descending) — click a column to re-sort.</p>
+    </section>
+  </div>
+
+  <!-- Row 5 — completed-job economics -->
+  <div class="grid12">
+    <section class="cardx span12" aria-label="Completed-job economics">
+      <div class="hd">
+        <div>
+          <div class="ti">Completed-Job Economics</div>
+          <div class="st">Ranked by allocated net profit · July-completed jobs, including pre-July hours on those jobs · hatched = interim allocation · hover or tap a row</div>
+        </div>
+        <div class="tools">
+          <div class="legend"><span><span class="sw" style="background:var(--acc)"></span>Net profit</span></div>
+        </div>
+      </div>
+      <div class="barlist" data-viz>
+        <div class="brow"><div class="toprow"><span class="name">Jim Ochoa</span><span class="rv tnum">$32K <small>net · <b>20%</b> of team net</small></span></div><div class="bar"><i style="width:100%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+        <div class="brow"><div class="toprow"><span class="name">Rob Sires</span><span class="rv tnum">$26K <small>net · <b>16%</b> of team net</small></span></div><div class="bar"><i style="width:81%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+        <div class="brow"><div class="toprow"><span class="name">Jeffrey Perry</span><span class="rv tnum">$21K <small>net · <b>13%</b> of team net</small></span></div><div class="bar"><i style="width:66%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+        <div class="brow"><div class="toprow"><span class="name">Juan Serrato</span><span class="rv tnum">$20K <small>net · <b>12%</b> of team net</small></span></div><div class="bar"><i style="width:63%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+        <div class="brow"><div class="toprow"><span class="name">Justin Molina</span><span class="rv tnum">$19K <small>net · <b>12%</b> of team net</small></span></div><div class="bar"><i style="width:59%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+        <div class="brow"><div class="toprow"><span class="name">Tadeo Jimenez</span><span class="rv tnum">$16K <small>net · <b>10%</b> of team net</small></span></div><div class="bar"><i style="width:50%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+        <div class="brow"><div class="toprow"><span class="name">Cole Bender</span><span class="rv tnum">$15K <small>net · <b>9%</b> of team net</small></span></div><div class="bar"><i style="width:47%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+        <div class="brow"><div class="toprow"><span class="name">Ismael Contreras</span><span class="rv tnum">$12K <small>net · <b>8%</b> of team net</small></span></div><div class="bar"><i style="width:38%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+        <div class="brow"><div class="toprow"><span class="name">Stephen Furtado</span><span class="rv tnum">$953 <small>net · <b>1%</b> of team net</small></span></div><div class="bar"><i style="width:3%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+        <div class="brow"><div class="toprow"><span class="name">Piel Sarmiento</span><span class="rv tnum">$405 <small>net · <b>0%</b> of team net</small></span></div><div class="bar"><i style="width:1.3%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+        <div class="brow"><div class="toprow"><span class="name">David Jarquin</span><span class="rv tnum">$246 <small>net · <b>0%</b> of team net</small></span></div><div class="bar"><i style="width:0.8%;background:repeating-linear-gradient(45deg,var(--acc) 0 6px,color-mix(in srgb,var(--acc),#fff 45%) 6px 10px)"></i></div></div>
+      </div>
+      <p class="fnote">Allocation is an interim hours-share split · $2,698 sits outside the 11-tech roster — Roberto Villalta ($2,698) is not on the recorded-work roster.</p>
+    </section>
+  </div>
+
+  <p class="srcline">Source: Simpro — roster is everyone with recorded work in July; work metrics use July-dated timesheets, with completed-job economics labeled as a separate cohort.</p>
+</main>
+
+<script src="assets/charts.js?v=8"></script>
+<script src="assets/drill.js?v=8"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const punct = document.getElementById('punct');
+  const open = () => drillPanel('Punctuality by technician', 'On-time share of verified visits · lowest first',
+    kv('Jim Ochoa', '81%') + kv('Tadeo Jimenez', '81%') + kv('Justin Molina', '83%') + kv('Ismael Contreras', '87%') +
+    kv('Juan Serrato', '89%') + kv('Cole Bender', '92%') + kv('Rob Sires', '94%') + kv('Jeffrey Perry', '97%') +
+    '<p style="font-size:12.5px;color:var(--faint);margin:10px 0 0">Implementation: this panel lists each technician\'s late visits for the month (job, date, minutes late) from verified mobile events.</p>');
+  punct.addEventListener('click', open);
+  punct.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(); });
+});
+</script>
+</body>
+</html>

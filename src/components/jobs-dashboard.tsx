@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -10,39 +9,42 @@ import {
   type ReactNode,
 } from "react";
 import {
-  Bullet,
-  DevStrip,
   fmt,
-  Histogram,
+  LineChart,
+  tipHide,
   tipRow,
-  TrendChart,
-  type TrendAnnotation,
-  type TrendSeries,
+  tipShow,
+  tipTitle,
+  type LineAnnotation,
+  type LineRefline,
+  type LineSeries,
   type WaterfallStep,
 } from "@/components/charts";
 import {
-  BRow,
+  BarList,
+  BarListRow,
+  Dpill,
+  KpiBand,
+  KpiBandNote,
+  KpiTile,
+  KpiTiles,
+  moneyK,
+  PrimaryStatCard,
+  SegBar,
+  type SegBarSegment,
+} from "@/components/band";
+import {
   Card,
   CardBody,
-  Chipd,
-  DCell,
   Def,
   DefTooltipProvider,
-  DGrid,
   DNote,
   Drawer,
   DSec,
   Fnote,
-  Focal,
-  FocalCov,
-  FocalLabel,
-  FocalMeta,
-  FocalValue,
-  Hero,
   KV,
   KVCell,
   MetricPicker,
-  Mgn,
   Seg,
   Skel,
   SrcPill,
@@ -56,19 +58,25 @@ import {
   type JobDrilldownRow,
   type JobSourceType,
 } from "@/lib/metrics/jobs";
+import { csvCell } from "@/lib/csv";
 import type { JobDashboardReadModel } from "@/lib/store/job-dashboard-read-model";
 
-/* /jobs — implements the approved APPROVED-2026-07-15/mockups/jobs.html
-   exactly, with every figure taken from the read-model payload (the mockup's
-   numbers were the June 2026 snapshot). Representative data carries the repr
-   grammar + data-def tooltips; empty/partial states are honest; no
-   unsupported value is ever rendered as zero. */
+/* /jobs — implements the owner-approved redesign
+   docs/approved-design/mockups/jobs.html exactly, with every figure taken
+   from the read-model payload (the mockup's July numbers are sample
+   content). Composition: KPI band (NET PROFIT primary + gross / calculated
+   expenses / calculated overhead / revenue tiles + chain footnote) →
+   Monthly Trend as TWO stacked single-axis panels ($ + margin-% strip) →
+   [Where Revenue Went above Work Source Mix] beside [Estimated vs Actual
+   Labor above Largest Overruns] → span-12 Profitability by Site → Completed
+   Jobs table. The net-negative card/tile is REMOVED per owner ruling — loss
+   records stay reachable through the completed-jobs table rows. */
 
-/** Example net-margin target (approved decision C6): every mention is
- *  labelled "(example)" — the real target number is Asad's to set. */
-export const EXAMPLE_NET_MARGIN_TARGET_PCT = 50;
+const ACC = "#5b63d3"; /* var(--acc) */
+const SERIES2 = "#0e9aae"; /* var(--series-2) */
 
 const CLIENT_PAGE_SIZE = 10;
+const FIRST_AVAILABLE_MONTH = "2023-01";
 
 export type JobsDashboardProps = {
   model: JobDashboardReadModel;
@@ -127,25 +135,27 @@ function JobsLoadError({ detail }: { detail: string }) {
 }
 
 function JobsEmptyMonth({ model }: { model: JobDashboardReadModel }) {
-  const monthLong = monthLongName(model.selectedMonth);
   return (
-    <Hero split>
-      <Focal style={{ paddingBottom: 24 }}>
-        <FocalLabel>Net Profit · Completed Jobs · {monthLong}</FocalLabel>
-        <div className="empt" style={{ marginTop: 16 }}>
-          No jobs were completed in this month.
-        </div>
-      </Focal>
-      <TrendCard model={model} />
-    </Hero>
+    <>
+      <Card>
+        <CardBody>
+          <StateEmpty>No jobs were completed in this month.</StateEmpty>
+        </CardBody>
+      </Card>
+      <div className="grid12">
+        <TrendCard model={model} />
+      </div>
+    </>
   );
 }
 
 /* ── Full month layout ─────────────────────────────────── */
 
+type SourceRow = JobDashboardReadModel["selected"]["jobSourceRows"][number];
+
 type DrawerState =
-  | { kind: "loss"; row: JobDrilldownRow }
   | { kind: "job"; row: JobDrilldownRow }
+  | { kind: "source"; row: SourceRow }
   | { kind: "prof"; mode: "site" | "category"; label: string; jobs: number; sell: number; np: number };
 
 function JobsContent({ model }: { model: JobDashboardReadModel }) {
@@ -157,24 +167,31 @@ function JobsContent({ model }: { model: JobDashboardReadModel }) {
   const openDrill = useCallback((kind: "site" | "category", label: string) => {
     setDrawer(null);
     setDrill((prev) => ({ kind, label, epoch: (prev?.epoch ?? 0) + 1 }));
+    void cohort.load().catch(() => undefined);
     tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+  }, [cohort]);
 
   return (
     <>
-      <Hero split>
-        <FocalPanel model={model} />
-        <BridgeCard model={model} />
-      </Hero>
+      <JobsBand model={model} />
 
-      <div className="g75">
-        <LaborCard model={model} cohort={cohort} />
-        <ProfitabilityCard model={model} onOpen={(state) => setDrawer(state)} />
+      <div className="grid12">
+        <TrendCard model={model} />
       </div>
 
-      <div className="g57">
-        <TrendCard model={model} />
-        <NetNegativeJobsCard model={model} onOpen={(row) => setDrawer({ kind: "loss", row })} />
+      <div className="grid12">
+        <div className="span6 colstack">
+          <RevenueWentCard model={model} />
+          <WorkSourceCard model={model} onOpen={(row) => setDrawer({ kind: "source", row })} />
+        </div>
+        <div className="span6 colstack">
+          <LaborCard model={model} cohort={cohort} />
+          <OverrunsCard model={model} />
+        </div>
+      </div>
+
+      <div className="grid12">
+        <ProfitabilityCard model={model} onOpen={(state) => setDrawer(state)} />
       </div>
 
       <div ref={tableRef}>
@@ -196,8 +213,8 @@ function JobsContent({ model }: { model: JobDashboardReadModel }) {
         title={drawerTitle(drawer)}
         sub={drawerSub(drawer, monthLong, model.selectedMonth)}
       >
-        {drawer?.kind === "loss" ? <JobDrawerBody row={drawer.row} loss /> : null}
         {drawer?.kind === "job" ? <JobDrawerBody row={drawer.row} /> : null}
+        {drawer?.kind === "source" ? <SourceDrawerBody row={drawer.row} /> : null}
         {drawer?.kind === "prof" ? (
           <ProfDrawerBody
             state={drawer}
@@ -213,7 +230,9 @@ function JobsContent({ model }: { model: JobDashboardReadModel }) {
 
 function drawerTitle(drawer: DrawerState | null): ReactNode {
   if (!drawer) return null;
-  return drawer.kind === "prof" ? drawer.label : drawer.row.name;
+  if (drawer.kind === "prof") return drawer.label;
+  if (drawer.kind === "source") return drawer.row.sourceType;
+  return drawer.row.name;
 }
 
 function drawerSub(drawer: DrawerState | null, monthLong: string, selectedMonth: string): ReactNode {
@@ -221,203 +240,156 @@ function drawerSub(drawer: DrawerState | null, monthLong: string, selectedMonth:
   if (drawer.kind === "prof") {
     return `${monthLong} ${selectedMonth.slice(0, 4)} · ${drawer.jobs} completed ${drawer.jobs === 1 ? "job" : "jobs"}`;
   }
+  if (drawer.kind === "source") {
+    return `${monthLong} ${selectedMonth.slice(0, 4)} · ${drawer.row.jobs} completed ${drawer.row.jobs === 1 ? "job" : "jobs"}`;
+  }
   return `Job ${drawer.row.jobId} · ${drawer.row.siteName}`;
 }
 
-/* ── Hero focal ────────────────────────────────────────── */
+/* ── Row 1: KPI band ───────────────────────────────────── */
 
-function FocalPanel({ model }: { model: JobDashboardReadModel }) {
+function JobsBand({ model }: { model: JobDashboardReadModel }) {
   const selected = model.selected;
   const coverage = selected.financialCoverage;
   const monthLong = monthLongName(model.selectedMonth);
-  const priorLong = monthLongName(shiftMonthKey(model.selectedMonth, -1));
-  const yoyLabel = seriesLabel(shiftMonthKey(model.selectedMonth, -12));
-  const daySuffix = model.provisional.active ? ` · day ${model.provisional.elapsedDays}` : "";
+  const provisional = model.provisional.active;
+  const day = model.provisional.elapsedDays;
+  const monShort = monthShortName(model.selectedMonth);
+  const lyName = seriesLabel(shiftMonthKey(model.selectedMonth, -12));
+  const priorName = seriesLabel(shiftMonthKey(model.selectedMonth, -1));
+  const priorShort = monthShortName(shiftMonthKey(model.selectedMonth, -1));
+  const priorYearAvailable = shiftMonthKey(model.selectedMonth, -12) >= FIRST_AVAILABLE_MONTH;
+  const priorMonthAvailable = shiftMonthKey(model.selectedMonth, -1) >= FIRST_AVAILABLE_MONTH;
   const comparison = Object.fromEntries(model.comparisons.map((row) => [row.key, row]));
   const netRow = comparison.netProfit;
-  const netMarginRow = comparison.netMargin;
+  const netPriorYear = priorYearAvailable ? netRow?.priorYear ?? null : null;
+  const netPriorMonth = priorMonthAvailable ? netRow?.priorMonth ?? null : null;
   const netSupported = coverage.netProfitSupported > 0;
+  const revSupported = coverage.sellValueSupported > 0;
+  const grossSupported = coverage.grossProfitSupported > 0;
   const netMargin = selected.netMarginActual;
-  const marginPtsDelta =
-    netMarginRow?.current != null && netMarginRow.priorYear != null
-      ? netMarginRow.current - netMarginRow.priorYear
-      : null;
+  const steps = netSupported && revSupported
+    ? buildBridgeSteps(selected.profitBridge, selected.grossProfitActual, selected.netProfitActual, false)
+    : null;
+  const materials = steps?.[1]?.value ?? null;
+  const labor = steps?.[2]?.value ?? null;
+  const overhead = steps?.[4]?.value ?? null;
+  const lyDef = provisional ? `vs ${lyName}, aligned to day ${day}` : `vs ${lyName}, full month`;
+  const priorDef = `vs ${priorShort}, full month`;
   const netDef = `Σ Simpro NetProfit Actual across jobs completed in ${monthLong} (CompletedDate sets the month; stage must be Complete or Archived — job status is never used, and Invoiced is not completion). Commission actuals are treated as cost inputs only.`;
 
-  const mom = (delta: number | null | undefined) =>
-    delta == null ? `No ${priorLong} comparison basis.` : `Vs ${priorLong}: ${signedPct(delta)}.`;
-
-  const bullet = heroBullet(model, monthLong, yoyLabel);
-
   return (
-    <Focal style={{ paddingBottom: 24 }}>
-      <FocalLabel>
-        <Def def={netDef}>Net Profit</Def> · Completed Jobs · {monthLong}
-        {model.provisional.active ? " (to date)" : ""}
-      </FocalLabel>
-      <FocalValue>{netSupported ? fmt.moneyFull(selected.netProfitActual) : "N/A"}</FocalValue>
-      <FocalMeta>
-        {netMargin != null ? (
-          <Mgn>
-            {netMargin.toFixed(1)}% net margin{" "}
-            {marginPtsDelta != null ? (
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: marginPtsDelta < 0 ? "#f0937f" : "#7fd4a8",
-                  marginLeft: 4,
-                }}
-              >
-                {marginPtsDelta < 0 ? "↓" : "↑"} {Math.abs(marginPtsDelta).toFixed(1)} pts vs {yoyLabel}
-              </span>
-            ) : null}
-          </Mgn>
-        ) : (
-          <Mgn>net margin unavailable</Mgn>
-        )}
-        {netRow?.priorYearDelta != null ? (
-          <Chipd tone={netRow.priorYearDelta >= 0 ? "up" : "dn"}>
-            {netRow.priorYearDelta >= 0 ? "↑" : "↓"} {Math.abs(netRow.priorYearDelta).toFixed(1)}% vs {yoyLabel}
-            {daySuffix}
-          </Chipd>
-        ) : (
-          <Chipd tone="neutral">no {yoyLabel} basis</Chipd>
-        )}
-        {netRow?.priorMonthDelta != null ? (
-          <Chipd tone="neutral">
-            {netRow.priorMonthDelta >= 0 ? "↑" : "↓"} {Math.abs(netRow.priorMonthDelta).toFixed(1)}% vs {priorLong}
-            {daySuffix}
-          </Chipd>
-        ) : (
-          <Chipd tone="neutral">no {priorLong} basis</Chipd>
-        )}
-        {netMargin != null ? (
-          <span className="mgn tnum" style={{ fontSize: 13, color: "#e6c07a" }}>
-            {Math.abs(EXAMPLE_NET_MARGIN_TARGET_PCT - netMargin).toFixed(1)} pts{" "}
-            {netMargin < EXAMPLE_NET_MARGIN_TARGET_PCT ? "below" : "above"} the {EXAMPLE_NET_MARGIN_TARGET_PCT}% target{" "}
-            <span style={{ fontSize: 11.5 }}>(example)</span>
-          </span>
-        ) : null}
-      </FocalMeta>
-      <div style={{ flex: "1 1 0" }} />
-      <DGrid style={{ marginTop: 0 }}>
-        <DCell
-          label="Revenue"
-          def={`Σ Simpro job Total (ex-tax) across the ${monthLong} completed cohort — CompletedDate in ${monthLong}, stage Complete or Archived. ${mom(comparison.sellValue?.priorMonthDelta)}`}
-          value={coverage.sellValueSupported > 0 ? fmt.moneyFull(selected.totalSellValue) : "N/A"}
-          u={yoyDeltaU(comparison.sellValue?.priorYearDelta)}
-          s={comparison.sellValue?.priorYearDelta == null ? `no ${yoyLabel} basis` : undefined}
-        />
-        <div className="dcell">
-          <div className="dl2">
-            <span
-              className="def"
-              data-def={`Σ Simpro GrossProfit Actual across the ${monthLong} completed cohort. Margin = gross profit ÷ revenue. ${mom(comparison.grossProfit?.priorMonthDelta)}`}
-            >
-              Gross Profit
-            </span>
-          </div>
-          <div className="dv2 tnum">
-            {coverage.grossProfitSupported > 0 ? fmt.moneyFull(selected.grossProfitActual) : "N/A"}
-            {comparison.grossProfit?.priorYearDelta != null ? (
-              <span className="u">{yoyDeltaU(comparison.grossProfit.priorYearDelta)}</span>
-            ) : null}
-          </div>
-          {selected.grossMarginActual != null ? (
-            <div className="tnum" style={{ fontSize: 12, fontWeight: 600, color: "#8b90a6", marginTop: 3 }}>
-              {selected.grossMarginActual.toFixed(1)}% gross margin
-            </div>
-          ) : null}
-        </div>
-        <DCell
-          label="Completed Jobs"
-          def={`Count of jobs with CompletedDate in ${monthLong} and Simpro stage Complete or Archived. ${mom(comparison.completedJobs?.priorMonthDelta)}`}
-          value={String(selected.completedJobCount)}
-          u={yoyDeltaU(comparison.completedJobs?.priorYearDelta)}
-          s={comparison.completedJobs?.priorYearDelta == null ? `no ${yoyLabel} basis` : undefined}
-        />
-        <DCell
-          label="Avg Job Value"
-          def={`${monthLong} revenue ÷ completed jobs. ${mom(comparison.averageJobValue?.priorMonthDelta)}`}
-          value={
-            selected.averageJobValue != null && coverage.sellValueSupported > 0
-              ? fmt.moneyFull(selected.averageJobValue)
-              : "—"
+    <>
+      <KpiBand ariaLabel={`${monthLong} key metrics`}>
+        <PrimaryStatCard
+          href="#trend"
+          label="Net profit"
+          labelDef={netDef}
+          pills={
+            <>
+              {deltaPill(priorYearAvailable ? netRow?.priorYearDelta : null, lyName, lyDef)}
+              {deltaPill(priorMonthAvailable ? netRow?.priorMonthDelta : null, priorShort, priorDef)}
+            </>
           }
-          u={yoyDeltaU(comparison.averageJobValue?.priorYearDelta)}
-          s={comparison.averageJobValue?.priorYearDelta == null ? `no ${yoyLabel} basis` : undefined}
+          value={netSupported ? fmt.moneyFull(selected.netProfitActual) : "N/A"}
+          sub={
+            netMargin != null ? (
+              <>{netMargin.toFixed(1)}% net margin</>
+            ) : (
+              "net margin unavailable"
+            )
+          }
+          bullet={
+            netSupported
+              ? {
+                  value: selected.netProfitActual,
+                  m1: { label: `${lyName} · ${provisional ? `d${day}` : "full"}`, value: netPriorYear, ghost: priorYearAvailable ? "no run" : "unavailable" },
+                  m2: { label: `${priorName} · full`, value: netPriorMonth, ghost: priorMonthAvailable ? "no run" : "unavailable" },
+                  fmt: moneyK,
+                  ariaLabel: `Net profit ${provisional ? "month to date" : monthLong} ${moneyK(selected.netProfitActual)}${
+                    netPriorYear != null ? `; ticks mark ${lyName} ${moneyK(netPriorYear)}` : ""
+                  }${netPriorMonth != null ? ` and full ${priorName} ${moneyK(netPriorMonth)}` : ""}`,
+                }
+              : null
+          }
         />
-      </DGrid>
-      <div style={{ marginTop: "auto", paddingTop: 18 }}>
-        {bullet ? <Bullet cur={bullet.cur} comp={bullet.comp} high={bullet.high} fmt={(v) => fmt.money(v)} /> : null}
-      </div>
-      <FocalCov style={{ paddingTop: 14 }}>
-        Green deltas vs {yoyLabel} · vs-{priorLong} in each tile’s tooltip
-      </FocalCov>
-    </Focal>
+        <KpiTiles>
+          <KpiTile
+            label="Gross profit"
+            labelDef={`Σ Simpro GrossProfit Actual across the ${monthLong} completed cohort. Margin = gross profit ÷ revenue.`}
+            pills={deltaPill(priorYearAvailable ? comparison.grossProfit?.priorYearDelta : null, lyName, lyDef)}
+            value={grossSupported ? fmt.moneyFull(selected.grossProfitActual) : "N/A"}
+            sub={selected.grossMarginActual != null ? `${selected.grossMarginActual.toFixed(1)}% margin` : "gross margin unavailable"}
+          />
+          <KpiTile
+            label="Calculated expenses"
+            labelDef={`Materials + labor cost actuals across the ${monthLong} cohort, display-rounded so revenue − expenses = gross exactly (largest-remainder split of the rounded revenue→gross gap).`}
+            value={materials != null && labor != null ? fmt.moneyFull(materials + labor) : "N/A"}
+            sub={
+              materials != null && labor != null
+                ? `materials ${fmt.moneyFull(materials)} · labor ${fmt.moneyFull(labor)}`
+                : "no supported cost basis"
+            }
+          />
+          <KpiTile
+            label="Calculated overhead"
+            labelDef={`Gross − net for the ${monthLong} cohort. The overhead step includes overhead, commission cost inputs and any residual, so the chain always closes.`}
+            value={overhead != null ? fmt.moneyFull(overhead) : "N/A"}
+            sub="gross − overhead = net"
+          />
+          <KpiTile
+            label="Revenue"
+            labelDef={`Σ Simpro job Total (ex-tax) across the ${monthLong} completed cohort — CompletedDate in ${monthLong}, stage Complete or Archived.`}
+            pills={deltaPill(priorYearAvailable ? comparison.sellValue?.priorYearDelta : null, lyName, lyDef)}
+            value={revSupported ? fmt.moneyFull(selected.totalSellValue) : "N/A"}
+            sub={
+              <>
+                {selected.completedJobCount} completed {selected.completedJobCount === 1 ? "job" : "jobs"}
+                {selected.averageJobValue != null && revSupported ? ` · avg ${fmt.moneyFull(selected.averageJobValue)}` : ""}
+              </>
+            }
+          />
+        </KpiTiles>
+      </KpiBand>
+      <KpiBandNote>
+        {provisional
+          ? `Vs ${lyName} comparisons are day-aligned through ${monShort} ${day} (“d${day}”); vs ${priorShort} compares the full month. The tiles chain: revenue − expenses = gross · gross − overhead = net.`
+          : "All vs-comparisons are full-month. The tiles chain: revenue − expenses = gross · gross − overhead = net."}
+      </KpiBandNote>
+    </>
   );
 }
 
-function yoyDeltaU(delta: number | null | undefined): ReactNode | undefined {
-  if (delta == null) return undefined;
-  if (delta >= 0) return <>↑ {Math.abs(delta).toFixed(1)}%</>;
-  return <span style={{ color: "#f0937f" }}>↓ {Math.abs(delta).toFixed(1)}%</span>;
+/** Labeled percent delta pill; null when there is no comparison basis. */
+function deltaPill(delta: number | null | undefined, vsLabel: string, def?: string): ReactNode {
+  if (delta == null) return null;
+  return (
+    <Dpill tone={delta < 0 ? "down" : delta > 0 ? "up" : "neutral"} def={def}>
+      {delta < 0 ? "↓" : "↑"} {Math.abs(delta).toFixed(1)}% vs {vsLabel}
+    </Dpill>
+  );
 }
 
-function heroBullet(model: JobDashboardReadModel, monthLong: string, yoyLabel: string) {
-  const trailing = model.trends.filter((row) => row.month <= model.selectedMonth).slice(-12);
-  if (trailing.length === 0 || model.selected.financialCoverage.netProfitSupported === 0) return null;
-  const high = trailing.reduce((best, row) => (row.netProfit > best.netProfit ? row : best), trailing[0]);
-  if (high.netProfit <= 0) return null;
-  const highLabel =
-    high.provenance === "representative"
-      ? `<span class="repr">${seriesLabel(high.month)}</span>`
-      : seriesLabel(high.month);
-  const priorYear = model.priorYearFull;
-  return {
-    cur: { m: monthLong, v: model.selected.netProfitActual },
-    comp:
-      priorYear.completedJobCount > 0 && priorYear.financialCoverage.netProfitSupported > 0
-        ? { m: yoyLabel, v: priorYear.netProfitActual }
-        : null,
-    high: { m: highLabel, v: high.netProfit },
-  };
-}
-
-/* ── Monthly Trend card ────────────────────────────────── */
+/* ── Row 2: Monthly Trend (stacked single-axis panels) ─── */
 
 type TrendMetric = {
   key: string;
   label: string;
   color: string;
-  axis: 1 | 2;
   unit?: "pct" | "count";
   values: (number | null)[];
-  /** Profit-derived metrics carry the per-month provenance dashing. */
+  /** Profit-derived metrics carry the representative provenance footnote. */
   repr: boolean;
 };
 
-const TREND_UNITS: Record<string, "pct" | "count" | undefined> = {
-  rev: undefined,
-  gp: undefined,
-  np: undefined,
-  ajv: undefined,
-  gm: "pct",
-  nm: "pct",
-  jobs: "count",
-};
-
-/** Metric-picker selection semantics ported verbatim from the approved
- *  jobs.html script: yoy is exclusive, minimum one chip, unit-compatible
- *  multi-select capped at four. */
+/** Metric-picker semantics: yoy is exclusive both ways, minimum one chip,
+ *  cap four via shift. Mixed units are allowed — they render as stacked
+ *  single-axis panels (never a shared or hidden dual axis). */
 export function nextTrendSelection(sel: string[], key: string): string[] {
   if (key === "yoy") return sel.includes("yoy") ? ["np", "nm"] : ["yoy"];
   if (sel.includes("yoy")) return [key];
   if (sel.includes(key)) return sel.length > 1 ? sel.filter((k) => k !== key) : sel;
-  const unit = TREND_UNITS[key];
-  const out = unit ? sel.filter((k) => !TREND_UNITS[k] || TREND_UNITS[k] === unit) : [...sel];
-  out.push(key);
+  const out = [...sel, key];
   while (out.length > 4) out.shift();
   return out;
 }
@@ -427,43 +399,19 @@ function TrendCard({ model }: { model: JobDashboardReadModel }) {
   const t = model.trends;
   const metrics = useMemo<TrendMetric[]>(
     () => [
-      { key: "rev", label: "Revenue", color: "#404a60", axis: 1, values: t.map((r) => r.sellValue), repr: false },
-      { key: "gp", label: "Gross profit", color: "#9aa2b2", axis: 1, values: t.map((r) => r.grossProfit), repr: true },
-      { key: "np", label: "Net profit", color: "#5b63d3", axis: 1, values: t.map((r) => r.netProfit), repr: true },
-      { key: "ajv", label: "Avg job value", color: "#6d7890", axis: 1, values: t.map((r) => r.avgJobValue), repr: false },
-      {
-        key: "gm",
-        label: "Gross margin %",
-        color: "#b98b3f",
-        axis: 2,
-        unit: "pct",
-        values: t.map((r) => r.grossMargin),
-        repr: true,
-      },
-      {
-        key: "nm",
-        label: "Net margin %",
-        color: "#404a60",
-        axis: 2,
-        unit: "pct",
-        values: t.map((r) => r.netMargin),
-        repr: true,
-      },
-      {
-        key: "jobs",
-        label: "Completed jobs",
-        color: "#5f6b83",
-        axis: 2,
-        unit: "count",
-        values: t.map((r) => r.completedJobs),
-        repr: false,
-      },
+      { key: "rev", label: "Revenue", color: "#404a60", values: t.map((r) => r.sellValue), repr: false },
+      { key: "gp", label: "Gross profit", color: "#9aa2b2", values: t.map((r) => r.grossProfit), repr: true },
+      { key: "np", label: "Net profit", color: ACC, values: t.map((r) => r.netProfit), repr: true },
+      { key: "ajv", label: "Avg job value", color: "#6d7890", values: t.map((r) => r.avgJobValue), repr: false },
+      { key: "gm", label: "Gross margin %", color: "#b98b3f", unit: "pct", values: t.map((r) => r.grossMargin), repr: true },
+      { key: "nm", label: "Net margin %", color: SERIES2, unit: "pct", values: t.map((r) => r.netMargin), repr: true },
+      { key: "jobs", label: "Completed jobs", color: "#5f6b83", unit: "count", values: t.map((r) => r.completedJobs), repr: false },
     ],
     [t],
   );
   if (t.length === 0) {
     return (
-      <Card title="Monthly Trend" subtitle="No served history for this selection.">
+      <Card className="span12" title="Monthly Trend" subtitle="No served history for this selection.">
         <CardBody>
           <StateEmpty>No monthly history is available.</StateEmpty>
         </CardBody>
@@ -482,10 +430,24 @@ function TrendCard({ model }: { model: JobDashboardReadModel }) {
   const rangeLabel = `${seriesLabel(t[0].month)} – ${seriesLabel(t[t.length - 1].month)}`;
 
   return (
-    <Card title="Monthly Trend" subtitle={`${rangeLabel} · pick up to four metrics · hover or tap for detail`}>
-      <MetricPicker groups={groups} selected={sel} onToggle={(key) => setSel(nextTrendSelection(sel, key))} />
+    <Card
+      className="span12"
+      style={{ scrollMarginTop: 70 }}
+      title={<span id="trend">Monthly Trend</span>}
+      subtitle={`${rangeLabel} · pick up to four metrics · hover or tap for detail`}
+      aside={
+        <MetricPicker
+          style={{ padding: 0, justifyContent: "flex-end" }}
+          groups={groups}
+          selected={sel}
+          onToggle={(key) => setSel(nextTrendSelection(sel, key))}
+        />
+      }
+    >
       <CardBody>
+        <div data-primary-viz="">
         <TrendBody model={model} metrics={metrics} sel={sel} />
+      </div>
       </CardBody>
     </Card>
   );
@@ -493,129 +455,212 @@ function TrendCard({ model }: { model: JobDashboardReadModel }) {
 
 const chipOf = (m: TrendMetric): MetricChip => ({ key: m.key, label: m.label, color: m.color });
 
+/** Sparse x labels mirroring the approved ML array: every other month, the
+ *  first (and each January) with its year, the last always kept. */
+function sparseLabels(monthKeys: string[]): string[] {
+  const n = monthKeys.length;
+  return monthKeys.map((key, i) => {
+    if (i % 2 !== 0 && i !== n - 1) return "";
+    return i === 0 || key.endsWith("-01") ? seriesLabel(key) : monthShortName(key);
+  });
+}
+
+function niceMoneyMax(v: number): number {
+  if (v <= 0) return 1;
+  const step = 10 ** Math.floor(Math.log10(v));
+  return Math.ceil(v / step) * step;
+}
+
 function TrendBody({ model, metrics, sel }: { model: JobDashboardReadModel; metrics: TrendMetric[]; sel: string[] }) {
   const t = model.trends;
+  if (sel.includes("yoy")) return <YoYTrend model={model} />;
+
   const selIdx = t.findIndex((row) => row.month === model.selectedMonth);
-  const labels = t.map((row, i) => (i === 0 || row.month.endsWith("-01") ? seriesLabel(row.month) : monthShortName(row.month)));
-  const reprLast = t.reduce((last, row, i) => (row.provenance === "representative" ? i : last), -1);
-  const verifiedDots = t.map((row, i) => (row.provenance === "verified" && i < reprLast ? i : -1)).filter((i) => i >= 0);
-  const reprProps = reprLast >= 0 ? { reprTo: reprLast, dots: verifiedDots } : {};
+  const labels = sparseLabels(t.map((r) => r.month));
+  const full = t.map((r) => seriesLabel(r.month));
+  const drawn = metrics.filter((m) => sel.includes(m.key));
+  const moneyDrawn = drawn.filter((m) => m.unit == null);
+  const pctDrawn = drawn.filter((m) => m.unit === "pct");
+  const countDrawn = drawn.filter((m) => m.unit === "count");
+  const anyRepr = t.some((row) => row.provenance === "representative") && drawn.some((m) => m.repr);
   const mfmt = (unit: "pct" | "count" | undefined, v: number) =>
     unit === "pct" ? v.toFixed(1) + "%" : unit === "count" ? fmt.n(v) : fmt.money(v);
 
-  if (sel.includes("yoy")) return <YoYTrend model={model} />;
+  /* One tooltip for every panel: the month plus every drawn metric. */
+  const tip = (i: number) =>
+    tipTitle(full[i]) +
+    drawn
+      .map((m) => {
+        const v = m.values[i];
+        return v == null ? "" : tipRow(m.color, m.label, mfmt(m.unit, v));
+      })
+      .join("") +
+    (i >= 12
+      ? drawn
+          .map((m) => {
+            const v = m.values[i - 12];
+            return v == null ? "" : tipRow("#e2e6ec", `${m.label} · ${full[i - 12]}`, mfmt(m.unit, v));
+          })
+          .join("")
+      : "");
 
-  const drawn = metrics.filter((m) => sel.includes(m.key));
-  const anyRepr = reprLast >= 0 && drawn.some((m) => m.repr);
-  const fnote = anyRepr ? (
-    <>
-      Dashed = <span className="repr">representative</span> history, solid = verified — revenue and job counts are
-      Simpro-verified for all {t.length} months.
-    </>
-  ) : (
-    <>Revenue and job counts are verified against Simpro for all {t.length} months.</>
-  );
+  /* Only months that actually completed work can be annotated — an empty
+     month's $0 is absence of data, not a slowdown or a record. */
+  const activeOnly = (value: number | null, i: number) => (t[i].completedJobs > 0 ? value : null);
 
-  if (sel.length === 1 && sel[0] === "jobs") {
-    return (
-      <>
-        <Histogram
-          h={340}
-          seriesName="Completed jobs"
-          buckets={t.map((row, i) => ({
-            label: labels[i],
-            count: row.completedJobs,
-            accent: i === selIdx,
-            tipLabel: seriesLabel(row.month),
-            extra:
-              (row.avgJobValue != null ? tipRow("#9aa2b2", "Avg job value", fmt.moneyFull(row.avgJobValue)) : "") +
-              tipRow("#9aa2b2", "Revenue", fmt.money(row.sellValue)) +
-              (i >= 12 ? tipRow("#e2e6ec", `Jobs · ${seriesLabel(t[i - 12].month)}`, String(t[i - 12].completedJobs)) : ""),
-          }))}
-        />
-        <Fnote>{fnote}</Fnote>
-      </>
+  const panels: ReactNode[] = [];
+
+  if (moneyDrawn.length > 0) {
+    const vals = moneyDrawn.flatMap((m) => m.values).filter((v): v is number => v != null);
+    const ymax = niceMoneyMax(Math.max(0, ...vals));
+    const ymin = Math.min(0, ...vals) < 0 ? -niceMoneyMax(Math.abs(Math.min(0, ...vals))) : 0;
+    const npIdx = moneyDrawn.findIndex((m) => m.key === "np");
+    const revIdx = moneyDrawn.findIndex((m) => m.key === "rev");
+    const reflines: LineRefline[] = [];
+    const netPriorYearFull = model.comparisons.find((r) => r.key === "netProfit")?.priorYearFull;
+    if (npIdx >= 0 && netPriorYearFull != null && netPriorYearFull > ymin && netPriorYearFull < ymax) {
+      reflines.push({
+        v: netPriorYearFull,
+        text: `${seriesLabel(shiftMonthKey(model.selectedMonth, -12))} · ${fmt.money(netPriorYearFull)} — same month last year`,
+        anchor: "start",
+      });
+    }
+    const annotations: LineAnnotation[] = [];
+    if (npIdx >= 0) {
+      const netVals = moneyDrawn[npIdx].values.map((v, i) => activeOnly(v, i));
+      const maxIdx = argBest(netVals, (a, b) => a > b);
+      const minIdx = argBest(netVals, (a, b) => a < b);
+      if (maxIdx >= 0 && maxIdx !== selIdx) {
+        annotations.push({ s: npIdx, i: maxIdx, text: `${full[maxIdx]} · ${fmt.money(t[maxIdx].netProfit)}\nhigh`, dy: -24, anchor: "middle" });
+      }
+      if (minIdx >= 0 && minIdx !== selIdx && minIdx !== maxIdx) {
+        annotations.push({
+          s: npIdx,
+          i: minIdx,
+          text: `${fmt.money(t[minIdx].netProfit)} net\n${monthShortName(t[minIdx].month)} slowdown`,
+          dy: 30,
+          anchor: "middle",
+        });
+      }
+      if (selIdx >= 0 && model.selected.financialCoverage.netProfitSupported > 0) {
+        annotations.push({
+          s: npIdx,
+          i: selIdx,
+          text: `${monthShortName(model.selectedMonth)} · ${fmt.money(t[selIdx].netProfit)} net`,
+          dy: -14,
+          dx: -4,
+          anchor: "end",
+        });
+      }
+    } else if (revIdx >= 0) {
+      const revVals = moneyDrawn[revIdx].values.map((v, i) => activeOnly(v, i));
+      const maxIdx = argBest(revVals, (a, b) => a > b);
+      if (maxIdx >= 0 && maxIdx !== selIdx) {
+        annotations.push({
+          s: revIdx,
+          i: maxIdx,
+          text: `${fmt.money(t[maxIdx].sellValue)} revenue\nbest month on record`,
+          dy: -24,
+          anchor: "middle",
+        });
+      }
+    }
+    const onlyPanel = pctDrawn.length === 0 && countDrawn.length === 0;
+    panels.push(
+      <LineChart
+        key="money"
+        labels={labels}
+        series={moneyDrawn.map((m): LineSeries => ({ name: m.label, vals: m.values, color: m.color, width: 2 }))}
+        h={onlyPanel ? 300 : 210}
+        ymin={ymin}
+        ymax={ymax}
+        ticks={4}
+        yFmt={fmt.money}
+        reflines={reflines}
+        annotations={annotations}
+        xlabels={onlyPanel ? undefined : false}
+        tip={tip}
+        ariaLabel={`${moneyDrawn.map((m) => m.label).join(", ")} by month, dollars`}
+      />,
     );
   }
 
-  const a2 = drawn.find((m) => m.axis === 2);
-  const onlyPct = drawn.length > 0 && drawn.every((m) => m.unit === "pct");
-  const annotations: TrendAnnotation[] = [];
-  const ri = drawn.findIndex((m) => m.key === "rev");
-  const ni = drawn.findIndex((m) => m.key === "np");
-  /* Only months that actually completed work can be annotated — an empty
-     month's $0 is absence of data, not a slowdown or a record. */
-  const activeOnly = (value: number, i: number) => (t[i].completedJobs > 0 ? value : null);
-  if (ri >= 0) {
-    const maxIdx = argBest(t.map((r, i) => activeOnly(r.sellValue, i)), (a, b) => a > b);
-    if (maxIdx >= 0 && maxIdx !== selIdx) {
-      annotations.push({ s: ri, i: maxIdx, text: `${fmt.money(t[maxIdx].sellValue)} revenue`, sub: "best month on record" });
+  if (pctDrawn.length > 0) {
+    const vals = pctDrawn.flatMap((m) => m.values).filter((v): v is number => v != null);
+    const lo = Math.max(0, Math.floor((Math.min(100, ...vals) - 5) / 10) * 10);
+    const hi = Math.min(100, Math.ceil((Math.max(0, ...vals) + 5) / 10) * 10);
+    const firstPanel = panels.length === 0;
+    const lastPanel = countDrawn.length === 0;
+    if (!firstPanel) {
+      panels.push(
+        <div key="pcthead" className="striphead">
+          <span className="sl">{pctDrawn.map((m) => m.label).join(" · ")}</span>
+          <span className="sn">own axis — mixed-unit picks always split into stacked panels, never share a $ axis</span>
+        </div>,
+      );
     }
+    panels.push(
+      <LineChart
+        key="pct"
+        labels={labels}
+        series={pctDrawn.map((m): LineSeries => ({ name: m.label, vals: m.values, color: m.color, width: 2 }))}
+        h={firstPanel ? 300 : 96}
+        ymin={lo}
+        ymax={hi}
+        ticks={firstPanel ? 4 : 2}
+        yFmt={(v) => v + "%"}
+        xlabels={lastPanel ? undefined : false}
+        tip={tip}
+        ariaLabel={`${pctDrawn.map((m) => m.label).join(", ")} by month, percent`}
+      />,
+    );
   }
-  if (ni >= 0) {
-    const minIdx = argBest(t.map((r, i) => activeOnly(r.netProfit, i)), (a, b) => a < b);
-    if (minIdx >= 0 && minIdx !== selIdx) {
-      annotations.push({
-        s: ni,
-        i: minIdx,
-        text: `${fmt.money(t[minIdx].netProfit)} net`,
-        sub: `${monthShortName(t[minIdx].month)} slowdown`,
-        dy: 1,
-      });
+
+  if (countDrawn.length > 0) {
+    const vals = countDrawn.flatMap((m) => m.values).filter((v): v is number => v != null);
+    const ymax = niceMoneyMax(Math.max(1, ...vals));
+    const firstPanel = panels.length === 0;
+    if (!firstPanel) {
+      panels.push(
+        <div key="counthead" className="striphead">
+          <span className="sl">Completed jobs</span>
+          <span className="sn">own count axis</span>
+        </div>,
+      );
     }
+    panels.push(
+      <LineChart
+        key="count"
+        labels={labels}
+        series={countDrawn.map((m): LineSeries => ({ name: m.label, vals: m.values, color: m.color, width: 2 }))}
+        h={firstPanel ? 300 : 96}
+        ymax={ymax}
+        ticks={firstPanel ? 4 : 2}
+        yFmt={fmt.n}
+        tip={tip}
+        ariaLabel="Completed jobs by month"
+      />,
+    );
   }
-  /* The band label states the selected month's figure — suppressed when the
-     cohort has no supported basis for it (never a fabricated $0). */
-  const coverage = model.selected.financialCoverage;
-  const bandLabel =
-    selIdx < 0
-      ? undefined
-      : sel.includes("np") && coverage.netProfitSupported > 0
-        ? `${monthShortName(model.selectedMonth)} · ${fmt.money(t[selIdx].netProfit)} net`
-        : sel.includes("rev") && coverage.sellValueSupported > 0
-          ? `${monthShortName(model.selectedMonth)} · ${fmt.money(t[selIdx].sellValue)} revenue`
-          : undefined;
+
+  const fnote: ReactNode = (
+    <>
+      {pctDrawn.length > 0 && moneyDrawn.length > 0
+        ? `${pctDrawn.map((m) => m.label).join(" and ")} is drawn on its own panel below the $ chart · `
+        : ""}
+      {anyRepr ? (
+        <>
+          Profit, margin, revenue, and job-count series use the stored Simpro job financials for all {t.length} months.
+        </>
+      ) : (
+        <>Revenue and job counts are verified against Simpro for all {t.length} months.</>
+      )}
+    </>
+  );
 
   return (
     <>
-      <TrendChart
-        labels={labels}
-        everyX={2}
-        h={340}
-        band={selIdx >= 0 ? selIdx : null}
-        bandLabel={bandLabel}
-        tipLabel={(i) => seriesLabel(t[i].month)}
-        annotations={annotations}
-        yFmt={fmt.money}
-        y2Fmt={a2 && a2.unit === "pct" ? (v) => v.toFixed(0) + "%" : fmt.n}
-        yMax={onlyPct ? 100 : undefined}
-        yMin={onlyPct ? 0 : undefined}
-        tipExtra={(i) =>
-          i >= 12
-            ? `<div style="border-top:1px solid #f1f2f6;margin-top:5px;padding-top:5px">` +
-              drawn
-                .map((m) => {
-                  const v = m.values[i - 12];
-                  return v == null ? "" : tipRow("#e2e6ec", `${m.label} · ${seriesLabel(t[i - 12].month)}`, mfmt(m.unit, v));
-                })
-                .join("") +
-              `</div>`
-            : ""
-        }
-        series={drawn.map(
-          (m): TrendSeries => ({
-            ...(m.repr ? reprProps : {}),
-            name: m.label,
-            color: m.color,
-            values: m.values,
-            axis: m.axis,
-            star: m.key === "np",
-            fill: m.key === "np",
-            endLabel: false,
-            tipFmt: m.unit ? (v) => mfmt(m.unit, v) : undefined,
-          }),
-        )}
-      />
+      {panels}
       <Fnote>{fnote}</Fnote>
     </>
   );
@@ -627,89 +672,63 @@ function YoYTrend({ model }: { model: JobDashboardReadModel }) {
   const prevYear = String(Number(curYear) - 1);
   const prior = new Array<number | null>(12).fill(null);
   const cur = new Array<number | null>(12).fill(null);
-  const priorVerified: number[] = [];
-  let priorMonths = 0;
-  let curReprLast = -1;
+  let anyRepr = false;
   for (const row of t) {
     const m = Number(row.month.slice(5)) - 1;
     if (row.month.startsWith(prevYear)) {
       prior[m] = row.netProfit;
-      priorMonths += 1;
-      if (row.provenance === "verified") priorVerified.push(m);
+      if (row.provenance === "representative") anyRepr = true;
     }
     if (row.month.startsWith(curYear) && row.month <= model.selectedMonth) {
       cur[m] = row.netProfit;
-      if (row.provenance === "representative") curReprLast = m;
+      if (row.provenance === "representative") anyRepr = true;
     }
   }
-  const priorAllVerified = priorMonths > 0 && priorVerified.length === priorMonths;
   const M12 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const band = Number(model.selectedMonth.slice(5)) - 1;
-  const curNet = cur[band];
-  const priorNet = prior[band];
-  const bandLabel =
-    curNet != null && priorNet != null
-      ? `${monthShortName(model.selectedMonth)} ’${curYear.slice(2)} · ${fmt.money(curNet)} vs ${fmt.money(priorNet)}`
-      : curNet != null
-        ? `${monthShortName(model.selectedMonth)} ’${curYear.slice(2)} · ${fmt.money(curNet)}`
-        : undefined;
-  const sw = (c: string) => (
-    <i
-      style={{
-        display: "inline-block",
-        width: 14,
-        height: 3,
-        borderRadius: 2,
-        background: c,
-        verticalAlign: 2,
-        marginRight: 5,
-      }}
-    />
-  );
-  const markedNote = priorAllVerified ? (
-    <>the ’{prevYear.slice(2)} line is verified throughout.</>
-  ) : priorVerified.length > 0 ? (
-    <>
-      solid spans and the marked {priorVerified.map((m) => `${M12[m]} ’${prevYear.slice(2)}`).join(", ")}{" "}
-      {priorVerified.length === 1 ? "point is" : "points are"} verified.
-    </>
-  ) : (
-    <>solid spans are verified.</>
-  );
-
+  const vals = [...prior, ...cur].filter((v): v is number => v != null);
+  const ymax = niceMoneyMax(Math.max(0, ...vals));
+  const ymin = Math.min(0, ...vals) < 0 ? -niceMoneyMax(Math.abs(Math.min(0, ...vals))) : 0;
+  const annotations: LineAnnotation[] = [];
+  if (cur[band] != null) {
+    annotations.push({
+      s: 1,
+      i: band,
+      text: `${M12[band]} ’${curYear.slice(2)} · ${fmt.money(cur[band] as number)}`,
+      dy: -14,
+      anchor: band >= 9 ? "end" : "middle",
+    });
+  }
   return (
     <>
-      <TrendChart
+      <LineChart
         labels={M12}
-        everyX={1}
-        h={340}
-        band={band}
-        bandLabel={bandLabel}
-        tipLabel={(i) => M12[i]}
-        yFmt={fmt.money}
         series={[
-          {
-            name: `Net ’${prevYear.slice(2)}`,
-            color: "#c9cfda",
-            ...(priorAllVerified ? {} : { dash: "4 4.5", dots: priorVerified }),
-            values: prior,
-            tipFmt: fmt.money,
-          },
-          {
-            name: `Net ’${curYear.slice(2)}`,
-            color: "#5b63d3",
-            star: true,
-            fill: true,
-            endLabel: false,
-            ...(curReprLast >= 0 ? { reprTo: curReprLast } : {}),
-            values: cur,
-            tipFmt: fmt.money,
-          },
+          { name: `Net ’${prevYear.slice(2)}`, vals: prior, color: "#c9cfda", width: 2 },
+          { name: `Net ’${curYear.slice(2)}`, vals: cur, color: ACC, width: 2 },
         ]}
+        h={300}
+        ymin={ymin}
+        ymax={ymax}
+        ticks={4}
+        yFmt={fmt.money}
+        annotations={annotations}
+        tip={(i) =>
+          tipTitle(M12[i]) +
+          (prior[i] != null ? tipRow("#c9cfda", `Net ’${prevYear.slice(2)}`, fmt.money(prior[i] as number)) : "") +
+          (cur[i] != null ? tipRow(ACC, `Net ’${curYear.slice(2)}`, fmt.money(cur[i] as number)) : "")
+        }
+        ariaLabel={`Net profit ${prevYear} versus ${curYear} by calendar month`}
       />
       <Fnote>
-        {sw("#c9cfda")}Net ’{prevYear.slice(2)} · {sw("#5b63d3")}Net ’{curYear.slice(2)} — dashed spans are{" "}
-        <span className="repr">representative</span>; {markedNote}
+        {anyRepr ? (
+          <>
+            Profit history is <span className="repr">representative</span> pending per-month reconciliation — revenue and
+            job counts are Simpro-verified.
+          </>
+        ) : (
+          <>Both years verified against Simpro.</>
+        )}
       </Fnote>
     </>
   );
@@ -726,10 +745,10 @@ function argBest(values: Array<number | null | undefined>, better: (a: number, b
   return idx;
 }
 
-/* ── Revenue → Net bridge ──────────────────────────────── */
+/* ── Revenue → cost chain (display rounding) ───────────── */
 
 /**
- * Display rounding for the approved waterfall: whole-dollar components that
+ * Display rounding for the approved cost chain: whole-dollar components that
  * sum exactly — revenue − materials − labor = gross (largest-remainder split
  * of the rounded revenue→gross gap across the two cost components) and
  * gross − overhead = net (overhead absorbs commission cost inputs and any
@@ -780,239 +799,149 @@ export function buildBridgeSteps(
   ];
 }
 
-function BridgeCard({ model }: { model: JobDashboardReadModel }) {
+/* ── Row 3 left: Where Revenue Went + Work Source Mix ──── */
+
+const REVENUE_SEG_COLORS = {
+  materials: "color-mix(in srgb,#0e9aae,#fff 40%)",
+  labor: SERIES2,
+  overhead: "#404a60", /* var(--series-strong) */
+  net: ACC,
+};
+
+function RevenueWentCard({ model }: { model: JobDashboardReadModel }) {
   const selected = model.selected;
   const monthLong = monthLongName(model.selectedMonth);
-  const supported =
-    selected.financialCoverage.netProfitSupported > 0 && selected.financialCoverage.sellValueSupported > 0;
+  const supported = selected.financialCoverage.netProfitSupported > 0 && selected.financialCoverage.sellValueSupported > 0;
   const steps = supported
     ? buildBridgeSteps(selected.profitBridge, selected.grossProfitActual, selected.netProfitActual, false)
     : null;
-  const revenue = steps?.[0]?.value ?? 0;
-  const materials = steps?.[1]?.value ?? 0;
-  const labor = steps?.[2]?.value ?? 0;
-  const gross = steps?.[3]?.value ?? 0;
-  const overhead = steps?.[4]?.value ?? 0;
-  const net = steps?.[5]?.value ?? 0;
-  const netPct = revenue > 0 && net > 0 ? Math.min(100, (net / revenue) * 100) : 0;
+  if (!steps) {
+    return (
+      <Card title={`Where ${monthLong} Revenue Went`} subtitle={`one bar · segments sum to ${monthLong} revenue`}>
+        <CardBody>
+          <StateEmpty>The {monthLong} cohort has no supported revenue and net-profit totals to split.</StateEmpty>
+        </CardBody>
+      </Card>
+    );
+  }
+  const revenue = steps[0].value;
+  const materials = steps[1].value;
+  const labor = steps[2].value;
+  const overhead = steps[4].value;
+  const net = steps[5].value;
+  const pct = (v: number) => (revenue > 0 ? (v / revenue) * 100 : 0);
+  const netPct = pct(net);
+  const segments: SegBarSegment[] = [
+    { width: pct(materials), color: REVENUE_SEG_COLORS.materials, label: `${pct(materials).toFixed(1)}%`, labelColor: "var(--ink)" },
+    { width: pct(labor), color: REVENUE_SEG_COLORS.labor, label: `${pct(labor).toFixed(1)}%`, labelColor: "var(--ink)" },
+    { width: pct(overhead), color: REVENUE_SEG_COLORS.overhead, label: `${pct(overhead).toFixed(1)}%` },
+    ...(net > 0
+      ? [
+          {
+            width: netPct,
+            color: REVENUE_SEG_COLORS.net,
+            label: netPct >= 16 ? `Net profit ${moneyK(net)} · ${netPct.toFixed(1)}%` : `${netPct.toFixed(1)}%`,
+          },
+        ]
+      : []),
+  ];
+  const legendSwatch = (background: string) => (
+    <i style={{ display: "inline-block", width: 9, height: 9, borderRadius: 2, background, flex: "none" }} />
+  );
   return (
     <Card
-      style={{ display: "flex", flexDirection: "column" }}
-      title="Revenue to Net Profit"
-      def={`Simpro job-cost components across the ${monthLong} cohort, display-rounded to whole dollars so the chain sums exactly. The overhead step includes overhead, commission cost inputs and any residual, so gross − overhead = net.`}
-      subtitle={
-        steps
-          ? `${monthLong} cost components · one revenue bar, net labeled directly`
-          : `${monthLong} cost components`
+      title={`Where ${monthLong} Revenue Went`}
+      subtitle={`one bar · segments sum to ${monthLong} revenue`}
+      aside={
+        <div
+          data-viz=""
+          style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", fontSize: 12, color: "var(--muted)", justifyContent: "flex-end" }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            {legendSwatch(REVENUE_SEG_COLORS.materials)}Materials {fmt.moneyFull(materials)} · {pct(materials).toFixed(1)}%
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            {legendSwatch(REVENUE_SEG_COLORS.labor)}Labor {fmt.moneyFull(labor)} · {pct(labor).toFixed(1)}%
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            {legendSwatch(REVENUE_SEG_COLORS.overhead)}Overhead {fmt.moneyFull(overhead)} · {pct(overhead).toFixed(1)}%
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>{legendSwatch(REVENUE_SEG_COLORS.net)}Net profit</span>
+        </div>
       }
     >
-      <CardBody style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-start", minHeight: 0 }}>
-        {steps ? (
-          <>
-            <div className="compact-bridge">
-              <span className="compact-bridge-fill" style={{ width: `${netPct}%` }} />
-            </div>
-            <div className="compact-split">
-              <b>{fmt.moneyFull(net)} net profit</b>
-              <span>{fmt.moneyFull(revenue)} revenue</span>
-            </div>
-            <div className="mini-metric-grid" style={{ marginTop: 16 }}>
-              <div>
-                <span>Materials</span>
-                <b className="tnum">{fmt.moneyFull(materials)}</b>
-              </div>
-              <div>
-                <span>Labor</span>
-                <b className="tnum">{fmt.moneyFull(labor)}</b>
-              </div>
-              <div>
-                <span>Gross profit</span>
-                <b className="tnum">{fmt.moneyFull(gross)}</b>
-              </div>
-              <div>
-                <span>Overhead</span>
-                <b className="tnum">{fmt.moneyFull(overhead)}</b>
-              </div>
-            </div>
-          </>
-        ) : (
-          <StateEmpty>The {monthLong} cohort has no supported revenue and net-profit totals to bridge.</StateEmpty>
-        )}
-        <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--hair-2)" }}>
-          <div className="ti">Work Source Mix</div>
-          <div className="st">{monthLong} completed jobs by source · labels show margin and revenue</div>
-          <WorkSourceVisual model={model} />
+      <CardBody>
+        <div data-viz="">
+          <SegBar
+            tall
+            segments={segments}
+            ariaLabel={`Revenue split: materials ${fmt.moneyFull(materials)}, labor ${fmt.moneyFull(labor)}, overhead ${fmt.moneyFull(overhead)}, net profit ${fmt.moneyFull(net)}`}
+          />
         </div>
+        <Fnote>Gross profit = revenue − materials − labor.</Fnote>
       </CardBody>
     </Card>
   );
 }
 
-/* ── Work source ───────────────────────────────────────── */
-
-function WorkSourceVisual({ model }: { model: JobDashboardReadModel }) {
-  const rows = model.selected.jobSourceRows;
-  const totalJobs = Math.max(rows.reduce((sum, row) => sum + row.jobs, 0), 1);
-  const sourceColors: Record<string, string> = {
-    "Quote-generated": "#5b63d3",
-    Recurring: "#9aa2b2",
-    "Direct service": "#404a60",
-  };
-  return (
-    <>
-      <div className="status-mix-bar" aria-label="Completed jobs by work source" style={{ marginTop: 10 }}>
-        {rows.map((row) => (
-          <span
-            key={row.sourceType}
-            style={{
-              width: `${(row.jobs / totalJobs) * 100}%`,
-              background: sourceColors[row.sourceType] ?? "#6d7890",
-            }}
-          />
-        ))}
-      </div>
-      <div className="source-mix-list">
-        {rows.map((row) => {
-          const revenueSupported = row.revenueCoverage > 0;
-          const netSupported = row.netProfitCoverage > 0;
-          const margin = row.netMargin == null ? "—" : pctText(row.netMargin);
-          return (
-            <div key={row.sourceType}>
-              <span>
-                <i style={{ background: sourceColors[row.sourceType] ?? "#6d7890" }} />
-                {row.sourceType}
-              </span>
-              <b className="tnum">{row.jobs}</b>
-              <em className="tnum">
-                {revenueSupported ? fmt.moneyFull(row.revenue) : "revenue n/a"} · {netSupported ? `${fmt.moneyFull(row.netProfit)} net` : "net n/a"} · {margin}
-              </em>
-            </div>
-          );
-        })}
-      </div>
-      <Fnote>
-        Work source is classification only. Negative rows elsewhere on this page require actual Simpro net profit below zero.
-      </Fnote>
-    </>
-  );
-}
-
-/* ── Loss module ───────────────────────────────────────── */
-
-const NUMBER_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
-
-/** "an $863 ticket" vs "a $59 ticket" — ported from the approved kit. */
-export function ticketArticle(v: number): string {
-  return String(Math.round(Math.abs(v)))[0] === "8" ? "an" : "a";
-}
-
-function NetNegativeJobsCard({ model, onOpen }: { model: JobDashboardReadModel; onOpen: (row: JobDrilldownRow) => void }) {
-  const selected = model.selected;
+function WorkSourceCard({ model, onOpen }: { model: JobDashboardReadModel; onOpen: (row: SourceRow) => void }) {
   const monthLong = monthLongName(model.selectedMonth);
-  const breakdown = selected.lossBreakdown;
-  if (breakdown.lossJobs === 0) {
-    return (
-      <Card title="Net-Negative Jobs" subtitle={`${monthLong} jobs below zero actual net profit`}>
-        <CardBody>
-          <StateEmpty>No {monthLong} jobs finished below zero actual net profit.</StateEmpty>
-        </CardBody>
-      </Card>
-    );
-  }
-  const losses = [...selected.lossRecords].sort((a, b) => (a.netProfit ?? 0) - (b.netProfit ?? 0));
-  const shown = losses.slice(0, 6);
-  const maxLoss = Math.max(Math.abs(shown[0]?.netProfit ?? 0), 1);
-  const shownWord = NUMBER_WORDS[shown.length] ?? String(shown.length);
-  const lossShare = selected.completedJobCount > 0 ? (breakdown.lossJobs / selected.completedJobCount) * 100 : 0;
+  const rows = model.selected.jobSourceRows;
+  const totalRevenue = Math.max(
+    rows.reduce((sum, row) => sum + (row.revenueCoverage > 0 ? row.revenue : 0), 0),
+    1,
+  );
   return (
-    <Card
-      title="Net-Negative Jobs"
-      subtitle={`${monthLong} jobs where Simpro NetProfit Actual is below zero · click a job for detail`}
-      footer={
-        <>
-          <span>
-            {breakdown.lossJobs > shown.length
-              ? `${shownWord} largest net-negative jobs shown · all ${breakdown.lossJobs} appear in the completed-jobs drilldown`
-              : `All ${breakdown.lossJobs} net-negative ${breakdown.lossJobs === 1 ? "job" : "jobs"} shown · also in the completed-jobs drilldown`}
-          </span>
-          <span />
-        </>
-      }
-    >
-      <div className="g57" style={{ margin: 0, gap: 0, marginTop: 0 }}>
-        <div
-          className="bd"
-          style={{
-            borderRight: "1px solid var(--hair-2)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-          }}
-        >
-          <div className="bigstat" style={{ marginBottom: 18 }}>
-            <div className="n tnum" style={{ color: "var(--down)" }}>
-              {fmt.moneyFull(breakdown.netTotal)}
-            </div>
-            <div className="d">
-              <Def def={`Count of completed ${monthLong} jobs where Simpro NetProfit Actual is below zero.`}>
-                {breakdown.lossJobs} of {selected.completedJobCount} {monthLong} jobs finished below zero actual net profit
-              </Def>
-            </div>
-          </div>
-          <div className="compact-meter danger">
-            <span style={{ width: `${Math.min(Math.max(lossShare, 0), 100)}%` }} />
-          </div>
-          <div className="compact-split" style={{ marginTop: 10 }}>
-            <b>{lossShare.toFixed(1)}% of completed jobs</b>
-            <span>actual net below zero</span>
-          </div>
-          <Fnote>
-            This card does not infer losses from source type, job structure, or ticket size. It only uses Simpro NetProfit Actual.
-          </Fnote>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 0 }}>
-          {shown.map((row) => (
-            <BRow
-              key={row.jobId}
-              neg
-              barWidth={Math.max(4, (Math.abs(row.netProfit ?? 0) / maxLoss) * 100)}
-              style={{ padding: "12px 20px" }}
-              onClick={() => onOpen(row)}
-              nameRow={
-                <>
-                  <div className="id1" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {row.name}
-                  </div>
-                  <div className="id2">{lossRowSub(row)}</div>
-                </>
-              }
-              mid={
-                row.sellValue != null ? (
-                  <span className="id2 tnum" style={{ flex: "none" }}>
-                    {fmt.moneyFull(row.sellValue)}
-                  </span>
-                ) : null
-              }
-              value={row.netProfit != null ? fmt.moneyFull(row.netProfit) : "—"}
-              valueStyle={{ color: "var(--down)", fontSize: 15 }}
-            />
-          ))}
-        </div>
-      </div>
+    <Card title="Work Source Mix" subtitle={`${monthLong} completed jobs by source · bar = revenue share`}>
+      <CardBody>
+        <BarList>
+          {rows.map((row) => {
+            const revenueSupported = row.revenueCoverage > 0;
+            const netSupported = row.netProfitCoverage > 0;
+            return (
+              <BarListRow
+                key={row.sourceType}
+                name={row.sourceType}
+                value={
+                  <>
+                    {row.jobs} <small>jobs</small>
+                  </>
+                }
+                barPct={revenueSupported ? (row.revenue / totalRevenue) * 100 : 0}
+                meta={`${revenueSupported ? fmt.moneyFull(row.revenue) : "revenue n/a"} · ${
+                  netSupported ? `${fmt.moneyFull(row.netProfit)} net` : "net n/a"
+                } · ${row.netMargin == null ? "margin n/a" : `${pctText(row.netMargin)} margin`}`}
+                onClick={() => onOpen(row)}
+              />
+            );
+          })}
+        </BarList>
+        <Fnote>
+          Work source is classification only. Negative rows elsewhere on this page require actual Simpro net profit below zero.
+        </Fnote>
+      </CardBody>
     </Card>
   );
 }
 
-function lossRowSub(row: JobDrilldownRow): string {
-  const parts = [`Job ${row.jobId}`, row.siteName];
-  if (row.technicians.length > 0) parts.push(row.technicians.join(", "));
-  if (row.actualHours != null) {
-    parts.push(`${trimHours(row.actualHours)}h recorded`);
-  }
-  return parts.join(" · ");
+function SourceDrawerBody({ row }: { row: SourceRow }) {
+  return (
+    <>
+      <KV>
+        <KVCell label="Jobs" value={String(row.jobs)} />
+        <KVCell label="Revenue" value={row.revenueCoverage > 0 ? fmt.moneyFull(row.revenue) : "N/A"} />
+        <KVCell label="Net profit" value={row.netProfitCoverage > 0 ? fmt.moneyFull(row.netProfit) : "N/A"} />
+        <KVCell label="Net margin" value={row.netMargin == null ? "N/A" : pctText(row.netMargin)} />
+      </KV>
+      <DSec>Drill-through</DSec>
+      <DNote>
+        Filter the completed-jobs list by source to see every {row.sourceType} job’s revenue, gross and net.
+      </DNote>
+    </>
+  );
 }
 
-/* ── Labor ─────────────────────────────────────────────── */
+/* ── Row 3 right: labor + overruns ─────────────────────── */
 
 const OVER_ESTIMATE_DEF =
   "Aggregated as (Σ actual − Σ estimated) ÷ Σ estimated across covered jobs — never an average of per-job percentages. Jobs with actuals but no estimate are excluded from the %; estimates come from the linked quote’s labor lines.";
@@ -1055,6 +984,10 @@ export function recurringLaborFacts(rows: JobDrilldownRow[]): RecurringLaborFact
 
 function LaborCard({ model, cohort }: { model: JobDashboardReadModel; cohort: FullCohort }) {
   const [mode, setMode] = useState<"quote" | "recurring">("quote");
+  const changeMode = (value: "quote" | "recurring") => {
+    setMode(value);
+    if (value === "recurring") void cohort.load().catch(() => undefined);
+  };
   return (
     <Card
       title="Estimated vs Actual Labor"
@@ -1068,88 +1001,105 @@ function LaborCard({ model, cohort }: { model: JobDashboardReadModel; cohort: Fu
             { val: "recurring", label: "Recurring" },
           ]}
           value={mode}
-          onChange={(val) => setMode(val as "quote" | "recurring")}
+          onChange={(val) => changeMode(val as "quote" | "recurring")}
         />
       }
     >
-      <CardBody className="fillbd">
+      <CardBody>
         {mode === "quote" ? (
           <QuoteLinkedLabor model={model} />
         ) : (
-          <RecurringLabor rows={cohort.rows} complete={cohort.complete} />
+          <RecurringLabor rows={cohort.rows} complete={cohort.complete} loading={cohort.loading} />
         )}
       </CardBody>
     </Card>
   );
 }
 
+/** Estimated/actual hour bars per the mockup: 14px tracks in a 76px/1fr/60px
+ *  grid, both scaled so the larger bar fills 93% of the track. */
 function LaborBars({ est, act }: { est: number; act: number }) {
-  const max = Math.max(est, act, 0.0001) * 1.12;
+  const max = Math.max(est, act, 0.0001);
+  const bar = (value: number, color: string) => (
+    <div style={{ height: 14, borderRadius: 5, background: "var(--n100)", overflow: "hidden" }}>
+      <i style={{ display: "block", height: "100%", width: `${(value / max) * 93}%`, background: color, borderRadius: 5, fontStyle: "normal" }} />
+    </div>
+  );
   return (
-    <>
-      {(
-        [
-          ["Estimated", est, "#9aa2b2"],
-          ["Actual", act, "#5b63d3"],
-        ] as const
-      ).map(([label, value, color]) => (
-        <div key={label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ width: 76, fontSize: 13.5, fontWeight: 600, color: "var(--ink-2)", flex: "none" }}>{label}</span>
-          <div style={{ flex: 1, height: 24, background: "#f1f2f6", borderRadius: 7, overflow: "hidden" }}>
-            <div style={{ width: `${(value / max) * 100}%`, height: "100%", background: color, borderRadius: 7 }} />
-          </div>
-          <b className="tnum" style={{ width: 64, textAlign: "right", fontSize: 14 }}>
-            {fmt.hrs(value)}
-          </b>
-        </div>
-      ))}
-    </>
+    <div data-viz="" style={{ display: "grid", gridTemplateColumns: "76px 1fr 60px", gap: 10, alignItems: "center", margin: "8px 0 4px" }}>
+      <span style={{ fontSize: 13, fontWeight: 600 }}>Estimated</span>
+      {bar(est, "var(--series-weak)")}
+      <b className="tnum" style={{ textAlign: "right" }}>{fmt.hrs(est)}</b>
+      <span style={{ fontSize: 13, fontWeight: 600 }}>Actual</span>
+      {bar(act, "var(--acc)")}
+      <b className="tnum" style={{ textAlign: "right" }}>{fmt.hrs(act)}</b>
+    </div>
   );
 }
 
 function LaborHeadline({ cov, pct }: { cov: ReactNode; pct: number | null }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12, marginTop: 2 }}>
-      <span style={{ fontSize: 13, color: "var(--muted)" }}>{cov}</span>
-      <span style={{ textAlign: "right", flex: "none" }}>
-        <span
-          className="tnum"
-          style={{
-            fontWeight: 800,
-            fontSize: 26,
-            letterSpacing: "-.03em",
-            color: pct == null ? "var(--muted)" : pct > 0 ? "var(--down)" : "var(--up)",
-          }}
-        >
-          {pct == null ? "—" : signedPct(pct)}
-        </span>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginTop: 10 }}>
+      <span style={{ fontSize: 12.5, color: "var(--faint)" }}>{cov}</span>
+      <span
+        className="tnum"
+        style={{
+          fontSize: 20,
+          fontWeight: 700,
+          flex: "none",
+          color: pct == null ? "var(--muted)" : pct > 0 ? "var(--state-failed-fg)" : "var(--success-fg)",
+        }}
+      >
+        {pct == null ? "—" : signedPct(pct)}{" "}
         <span
           className="def"
           data-def={OVER_ESTIMATE_DEF}
-          style={{
-            display: "block",
-            fontSize: 11.5,
-            fontWeight: 600,
-            letterSpacing: ".08em",
-            textTransform: "uppercase",
-            color: "var(--subtle)",
-          }}
+          style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--muted)" }}
         >
-          over estimate
+          {pct != null && pct < 0 ? "under estimate" : "over estimate"}
         </span>
       </span>
     </div>
   );
 }
 
-const laborSectionTitle: CSSProperties = {
-  fontSize: 11.5,
-  fontWeight: 700,
+const stripTitleStyle: CSSProperties = {
+  marginTop: 14,
+  fontSize: 11,
+  fontWeight: 600,
   letterSpacing: ".06em",
   textTransform: "uppercase",
-  color: "var(--faint)",
-  padding: "10px 0 2px",
+  color: "var(--muted)",
 };
+
+/** Per-job variance strip: one thin flex bar per covered job, sorted — green
+ *  under estimate, grey on estimate, red over (the mockup's exact pattern). */
+function VarianceStrip({ items }: { items: Array<{ v: number; label: string }> }) {
+  const maxAbs = Math.max(...items.map((d) => Math.abs(d.v)), 0.0001);
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 56, marginTop: 8 }} aria-label="Per-job hours variance, sorted" data-viz="">
+      {items.map((d, i) => (
+        <i
+          key={i}
+          style={{
+            flex: 1,
+            fontStyle: "normal",
+            background: d.v > 0 ? "var(--down)" : d.v < 0 ? "var(--up)" : "var(--n200)",
+            height: `${d.v === 0 ? 3 : Math.max(4, (Math.abs(d.v) / maxAbs) * 100)}%`,
+          }}
+          onPointerEnter={(e) =>
+            tipShow(
+              tipTitle(d.label) + tipRow(d.v > 0 ? "#d0463a" : d.v < 0 ? "#177a52" : "#d7dbe4", "Hours variance", hoursSigned(d.v)),
+              e.clientX,
+              e.clientY,
+            )
+          }
+          onPointerLeave={tipHide}
+        />
+      ))}
+    </div>
+  );
+}
 
 function LaborOverrunRow({ name, det, delta, neutral }: { name: string; det: string; delta: string; neutral?: boolean }) {
   return (
@@ -1189,12 +1139,8 @@ function QuoteLinkedLabor({ model }: { model: JobDashboardReadModel }) {
   const onEstimate = perJobAsc.length - over.length - under.length;
   const overSum = over.reduce((sum, row) => sum + row.varianceHours, 0);
   const underSum = under.reduce((sum, row) => sum + Math.abs(row.varianceHours), 0);
-  const topOverruns = [...ql.perJob]
-    .sort((a, b) => b.varianceHours - a.varianceHours)
-    .filter((row) => row.varianceHours > 0)
-    .slice(0, 3);
   return (
-    <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, gap: 15, paddingTop: 8 }}>
+    <div>
       <LaborBars est={ql.estimatedHours} act={ql.actualHours} />
       <LaborHeadline
         cov={
@@ -1211,56 +1157,29 @@ function QuoteLinkedLabor({ model }: { model: JobDashboardReadModel }) {
         }
         pct={ql.overrunPercent}
       />
-      <div>
-        {perJobAsc.length > 0 ? (
-          <>
-            <div style={{ ...laborSectionTitle, borderTop: "1px solid var(--hair-2)" }}>
-              Per-job variance — {perJobAsc.length} covered jobs, sorted · {over.length} over (+{overSum.toFixed(1)}h,
-              red) · {under.length} under (−{underSum.toFixed(1)}h) · {onEstimate} on estimate
-            </div>
-            <DevStrip
-              h={130}
-              unit="Hours variance"
-              fmt={hoursSigned}
-              items={perJobAsc.map((row) => ({
-                v: row.varianceHours,
-                label:
-                  row.varianceHours > 0
-                    ? `+${trimHours(row.varianceHours)}h over estimate`
-                    : row.varianceHours < 0
-                      ? `${hoursSigned(row.varianceHours).replace(".00", "")} under estimate`
-                      : "on estimate",
-              }))}
-            />
-          </>
-        ) : null}
-        <div style={{ ...laborSectionTitle, ...(perJobAsc.length > 0 ? {} : { borderTop: "1px solid var(--hair-2)" }) }}>
-          Largest overruns
-        </div>
-        {topOverruns.length > 0 ? (
-          topOverruns.map((row) => (
-            <LaborOverrunRow
-              key={row.jobId}
-              name={`${row.jobId} · ${row.siteName} — ${row.name}`}
-              det={`${trimHours(row.estimatedHours)}h quoted · ${trimHours(row.actualHours)}h actual`}
-              delta={`+${trimHours(row.varianceHours)}h`}
-            />
-          ))
-        ) : (
-          <div className="id2" style={{ padding: "9px 0" }}>
-            No overruns — every covered job finished at or under its estimate.
+      {perJobAsc.length > 0 ? (
+        <>
+          <div style={stripTitleStyle}>
+            Per-job variance — {perJobAsc.length} covered jobs · {over.length} over (+{overSum.toFixed(1)}h) · {under.length}{" "}
+            under (−{underSum.toFixed(1)}h) · {onEstimate} on estimate
           </div>
-        )}
-      </div>
+          <VarianceStrip
+            items={perJobAsc.map((row) => ({ v: row.varianceHours, label: `${row.jobId} · ${row.siteName}` }))}
+          />
+        </>
+      ) : null}
     </div>
   );
 }
 
-function RecurringLabor({ rows, complete }: { rows: JobDrilldownRow[]; complete: boolean }) {
+function RecurringLabor({ rows, complete, loading }: { rows: JobDrilldownRow[]; complete: boolean; loading: boolean }) {
+  if (!complete) {
+    return <StateEmpty>{loading ? "Loading recurring labor for the full month…" : "Recurring labor is available when opened."}</StateEmpty>;
+  }
   const facts = recurringLaborFacts(rows);
   const exclusions = facts.exclusions.slice(0, 3);
   return (
-    <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, gap: 15, paddingTop: 8 }}>
+    <div>
       <LaborBars est={facts.estimatedHours} act={facts.actualHours} />
       <LaborHeadline
         cov={
@@ -1271,37 +1190,71 @@ function RecurringLabor({ rows, complete }: { rows: JobDrilldownRow[]; complete:
         }
         pct={facts.overrunPercent}
       />
-      <div>
-        <div style={{ ...laborSectionTitle, borderTop: "1px solid var(--hair-2)" }}>
-          Recorded hours with no plan estimate — excluded from the %
+      <div style={stripTitleStyle}>Recorded hours with no plan estimate — excluded from the %</div>
+      {exclusions.length > 0 ? (
+        exclusions.map((row) => (
+          <LaborOverrunRow
+            key={row.jobId}
+            neutral
+            name={`${row.jobId} · ${row.siteName} — ${row.name}`}
+            det="recurring visit · no plan estimate"
+            delta={`${trimHours(row.actualHours)}h`}
+          />
+        ))
+      ) : (
+        <div className="id2" style={{ padding: "9px 0" }}>
+          {complete
+            ? "Every recorded recurring visit has a plan estimate."
+            : "Per-job exclusions appear once the full month is loaded."}
         </div>
-        {exclusions.length > 0 ? (
-          exclusions.map((row) => (
-            <LaborOverrunRow
-              key={row.jobId}
-              neutral
-              name={`${row.jobId} · ${row.siteName} — ${row.name}`}
-              det="recurring visit · no plan estimate"
-              delta={`${trimHours(row.actualHours)}h`}
-            />
-          ))
-        ) : (
-          <div className="id2" style={{ padding: "9px 0" }}>
-            {complete
-              ? "Every recorded recurring visit has a plan estimate."
-              : "Per-job exclusions appear once the full month is loaded."}
-          </div>
-        )}
-        <Fnote style={{ marginTop: 0 }}>
-          <span className="repr">Representative</span> until recurring estimates are re-verified per plan.
-          {!complete ? " Computed from the loaded jobs only — the full month is still loading." : ""}
-        </Fnote>
-      </div>
+      )}
+      <Fnote style={{ marginTop: 10 }}>
+        <span className="repr">Representative</span> until recurring estimates are re-verified per plan.
+        {!complete ? " Computed from the loaded jobs only — the full month is still loading." : ""}
+      </Fnote>
     </div>
   );
 }
 
-/* ── Profitability by Site / Category ──────────────────── */
+function OverrunsCard({ model }: { model: JobDashboardReadModel }) {
+  const topOverruns = [...model.selected.quoteLinkedLabor.perJob]
+    .filter((row) => row.varianceHours > 0)
+    .sort((a, b) => b.varianceHours - a.varianceHours)
+    .slice(0, 3);
+  const maxOverrun = topOverruns[0]?.varianceHours ?? 0;
+  return (
+    <Card
+      title="Largest Overruns"
+      subtitle={
+        topOverruns.length > 0
+          ? `top ${topOverruns.length} by hours over estimate · bars scaled to the largest (+${trimHours(maxOverrun)}h)`
+          : "hours over estimate on covered quote-linked jobs"
+      }
+    >
+      <CardBody>
+        {topOverruns.length > 0 ? (
+          <BarList>
+            {topOverruns.map((row) => (
+              <BarListRow
+                key={row.jobId}
+                name={`${row.jobId} · ${row.siteName} — ${row.name}`}
+                value={`+${trimHours(row.varianceHours)}h`}
+                bad
+                barPct={(row.varianceHours / maxOverrun) * 100}
+                barBad
+                meta={`${trimHours(row.estimatedHours)}h quoted · ${trimHours(row.actualHours)}h actual`}
+              />
+            ))}
+          </BarList>
+        ) : (
+          <StateEmpty>No overruns — every covered job finished at or under its estimate.</StateEmpty>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+/* ── Row 4: Profitability by Site / Category ───────────── */
 
 type ProfRow = { label: string; jobs: number; sell: number; np: number; isRemainder?: boolean };
 
@@ -1361,6 +1314,7 @@ function ProfitabilityCard({
 
   return (
     <Card
+      className="span12"
       title={mode === "category" ? "Profitability by Category" : "Profitability by Site"}
       subtitle={`${monthLong} net profit · bars scaled to the largest row · click a row for its jobs`}
       aside={
@@ -1375,50 +1329,38 @@ function ProfitabilityCard({
           onChange={(val) => setMode(val as "site" | "category")}
         />
       }
-      footer={
-        <>
-          <span>{foot}</span>
-          <span />
-        </>
-      }
     >
-      <div style={{ paddingBottom: 8 }}>
-        {rows.map((row) => {
-          const nm = row.sell > 0 ? (row.np / row.sell) * 100 : null;
-          const share = totalNet !== 0 ? (row.np / totalNet) * 100 : null;
-          return (
-            <BRow
-              key={row.label}
-              rem={row.isRemainder}
-              barWidth={row.isRemainder || maxNp <= 0 ? 0 : Math.max(2, (row.np / maxNp) * 100)}
-              barColor={row.isRemainder ? "transparent" : undefined}
-              name={row.label}
-              sub={
-                <span className="tnum">
-                  {row.jobs} {row.jobs === 1 ? "job" : "jobs"} · {fmt.moneyFull(row.sell)} revenue
-                </span>
-              }
-              onClick={
-                row.isRemainder
-                  ? undefined
-                  : () => onOpen({ kind: "prof", mode, label: row.label, jobs: row.jobs, sell: row.sell, np: row.np })
-              }
-              valueBold={false}
-              value={
-                <span style={{ display: "inline-block", textAlign: "right" }}>
-                  <b className="tnum" style={{ fontSize: 14 }}>
-                    {fmt.moneyFull(row.np)}
-                  </b>
-                  <span className="id2 tnum" style={{ display: "block" }}>
-                    {nm != null ? `${pctText(nm)} margin` : "margin n/a"}
-                    {share != null ? ` · ${pctText(share)} of net` : ""}
-                  </span>
-                </span>
-              }
-            />
-          );
-        })}
-      </div>
+      <CardBody>
+        <BarList variant="cols2">
+          {rows.map((row) => {
+            const nm = row.sell > 0 ? (row.np / row.sell) * 100 : null;
+            const share = totalNet !== 0 ? (row.np / totalNet) * 100 : null;
+            const metaParts = [
+              `${row.jobs} ${row.jobs === 1 ? "job" : "jobs"}`,
+              `${fmt.moneyFull(row.sell)} revenue`,
+              nm != null ? `${pctText(nm)} margin` : "margin n/a",
+              share != null ? `${pctText(share)} of net` : null,
+            ].filter(Boolean);
+            return (
+              <BarListRow
+                key={row.label}
+                name={row.label}
+                value={fmt.moneyFull(row.np)}
+                bad={row.np < 0}
+                total={row.isRemainder}
+                barPct={row.isRemainder || maxNp <= 0 ? undefined : Math.max((Math.max(row.np, 0) / maxNp) * 100, 2)}
+                meta={`${metaParts.join(" · ")}${row.isRemainder ? " — long-tail aggregate, not on the per-site bar scale" : ""}`}
+                onClick={
+                  row.isRemainder
+                    ? undefined
+                    : () => onOpen({ kind: "prof", mode, label: row.label, jobs: row.jobs, sell: row.sell, np: row.np })
+                }
+              />
+            );
+          })}
+        </BarList>
+        <Fnote>{foot}</Fnote>
+      </CardBody>
     </Card>
   );
 }
@@ -1461,28 +1403,23 @@ function ProfDrawerBody({
 export type JobsFetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
 /**
- * Assembles the full month cohort by walking the real paginated /api/jobs
- * payload (unfiltered — table filters are applied client-side so they change
- * only the drilldown cohort, never the page's read model). Throws instead of
- * returning a partial cohort.
+ * Loads the full month roster through the narrow records endpoint. Table
+ * filters remain client-side so they never alter the dashboard read model.
  */
 export async function fetchAllCompletedJobs(
   model: JobDashboardReadModel,
   fetcher: JobsFetcher = fetch,
 ): Promise<JobDrilldownRow[]> {
-  const { total, totalPages } = model.drilldownPagination;
+  const { total } = model.drilldownPagination;
   if (model.selected.records.length >= total) return model.selected.records;
-  const rows: JobDrilldownRow[] = [];
-  for (let page = 1; page <= totalPages; page += 1) {
-    const search = new URLSearchParams({ month: model.selectedMonth, page: String(page) });
-    const response = await fetcher(`/api/jobs?${search.toString()}`, { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`The complete job list could not be loaded (page ${page} failed).`);
-    }
-    const data = (await response.json()) as JobDashboardReadModel;
-    rows.push(...data.selected.records);
+  const search = new URLSearchParams({ month: model.selectedMonth });
+  const response = await fetcher(`/api/jobs/records?${search.toString()}`, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("The complete job list could not be loaded.");
   }
-  if (rows.length !== total) {
+  const data = (await response.json()) as { records?: JobDrilldownRow[]; total?: number };
+  const rows = data.records;
+  if (!Array.isArray(rows) || rows.length !== total || data.total !== total) {
     throw new Error("The complete job list could not be loaded. No file was downloaded.");
   }
   return rows;
@@ -1536,7 +1473,7 @@ export function buildCompletedJobsCsv(rows: JobDrilldownRow[]): string {
     "Net Profit",
     "Net Margin (%)",
   ];
-  const lines = [header.map(csvEscape).join(",")];
+  const lines = [header.map(csvCell).join(",")];
   for (const row of rows) {
     lines.push(
       [
@@ -1556,15 +1493,11 @@ export function buildCompletedJobsCsv(rows: JobDrilldownRow[]): string {
           ? ((row.netProfit / row.sellValue) * 100).toFixed(1)
           : "",
       ]
-        .map((value) => csvEscape(String(value)))
+        .map((value) => csvCell(value))
         .join(","),
     );
   }
   return lines.join("\r\n") + "\r\n";
-}
-
-function csvEscape(value: string): string {
-  return /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
 /** Real pager layout: first pages, a window around the current page, and the
@@ -1583,35 +1516,63 @@ export function pageList(totalPages: number, page: number): Array<number | "gap"
   return out;
 }
 
-export type FullCohort = { rows: JobDrilldownRow[]; complete: boolean; error: string | null };
+export type FullCohort = {
+  rows: JobDrilldownRow[];
+  complete: boolean;
+  loading: boolean;
+  error: string | null;
+  load: () => Promise<JobDrilldownRow[]>;
+};
 
-/** Full-cohort loader shared by the drilldown table and the recurring labor
- *  mode. Kicks off the paginated walk once, on the client. */
+/** Full-cohort loader shared by the drilldown table and recurring labor.
+ * It stays idle on initial render and makes one narrow request only when an
+ * interaction needs records beyond the supplied dashboard page. */
 function useFullCohort(model: JobDashboardReadModel): FullCohort {
   const initialComplete = model.selected.records.length >= model.drilldownPagination.total;
-  const [state, setState] = useState<{ rows: JobDrilldownRow[] | null; error: string | null }>(() => ({
+  const [state, setState] = useState<{
+    month: string; rows: JobDrilldownRow[] | null; error: string | null; loading: boolean;
+  }>(() => ({
+    month: model.selectedMonth,
     rows: initialComplete ? model.selected.records : null,
     error: null,
+    loading: false,
   }));
-  useEffect(() => {
-    if (initialComplete) return;
-    let cancelled = false;
-    fetchAllCompletedJobs(model)
+  const requestRef = useRef<{ month: string; promise: Promise<JobDrilldownRow[]> } | null>(null);
+  const currentState = state.month === model.selectedMonth
+    ? state
+    : { rows: null, error: null, loading: false };
+  const load = useCallback(() => {
+    if (initialComplete) return Promise.resolve(model.selected.records);
+    if (currentState.rows) return Promise.resolve(currentState.rows);
+    if (requestRef.current?.month === model.selectedMonth) return requestRef.current.promise;
+
+    setState({ month: model.selectedMonth, rows: null, error: null, loading: true });
+    const promise = fetchAllCompletedJobs(model)
       .then((rows) => {
-        if (!cancelled) setState({ rows, error: null });
+        setState({ month: model.selectedMonth, rows, error: null, loading: false });
+        return rows;
       })
       .catch((error: unknown) => {
-        if (!cancelled) setState({ rows: null, error: error instanceof Error ? error.message : "Load failed." });
+        setState({
+          month: model.selectedMonth,
+          rows: null,
+          error: error instanceof Error ? error.message : "Load failed.",
+          loading: false,
+        });
+        throw error;
+      })
+      .finally(() => {
+        if (requestRef.current?.promise === promise) requestRef.current = null;
       });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model.selectedMonth]);
+    requestRef.current = { month: model.selectedMonth, promise };
+    return promise;
+  }, [currentState.rows, initialComplete, model]);
   return {
-    rows: state.rows ?? model.selected.records,
-    complete: state.rows !== null,
-    error: state.error,
+    rows: currentState.rows ?? model.selected.records,
+    complete: currentState.rows !== null || initialComplete,
+    loading: currentState.loading,
+    error: currentState.error,
+    load,
   };
 }
 
@@ -1641,6 +1602,7 @@ function CompletedJobsCard({
   const filters: CompletedJobsFilters = { category, source, technician, site };
   const filteredAll = sortBySellValue(filterCompletedJobs(cohort.rows, filters));
   const anyFilter = category !== "all" || source !== "all" || technician !== "all" || site !== null;
+  const waitingForFullCohort = !cohort.complete && (anyFilter || page > 1);
   const total = anyFilter || cohort.complete ? filteredAll.length : model.drilldownPagination.total;
   const totalPages = Math.max(1, Math.ceil(total / CLIENT_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -1649,15 +1611,19 @@ function CompletedJobsCard({
   const setFilter = (setter: (value: string) => void) => (value: string) => {
     setter(value);
     setPage(1);
+    void cohort.load().catch(() => undefined);
   };
 
-  const downloadCsv = () => {
+  const downloadCsv = async () => {
     setCsvError(null);
-    if (!cohort.complete) {
-      setCsvError(cohort.error ?? "The complete job list is still loading. No file was downloaded.");
+    let rows = cohort.rows;
+    try {
+      rows = await cohort.load();
+    } catch {
+      setCsvError(cohort.error ?? "The complete job list could not be loaded. No file was downloaded.");
       return;
     }
-    const csv = buildCompletedJobsCsv(filteredAll);
+    const csv = buildCompletedJobsCsv(sortBySellValue(filterCompletedJobs(rows, filters)));
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -1751,7 +1717,11 @@ function CompletedJobsCard({
             </tr>
           </thead>
           <tbody>
-            {visible.length === 0 ? (
+            {waitingForFullCohort ? (
+              <tr>
+                <td colSpan={6}><StateEmpty>Loading the full month…</StateEmpty></td>
+              </tr>
+            ) : visible.length === 0 ? (
               <tr>
                 <td colSpan={6}>
                   <StateEmpty>
@@ -1761,7 +1731,19 @@ function CompletedJobsCard({
               </tr>
             ) : (
               visible.map((row) => (
-                <tr key={row.jobId} className="rowlink" onClick={() => onOpen(row)}>
+                <tr
+                  key={row.jobId}
+                  className="rowlink"
+                  tabIndex={0}
+                  aria-label={`Open job ${row.jobNo || row.jobId} detail`}
+                  onClick={() => onOpen(row)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onOpen(row);
+                    }
+                  }}
+                >
                   <td>
                     <div className="id1">{row.name}</div>
                     <div className="id2">
@@ -1774,7 +1756,11 @@ function CompletedJobsCard({
                   <td className="num tnum">{row.sellValue != null ? fmt.moneyFull(row.sellValue) : "—"}</td>
                   <td className="num tnum hide-sm">{row.grossProfit != null ? fmt.moneyFull(row.grossProfit) : "—"}</td>
                   <td className="num tnum" style={{ fontWeight: 700 }}>
-                    {row.netProfit != null ? fmt.moneyFull(row.netProfit) : "—"}
+                    {row.netProfit != null ? (
+                      row.netProfit < 0 ? <span className="neg" style={{ color: "var(--state-failed-fg)" }}>{fmt.moneyFull(row.netProfit)}</span> : fmt.moneyFull(row.netProfit)
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="num tnum hide-lg">{marginCellText(netMarginDisplay(row.sellValue, row.netProfit))}</td>
                 </tr>
@@ -1788,7 +1774,7 @@ function CompletedJobsCard({
           {total === 0
             ? "Showing 0 jobs"
             : `Showing ${start + 1}–${start + visible.length} of ${total}${anyFilter ? " filtered" : ""} by sell value`}
-          {!cohort.complete && !cohort.error ? " · loading the full month…" : ""}
+          {cohort.loading ? " · loading the full month…" : ""}
           {cohort.error ? ` · ${cohort.error}` : ""}
           {csvError ? ` · ${csvError}` : ""}
         </span>
@@ -1806,8 +1792,14 @@ function CompletedJobsCard({
                 key={entry}
                 type="button"
                 className={entry === safePage ? "on" : undefined}
-                disabled={!cohort.complete && entry * CLIENT_PAGE_SIZE > cohort.rows.length}
-                onClick={() => setPage(entry)}
+                disabled={cohort.loading}
+                onClick={() => {
+                  if (!cohort.complete && entry > 1) {
+                    void cohort.load().then(() => setPage(entry)).catch(() => undefined);
+                    return;
+                  }
+                  setPage(entry);
+                }}
               >
                 {entry}
               </button>
@@ -1815,8 +1807,15 @@ function CompletedJobsCard({
           )}
           <button
             type="button"
-            disabled={safePage === totalPages}
-            onClick={() => setPage(safePage + 1)}
+            disabled={safePage === totalPages || cohort.loading}
+            onClick={() => {
+              const next = safePage + 1;
+              if (!cohort.complete) {
+                void cohort.load().then(() => setPage(next)).catch(() => undefined);
+                return;
+              }
+              setPage(next);
+            }}
             aria-label="Next page"
           >
             ›
@@ -1846,17 +1845,23 @@ function marginCellText(display: NetMarginDisplay): string {
   return display.text;
 }
 
-function JobDrawerBody({ row, loss }: { row: JobDrilldownRow; loss?: boolean }) {
+/** "an $863 ticket" vs "a $59 ticket" — ported from the approved kit. */
+export function ticketArticle(v: number): string {
+  return String(Math.round(Math.abs(v)))[0] === "8" ? "an" : "a";
+}
+
+function JobDrawerBody({ row }: { row: JobDrilldownRow }) {
   const margin = netMarginDisplay(row.sellValue, row.netProfit);
+  const loss = row.netProfit != null && row.netProfit < 0;
   return (
     <>
       <KV>
         <KVCell label="Sell value" value={row.sellValue != null ? fmt.moneyFull(row.sellValue) : "N/A"} />
-        {!loss && row.grossProfit != null ? <KVCell label="Gross profit" value={fmt.moneyFull(row.grossProfit)} /> : null}
+        {row.grossProfit != null ? <KVCell label="Gross profit" value={fmt.moneyFull(row.grossProfit)} /> : null}
         <KVCell
           label="Net profit"
           value={row.netProfit != null ? fmt.moneyFull(row.netProfit) : "N/A"}
-          valueStyle={{ color: row.netProfit != null && row.netProfit < 0 ? "var(--down)" : "var(--ink)" }}
+          valueStyle={{ color: loss ? "var(--down)" : "var(--ink)" }}
         />
         <KVCell
           label="Net margin"
@@ -1882,7 +1887,7 @@ function JobDrawerBody({ row, loss }: { row: JobDrilldownRow; loss?: boolean }) 
       {loss ? (
         <>
           <DSec>Net-negative basis</DSec>
-          <DNote>This job appears here only because Simpro NetProfit Actual is below zero. No additional cause is inferred by the dashboard.</DNote>
+          <DNote>This job finished below zero only because Simpro NetProfit Actual is below zero. No additional cause is inferred by the dashboard.</DNote>
         </>
       ) : null}
       <DSec>In Simpro</DSec>

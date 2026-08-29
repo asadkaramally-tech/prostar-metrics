@@ -3,8 +3,11 @@ import test from "node:test";
 import type { FreshnessStatus } from "../../src/lib/metrics/freshness";
 import {
   buildQuoteMetricsReadModel,
+  buildQuoteMetricsReadModelFromPersistedRecords,
+  buildPersistedQuoteDashboardRecords,
   getQuoteFollowUpQueue,
   getPersistedQuoteDashboard,
+  getPersistedQuoteDashboardRecords,
   loadQuoteDashboardRows,
   type QuoteCanonicalRow,
 } from "../../src/lib/store/quote-dashboard-read-model";
@@ -63,6 +66,96 @@ test("default quote dashboard reads the persisted serving model before canonical
   assert.deepEqual(capturedValues, ["2026-06-01"]);
 });
 
+test("filtered quote dashboard preserves pagination semantics from persisted monthly quote records", () => {
+  const rows = [
+    ...Array.from({ length: 60 }, (_, index) => quoteRow({
+      id: index + 1,
+      dateApproved: `2026-06-${String(index % 28 + 1).padStart(2, "0")}`,
+      dateIssued: "2026-06-01",
+      total: index + 1,
+      linkedMatch: true,
+      linkedJobId: 10_000 + index,
+      category: "HVAC",
+    })),
+    quoteRow({ id: 100, dateApproved: "2026-07-03", dateIssued: "2026-06-28", total: 9_999, category: "Water Heating" }),
+  ];
+  const options = {
+    selectedMonth: "2026-06",
+    now: new Date("2026-07-10T20:00:00Z"),
+    category: "HVAC",
+    tier: "Under $750",
+    outcome: "accepted",
+    acceptancePath: "converted_only",
+    sort: "value-desc",
+    page: 2,
+  };
+  const canonical = buildQuoteMetricsReadModel(freshness, rows, undefined, options);
+  const persisted = buildQuoteMetricsReadModelFromPersistedRecords(
+    freshness,
+    [
+      ...buildPersistedQuoteDashboardRecords(rows, "2026-06-01"),
+      ...buildPersistedQuoteDashboardRecords(rows, "2026-07-01"),
+    ],
+    undefined,
+    options,
+  );
+
+  assert.deepEqual(persisted.classificationRows, canonical.classificationRows);
+  assert.deepEqual(persisted.pagination, canonical.pagination);
+  assert.deepEqual(persisted.currentMonth, canonical.currentMonth);
+  assert.deepEqual(persisted.sentMonthly, canonical.sentMonthly);
+});
+
+test("persisted quote records are reclassified when an older payload stored a stale outcome", () => {
+  const records = buildPersistedQuoteDashboardRecords([
+    quoteRow({
+      id: 2756,
+      dateApproved: "2026-07-12",
+      total: 1_250,
+      status: "Quote: Quote Accepted Online",
+    }),
+  ], "2026-07-01").map((record) => ({
+    ...record,
+    outcome: "not_accepted" as const,
+    acceptancePath: "not_accepted" as const,
+    evidence: "No accepted-online status or exact converted-job relationship",
+  }));
+
+  const model = buildQuoteMetricsReadModelFromPersistedRecords(freshness, records, undefined, {
+    selectedMonth: "2026-07",
+    now: new Date("2026-07-20T20:00:00Z"),
+  });
+
+  assert.equal(model.currentMonth?.quoteCount, 1);
+  assert.equal(model.currentMonth?.acceptedCount, 1);
+  assert.equal(model.currentMonth?.acceptedValue, 1_250);
+  assert.equal(model.classificationRows[0]?.acceptancePath, "accepted_online_only");
+});
+
+test("persisted quote records require every requested monthly serving model", async () => {
+  let capturedSql = "";
+  let capturedValues: unknown[] | undefined;
+  const records = await getPersistedQuoteDashboardRecords("2023-02", async <T>(sql: string, values?: unknown[]) => {
+    capturedSql = sql;
+    capturedValues = values;
+    return {
+      rows: [
+        { period_start: "2023-01-01", quote_records: [] },
+        { period_start: "2023-02-01", quote_records: [] },
+      ] as T[],
+    };
+  });
+  assert.deepEqual(records, []);
+  assert.match(capturedSql, /values_json -> 'quoteRecords' as quote_records/);
+  assert.match(capturedSql, /period_start = any\(\$1::date\[\]\)/);
+  assert.deepEqual(capturedValues, [["2023-01-01", "2023-02-01"]]);
+
+  const missingMonth = await getPersistedQuoteDashboardRecords("2023-02", async <T>() => ({
+    rows: [{ period_start: "2023-02-01", quote_records: [] }] as T[],
+  }));
+  assert.equal(missingMonth, null);
+});
+
 test("selected month classifies all evidence paths with exact denominators", () => {
   const model = buildQuoteMetricsReadModel(freshness, [
     quoteRow({ id: 1, dateApproved: "2026-06-01", total: 100, status: "Quote Accepted Online", category: "HVAC" }),
@@ -106,6 +199,46 @@ test("selected month classifies all evidence paths with exact denominators", () 
   assert.deepEqual(model.acceptanceByCategory.map((row) => row.category), ["HVAC", "Water Heating", "Unclassified"]);
   assert.equal(model.methodology.overrides.activeCount, 2);
   assert.equal("openPipeline" in model, false);
+});
+
+test("July DateIssued cohort counts 97 quotes, 24 accepted union, and 19 conversion-backed", () => {
+  const rows = Array.from({ length: 97 }, (_, index) => {
+    const id = 1_000 + index;
+    const common = {
+      id,
+      dateIssued: `2026-07-${String(index % 21 + 1).padStart(2, "0")}`,
+      dateApproved: index % 3 === 0 ? null : "2026-08-01",
+      total: 100,
+    };
+
+    if (index < 5) return quoteRow({ ...common, status: "Quote: Quote Accepted Online", inverseMatch: true, linkedJobId: 9_000 + id });
+    if (index < 10) return quoteRow({ ...common, status: "Quote: Quote Accepted Online", linkedMatch: true, linkedJobId: 9_000 + id });
+    if (index < 19) return quoteRow({ ...common, linkedMatch: true, linkedJobId: 9_000 + id });
+    if (index < 24) return quoteRow({ ...common, status: "Quote: Quote Accepted Online" });
+    return quoteRow(common);
+  });
+
+  const model = buildQuoteMetricsReadModel(freshness, rows, undefined, {
+    selectedMonth: "2026-07",
+    now: new Date("2026-07-21T20:00:00Z"),
+  });
+
+  assert.equal(model.currentMonth?.quoteCount, 97);
+  assert.equal(model.currentMonth?.acceptedCount, 24);
+  assert.equal(model.currentMonth?.notAcceptedCount, 73);
+  assert.equal(model.classificationRows.length, 50);
+  assert.equal(model.pagination.classificationTotal, 97);
+  assert.ok(model.classificationRows.every((row) => row.dateIssued.startsWith("2026-07-")));
+  assert.deepEqual(model.acceptancePaths.map((row) => [row.path, row.count]), [
+    ["accepted_online_and_converted", 10],
+    ["accepted_online_only", 5],
+    ["converted_only", 9],
+    ["not_accepted", 73],
+  ]);
+  const conversionBacked = model.acceptancePaths
+    .filter((row) => row.path === "accepted_online_and_converted" || row.path === "converted_only")
+    .reduce((total, row) => total + row.count, 0);
+  assert.equal(conversionBacked, 19);
 });
 
 test("acceptance-path filter covers every app-owned classification path", () => {
@@ -177,7 +310,7 @@ test("acceptance path composes with outcome and existing record filters", () => 
   assert.equal(conflictingOutcome.pagination.classificationTotal, 0);
 });
 
-test("Largest Not Accepted age is deterministic from DateApproved and the model as-of date", () => {
+test("Largest Not Accepted age is deterministic from DateIssued and the model as-of date", () => {
   const rows = [quoteRow({ id: 70, dateApproved: "2026-07-10", total: 2500 })];
   const beforeLosAngelesMidnight = buildQuoteMetricsReadModel(freshness, rows, undefined, {
     selectedMonth: "2026-07",
@@ -188,7 +321,7 @@ test("Largest Not Accepted age is deterministic from DateApproved and the model 
     now: new Date("2026-07-13T07:00:00Z"),
   });
 
-  assert.equal(beforeLosAngelesMidnight.largestNotAccepted[0]?.dateApproved, "2026-07-10");
+  assert.equal(beforeLosAngelesMidnight.largestNotAccepted[0]?.dateIssued, "2026-07-10");
   assert.equal(beforeLosAngelesMidnight.largestNotAccepted[0]?.ageDays, 2);
   assert.equal(afterLosAngelesMidnight.largestNotAccepted[0]?.ageDays, 3);
   assert.equal(beforeLosAngelesMidnight.largestNotAccepted[0]?.evidence, "No accepted-online status or exact converted-job relationship");
@@ -258,7 +391,7 @@ test("monthly tier trends expose quote volume and Accepted/Not Accepted rates on
   assert.equal("salesperson" in june, false);
 });
 
-test("partial current month uses DateApproved same-day cohorts and stable trailing excludes it", () => {
+test("partial current month uses DateIssued same-day cohorts and stable trailing excludes it", () => {
   const model = buildQuoteMetricsReadModel(freshness, [
     quoteRow({ id: 30, dateApproved: "2026-07-05", total: 100, status: "Quote Accepted Online" }),
     quoteRow({ id: 31, dateApproved: "2026-07-08", total: 200 }),
@@ -324,7 +457,7 @@ test("dashboard source query loads customer/site identity and DateIssued-only re
   assert.match(capturedSql, /nullif\(btrim\(q\.customer_name\), ''\) as customer_name/);
   assert.match(capturedSql, /q\.site_id::text as site_id/);
   assert.match(capturedSql, /nullif\(btrim\(q\.site_name\), ''\) as site_name/);
-  assert.match(capturedSql, /q\.date_approved is null and q\.date_issued >= date '2023-01-01'/);
+  assert.match(capturedSql, /q\.date_issued >= date '2023-01-01'/);
 });
 
 test("follow-up queue source query stays on normalized quote/job tables", async () => {
@@ -345,7 +478,7 @@ test("follow-up queue source query stays on normalized quote/job tables", async 
   assert.doesNotMatch(capturedSql, /quote_identity/);
 });
 
-test("sent-basis monthly series counts by DateIssued alongside the DateApproved acceptance basis", () => {
+test("all primary monthly quote metrics use DateIssued, including DateApproved-null quotes", () => {
   const model = buildQuoteMetricsReadModel(freshness, [
     quoteRow({ id: 70, dateApproved: "2026-06-05", dateIssued: "2026-06-03", total: 100 }),
     quoteRow({ id: 71, dateApproved: "2026-06-20", dateIssued: "2026-05-28", total: 200 }),
@@ -361,8 +494,8 @@ test("sent-basis monthly series counts by DateIssued alongside the DateApproved 
   assert.equal(june?.sentValue, 500);
   assert.equal(may?.sentCount, 1);
   assert.equal(may?.sentValue, 200);
-  // The acceptance basis is untouched: quote 72 (no DateApproved) is outside monthly activity.
-  assert.equal(model.currentMonth?.quoteCount, 3);
+  assert.equal(model.currentMonth?.quoteCount, 2);
+  assert.equal(model.currentMonth?.quoteValue, 500);
 });
 
 test("follow-up queue lists the not-accepted cohort oldest-first with customer rollup", () => {
@@ -377,7 +510,7 @@ test("follow-up queue lists the not-accepted cohort oldest-first with customer r
   const queue = model.followUpQueue;
   assert.equal(queue.totalCount, 3, "accepted and excluded quotes never enter the queue");
   assert.equal(queue.totalValue, 6600);
-  assert.deepEqual(queue.rows.map((row) => row.quoteId), [80, 82, 81], "oldest DateApproved first");
+  assert.deepEqual(queue.rows.map((row) => row.quoteId), [80, 82, 81], "oldest DateIssued first");
   assert.equal(queue.rows[0]?.ageDays, 44);
   assert.equal(queue.rows[0]?.sentDate, "2026-06-01");
   assert.equal(queue.rows[0]?.customer, "Island Club");
@@ -385,7 +518,7 @@ test("follow-up queue lists the not-accepted cohort oldest-first with customer r
   assert.equal(queue.rows[0]?.status, "Other status");
   assert.equal(queue.asOf, "2026-07-15");
   assert.match(queue.scope, /2026-06 cohort/);
-  assert.match(queue.scope, /DateApproved/);
+  assert.match(queue.scope, /DateIssued/);
 
   assert.deepEqual(queue.byCustomer.map((row) => row.customer), ["Island Club", "Vive Luxe"]);
   assert.equal(queue.byCustomer[0]?.count, 2);
@@ -406,7 +539,7 @@ test("missing customer and site identity stays honest instead of fabricated", ()
 function quoteRow({
   id,
   dateApproved,
-  dateIssued = "2026-01-01",
+  dateIssued = dateApproved,
   total,
   status = "Other status",
   category = "HVAC",

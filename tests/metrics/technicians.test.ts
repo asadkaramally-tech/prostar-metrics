@@ -164,6 +164,7 @@ test("July 2026 regression: pre-month allocation is disclosed, archived people g
     ],
   });
 
+  assert.equal(model.schemaVersion, 1);
   assert.equal(model.rosterApplied, true);
   assert.deepEqual(model.technicians.map((technician) => technician.employeeId).sort(), ["134", "253"]);
 

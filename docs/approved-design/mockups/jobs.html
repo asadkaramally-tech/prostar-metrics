@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Metrics — Pro Star Metrics (redesign mockup)</title>
+<link rel="stylesheet" href="assets/tokens.css?v=8">
+</head>
+<body>
+
+<nav class="appnav">
+  <div class="brand"><span>PRO<span class="star">★</span>STAR</span><span style="letter-spacing:.22em;font-weight:500">METRICS</span></div>
+  <div class="navlinks">
+    <a href="quotes.html">Quotes</a>
+    <a class="on" href="jobs.html" aria-current="page">Jobs</a>
+    <a href="materials.html">Materials</a>
+    <a href="technicians.html">Technicians</a>
+    <a href="commissions.html">Commissions</a>
+  </div>
+  <div class="right">
+    <button class="health btn" style="all:unset" aria-label="Data health, 5 active alerts"><span class="health">Data health <span class="badge">5 active</span></span></button>
+    <div class="user"><div class="av">A</div><div class="who"><b>asad</b><span>Owner · Admin</span></div></div>
+  </div>
+</nav>
+
+<main class="container">
+  <header class="pagehead">
+    <div>
+      <div class="eyebrow">Operations</div>
+      <h1>Job Metrics</h1>
+      <div class="sub">Revenue, profit and outcomes for completed work.</div>
+    </div>
+    <div class="controls">
+      <div class="stepper"><button aria-label="Previous month">‹</button><span class="lbl">📅 July 2026</span><button aria-label="Next month" disabled style="opacity:.35">›</button></div>
+      <div class="updated"><span class="dot"></span>Updated 3 days ago</div>
+    </div>
+  </header>
+
+  <!-- Row 1 — KPI band -->
+  <section class="kpis hero" aria-label="July key metrics">
+    <a class="kpi primary" href="#trend">
+      <span class="lblrow"><span class="lbl">Net profit</span><span class="pills"><span class="pill down">↓ 10.2% vs Jul ’25</span><span class="pill down">↓ 21.7% vs Jun</span></span></span>
+      <span class="val tnum">$165,448</span>
+      <span class="sub">53.6% net margin · 3.6 pts above 50% target (example)</span>
+      <div class="bullet" data-viz aria-label="Net profit month to date $165.4K; ticks mark Jul ’25 $184.2K and June $211.3K, day-aligned">
+        <div class="btrack"><i style="width:75.3%"></i><span class="bmark m1" style="left:83.8%"></span><span class="bmark m2" style="left:96.1%"></span></div>
+        <div class="bcap"><span class="bkey"><i class="tick m1"></i>Jul ’25 · d18 <b>$184.2K</b></span><span class="bkey"><i class="tick m2"></i>Jun ’26 · d18 <b>$211.3K</b></span></div>
+      </div>
+    </a>
+    <div class="ktiles">
+      <div class="kpi">
+        <span class="lblrow"><span class="lbl">Gross profit</span><span class="pills"><span class="pill up">↑ 2.1% vs Jul ’25</span></span></span>
+        <span class="val tnum">$216,186</span>
+        <span class="sub">70.1% margin</span>
+      </div>
+      <div class="kpi">
+        <span class="lbl">Calculated expenses</span>
+        <span class="val tnum">$92,200</span>
+        <span class="sub">materials $56,977 · labor $35,223</span>
+      </div>
+      <div class="kpi">
+        <span class="lbl">Calculated overhead</span>
+        <span class="val tnum">$50,738</span>
+        <span class="sub">gross − overhead = net</span>
+      </div>
+      <div class="kpi">
+        <span class="lblrow"><span class="lbl">Revenue</span><span class="pills"><span class="pill up">↑ 16.0% vs Jul ’25</span></span></span>
+        <span class="val tnum">$308,386</span>
+        <span class="sub">132 completed jobs · avg $2,336</span>
+      </div>
+    </div>
+  </section>
+  <p class="kpiband-note">All vs-comparisons are day-aligned through Jul 18 (“d18”). The tiles chain: revenue − expenses = gross · gross − overhead = net.</p>
+
+  <!-- Row 2 — Monthly Trend (primary chart, promoted from the bottom) -->
+  <div class="grid12">
+    <section class="cardx span12" id="trend" aria-label="Monthly trend">
+      <div class="hd">
+        <div>
+          <div class="ti">Monthly Trend</div>
+          <div class="st">Jan ’25 – Jul ’26 · pick up to four metrics · hover or tap for detail</div>
+        </div>
+        <div class="tools">
+          <div class="chips" role="group" aria-label="Metrics">
+            <button class="chip"><span class="sw"></span>Revenue</button>
+            <button class="chip"><span class="sw"></span>Gross profit</button>
+            <button class="chip on"><span class="sw"></span>Net profit</button>
+            <button class="chip"><span class="sw"></span>Avg job value</button>
+            <button class="chip"><span class="sw"></span>Gross margin %</button>
+            <button class="chip on"><span class="sw" style="background:var(--series-2)"></span>Net margin %</button>
+            <button class="chip"><span class="sw"></span>Completed jobs</button>
+            <button class="chip"><span class="sw"></span>Net ’25 vs ’26</button>
+          </div>
+        </div>
+      </div>
+      <div class="plot" data-chart="jobsTrendMain" data-viz data-label="Net profit by month, dollars"></div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin:2px 0 0"><span style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Net margin %</span><span style="font-size:11px;color:var(--faint)">own axis — mixed-unit picks always split into stacked panels, never share a $ axis</span></div>
+      <div class="plot" data-chart="jobsTrendMargin" data-viz data-label="Net margin percent by month"></div>
+      <p class="fnote">Net margin % is drawn on its own 30–70% panel below the $ chart · profit and margin series are representative pending Simpro verification — revenue and job counts are Simpro-verified for all 19 months. [mockup-only] Series shape approximated from the live chart; anchor points (Jul ’25 $316K, Dec ’25 $725K, May ’26 $143K, Jul ’26 $165K) are real.</p>
+    </section>
+  </div>
+
+  <!-- Row 3 — revenue story | labor economics (colstacks height-matched: 596 vs 608 natural) -->
+  <div class="grid12">
+    <div class="span6 colstack">
+    <section class="cardx" aria-label="Where July revenue went">
+      <div class="hd">
+        <div>
+          <div class="ti">Where July Revenue Went</div>
+          <div class="st">one bar · segments sum to July revenue</div>
+        </div>
+        <div class="tools" data-viz><div class="legend"><span><span class="sw" style="background:color-mix(in srgb, var(--series-2), #fff 40%)"></span>Materials $56,977 · 18.5%</span>
+          <span><span class="sw" style="background:var(--series-2)"></span>Labor $35,223 · 11.4%</span>
+          <span><span class="sw" style="background:var(--series-strong)"></span>Overhead $50,738 · 16.5%</span>
+          <span><span class="sw" style="background:var(--acc)"></span>Net profit</span></div></div>
+      </div>
+      <div data-viz>
+        <div class="stacked tall" role="img" aria-label="Revenue split: materials $56,977, labor $35,223, overhead $50,738, net profit $165,448">
+          <i style="width:18.5%;background:color-mix(in srgb, var(--series-2), #fff 40%)"><span class="seglabel" style="color:var(--ink)">18.5%</span></i>
+          <i style="width:11.4%;background:var(--series-2)"><span class="seglabel" style="color:var(--ink)">11.4%</span></i>
+          <i style="width:16.5%;background:var(--series-strong)"><span class="seglabel">16.5%</span></i>
+          <i style="width:53.6%;background:var(--acc)"><span class="seglabel">Net profit $165.4K · 53.6%</span></i>
+        </div>
+              </div>
+      <p class="fnote">Gross profit = revenue − materials − labor.</p>
+    </section>
+    <section class="cardx" aria-label="Work source mix">
+      <div class="hd">
+        <div>
+          <div class="ti">Work Source Mix</div>
+          <div class="st">July completed jobs by source · bar = revenue share</div>
+        </div>
+      </div>
+      <div class="barlist">
+        <div class="brow">
+          <div class="toprow"><span class="name">Quote-generated</span><span class="rv tnum">28 <small>jobs</small></span></div>
+          <div class="bar"><i style="width:63.6%"></i></div>
+          <div class="meta">$196,074 · $103,132 net · 52.6% margin</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">Recurring</span><span class="rv tnum">29 <small>jobs</small></span></div>
+          <div class="bar"><i style="width:20.4%"></i></div>
+          <div class="meta">$62,872 · $37,515 net · 59.7% margin</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">Direct service</span><span class="rv tnum">75 <small>jobs</small></span></div>
+          <div class="bar"><i style="width:16.0%"></i></div>
+          <div class="meta">$49,439 · $24,802 net · 50.2% margin</div>
+        </div>
+      </div>
+      <p class="fnote">Work source is classification only. Negative rows elsewhere on this page require actual Simpro net profit below zero.</p>
+    </section>
+    </div>
+    <div class="span6 colstack">
+    <section class="cardx" aria-label="Estimated vs actual labor">
+      <div class="hd">
+        <div>
+          <div class="ti">Estimated vs Actual Labor</div>
+          <div class="st">Hours variance on covered jobs</div>
+        </div>
+        <div class="tools">
+          <div class="seg"><button class="on">Quote-linked</button><button>Recurring</button></div>
+        </div>
+      </div>
+      <div data-viz>
+        <div style="display:grid;grid-template-columns:76px 1fr 60px;gap:10px;align-items:center;margin:8px 0 4px">
+          <span style="font-size:13px;font-weight:600">Estimated</span>
+          <div class="bar" style="height:14px;border-radius:5px;background:var(--n100);overflow:hidden"><i style="display:block;height:100%;width:88%;background:var(--series-weak);border-radius:5px"></i></div>
+          <b class="tnum" style="text-align:right">482.5h</b>
+          <span style="font-size:13px;font-weight:600">Actual</span>
+          <div class="bar" style="height:14px;border-radius:5px;background:var(--n100);overflow:hidden"><i style="display:block;height:100%;width:93%;background:var(--acc);border-radius:5px"></i></div>
+          <b class="tnum" style="text-align:right">510h</b>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px">
+          <span style="font-size:12.5px;color:var(--faint)">55 of 57 quote-linked jobs covered · 1 more has actuals but no estimate</span>
+          <span style="font-size:20px;font-weight:700;color:var(--state-failed-fg)" class="tnum">+5.7% <span style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted)">OVER ESTIMATE</span></span>
+        </div>
+        <div style="margin-top:14px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Per-job variance — 55 covered jobs · 18 over (+41.5h) · 15 under (−14.0h) · 22 on estimate</div>
+        <div style="display:flex;align-items:flex-end;gap:2px;height:56px;margin-top:8px" aria-label="Per-job hours variance, sorted">
+          <!-- variance strip: green under, grey on-estimate, red over -->
+          <i style="flex:1;background:var(--up);height:26%"></i><i style="flex:1;background:var(--up);height:22%"></i><i style="flex:1;background:var(--up);height:20%"></i><i style="flex:1;background:var(--up);height:18%"></i><i style="flex:1;background:var(--up);height:16%"></i><i style="flex:1;background:var(--up);height:14%"></i><i style="flex:1;background:var(--up);height:12%"></i><i style="flex:1;background:var(--up);height:12%"></i><i style="flex:1;background:var(--up);height:10%"></i><i style="flex:1;background:var(--up);height:10%"></i><i style="flex:1;background:var(--up);height:8%"></i><i style="flex:1;background:var(--up);height:8%"></i><i style="flex:1;background:var(--up);height:6%"></i><i style="flex:1;background:var(--up);height:6%"></i><i style="flex:1;background:var(--up);height:4%"></i>
+          <i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i><i style="flex:1;background:var(--n200);height:3%"></i>
+          <i style="flex:1;background:var(--down);height:8%"></i><i style="flex:1;background:var(--down);height:10%"></i><i style="flex:1;background:var(--down);height:12%"></i><i style="flex:1;background:var(--down);height:14%"></i><i style="flex:1;background:var(--down);height:16%"></i><i style="flex:1;background:var(--down);height:18%"></i><i style="flex:1;background:var(--down);height:22%"></i><i style="flex:1;background:var(--down);height:26%"></i><i style="flex:1;background:var(--down);height:30%"></i><i style="flex:1;background:var(--down);height:34%"></i><i style="flex:1;background:var(--down);height:38%"></i><i style="flex:1;background:var(--down);height:44%"></i><i style="flex:1;background:var(--down);height:50%"></i><i style="flex:1;background:var(--down);height:56%"></i><i style="flex:1;background:var(--down);height:64%"></i><i style="flex:1;background:var(--down);height:74%"></i><i style="flex:1;background:var(--down);height:86%"></i><i style="flex:1;background:var(--down);height:100%"></i>
+        </div>
+      </div>
+    </section>
+      <section class="cardx" aria-label="Largest overruns">
+      <div class="hd">
+        <div>
+          <div class="ti">Largest Overruns</div>
+          <div class="st">top 3 by hours over estimate · bars scaled to the largest (+5.5h)</div>
+        </div>
+      </div>
+      <div class="barlist">
+        <div class="brow">
+          <div class="toprow"><span class="name">17294 · De Soto Gardens — Replace Water Heater</span><span class="rv bad tnum">+5.5h</span></div>
+          <div class="bar"><i class="bad" style="width:100%"></i></div>
+          <div class="meta">12h quoted · 17.5h actual</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">17306 · Portola Springs HOA — 2.5-Ton Heat Pump A/C System Replacement</span><span class="rv bad tnum">+5.5h</span></div>
+          <div class="bar"><i class="bad" style="width:100%"></i></div>
+          <div class="meta">16h quoted · 21.5h actual</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">17236 · JW Marriot Anaheim — Single Boiler Replacement--WH7 SS 0650C N</span><span class="rv bad tnum">+4.25h</span></div>
+          <div class="bar"><i class="bad" style="width:77%"></i></div>
+          <div class="meta">32h quoted · 36.25h actual</div>
+        </div>
+      </div>
+      </section>
+    </div>
+  </div>
+
+
+  <!-- Row 4 — site profitability (two-column list) -->
+  <div class="grid12">
+    <section class="cardx span12" aria-label="Profitability by site">
+      <div class="hd">
+        <div>
+          <div class="ti">Profitability by Site</div>
+          <div class="st">July net profit · bars scaled to the largest row · click a row for its jobs</div>
+        </div>
+        <div class="tools">
+          <div class="seg"><button class="on">By site</button><button>By category</button></div>
+        </div>
+      </div>
+      <div class="barlist cols2">
+        <div class="brow">
+          <div class="toprow"><span class="name">Creekwood at River Run <small style="color:var(--faint);font-weight:400">(contract client)</small></span><span class="rv tnum">$47,044</span></div>
+          <div class="bar"><i style="width:100%"></i></div>
+          <div class="meta">1 job · $102,986 revenue · 45.7% margin · 28.4% of net</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">JW Marriot Anaheim</span><span class="rv tnum">$12,017</span></div>
+          <div class="bar"><i style="width:25.5%"></i></div>
+          <div class="meta">2 jobs · $16,241 revenue · 74.0% margin · 7.3% of net</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">Sunland Park <small style="color:var(--faint);font-weight:400">(contract client)</small></span><span class="rv tnum">$9,673</span></div>
+          <div class="bar"><i style="width:20.6%"></i></div>
+          <div class="meta">1 job · $15,159 revenue · 63.8% margin · 5.8% of net</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">Aqua 488 HOA <small style="color:var(--faint);font-weight:400">(contract client)</small></span><span class="rv tnum">$5,017</span></div>
+          <div class="bar"><i style="width:10.7%"></i></div>
+          <div class="meta">2 jobs · $6,948 revenue · 72.2% margin · 3.0% of net</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">Portola Springs HOA <small style="color:var(--faint);font-weight:400">(contract client)</small></span><span class="rv tnum">$4,976</span></div>
+          <div class="bar"><i style="width:10.6%"></i></div>
+          <div class="meta">1 job · $8,431 revenue · 59.0% margin · 3.0% of net</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">Days Inn #1111</span><span class="rv tnum">$4,728</span></div>
+          <div class="bar"><i style="width:10.1%"></i></div>
+          <div class="meta">2 jobs · $6,274 revenue · 75.4% margin · 2.9% of net</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">Neilson Villa <small style="color:var(--faint);font-weight:400">(contract client)</small></span><span class="rv tnum">$4,250</span></div>
+          <div class="bar"><i style="width:9.0%"></i></div>
+          <div class="meta">1 job · $4,438 revenue · 95.8% margin · 2.6% of net</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">Schmale Family Senior <small style="color:var(--faint);font-weight:400">(contract client)</small></span><span class="rv tnum">$4,077</span></div>
+          <div class="bar"><i style="width:8.7%"></i></div>
+          <div class="meta">1 job · $8,341 revenue · 48.9% margin · 2.5% of net</div>
+        </div>
+        <div class="brow total">
+          <div class="toprow"><span class="name" style="color:var(--muted)">Remaining 83 sites</span><span class="rv tnum">$73,667</span></div>
+          <div class="meta">121 jobs · $139,569 revenue · 52.8% margin · 44.5% of net — long-tail aggregate, not on the per-site bar scale</div>
+        </div>
+      </div>
+      <p class="fnote">Top 8 of 91 sites by net profit · the long tail still carries 44.5% of net.</p>
+    </section>
+  </div>
+
+  <!-- Row 5 — completed jobs -->
+  <div class="grid12">
+    <section class="cardx span12" aria-label="Completed jobs">
+      <div class="hd">
+        <div>
+          <div class="ti">Completed Jobs</div>
+          <div class="st">All 132 July jobs by sell value · click a row for detail</div>
+        </div>
+        <div class="tools">
+          <button class="btn">⭳ Download CSV</button>
+          <select class="ctl"><option>All categories</option></select>
+          <select class="ctl"><option>All sources</option></select>
+          <select class="ctl"><option>All technicians</option></select>
+        </div>
+      </div>
+      <div class="tblwrap">
+        <table class="data">
+          <thead><tr><th>Job</th><th>Source</th><th class="num">Sell</th><th class="num">Gross</th><th class="num">Net</th><th class="num">Net margin</th></tr></thead>
+          <tbody>
+            <tr class="click"><td><b>Boiler Install--HD201 (8 Systems)</b><span class="cellsub">Job 16709 · Creekwood at River Run (contract client)</span></td><td><span class="srcpill">Quote-generated</span></td><td class="num">$102,986</td><td class="num">$56,148</td><td class="money">$47,044</td><td class="num">45.7%</td></tr>
+            <tr class="click"><td><b>Single Boiler Replacement--WH7 SS 0650C N</b><span class="cellsub">Job 17236 · JW Marriot Anaheim</span></td><td><span class="srcpill">Quote-generated</span></td><td class="num">$15,141</td><td class="num">$12,204</td><td class="money">$11,207</td><td class="num">74.0%</td></tr>
+            <tr class="click"><td><b>Replace Water Heater</b><span class="cellsub">Job 17294 · De Soto Gardens (contract client)</span></td><td><span class="srcpill">Quote-generated</span></td><td class="num">$10,709</td><td class="num">$4,781</td><td class="money">$3,865</td><td class="num">36.1%</td></tr>
+            <tr class="click"><td><b>Portola Springs #3: 2.5-Ton Heat Pump A/C System Replacement</b><span class="cellsub">Job 17306 · Portola Springs HOA (contract client)</span></td><td><span class="srcpill">Quote-generated</span></td><td class="num">$8,431</td><td class="num">$6,985</td><td class="money">$4,976</td><td class="num">59.0%</td></tr>
+            <tr class="click"><td><b>Water Heater PM Service Recommendations</b><span class="cellsub">Job 17155 · Schmale Family Senior (contract client)</span></td><td><span class="srcpill">Quote-generated</span></td><td class="num">$8,341</td><td class="num">$6,007</td><td class="money">$4,077</td><td class="num">48.9%</td></tr>
+            <tr class="click"><td><b>A/C Repairs: HP #3</b><span class="cellsub">Job 17242 · Aqua 488 HOA (contract client)</span></td><td><span class="srcpill">Quote-generated</span></td><td class="num">$6,889</td><td class="num">$6,180</td><td class="money">$5,289</td><td class="num">76.8%</td></tr>
+            <tr class="click"><td><b>MH-7</b><span class="cellsub">Job 17061 · Park Genesee Apartments (contract client)</span></td><td><span class="srcpill">Recurring</span></td><td class="num">$5,914</td><td class="num">$4,946</td><td class="money">$3,780</td><td class="num">63.9%</td></tr>
+            <tr class="click"><td><b>Replace Tube bundle, Igniter, Flame Sensor</b><span class="cellsub">Job 17291 · Days Inn #1111</span></td><td><span class="srcpill">Quote-generated</span></td><td class="num">$5,451</td><td class="num">$3,905</td><td class="money">$3,905</td><td class="num">71.6%</td></tr>
+            <tr class="click"><td><b>MH-6</b><span class="cellsub">Job 17056 · Las Lomas Gardens (contract client)</span></td><td><span class="srcpill">Recurring</span></td><td class="num">$4,500</td><td class="num">$4,117</td><td class="money">$3,506</td><td class="num">77.9%</td></tr>
+            <tr class="click"><td><b>MH-5</b><span class="cellsub">Job 17058 · Neilson Villa (contract client)</span></td><td><span class="srcpill">Recurring</span></td><td class="num">$4,438</td><td class="num">$4,250</td><td class="money">$4,250</td><td class="num">95.8%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12.5px;color:var(--muted)">
+        <span>Showing 1–10 of 132 by sell value</span>
+        <span style="display:flex;gap:6px;align-items:center">
+          <button class="btn" style="padding:5px 9px">‹</button>
+          <button class="btn" style="padding:5px 10px;background:var(--acc);color:#fff;border-color:var(--acc)">1</button>
+          <button class="btn" style="padding:5px 10px">2</button><span>…</span><button class="btn" style="padding:5px 10px">14</button>
+          <button class="btn" style="padding:5px 9px">›</button>
+        </span>
+      </div>
+    </section>
+  </div>
+
+
+
+  <p class="srcline">Source: Simpro completed jobs · Pacific-time months · net profit = Simpro NetProfit Actual</p>
+</main>
+
+<script src="assets/charts.js?v=8"></script>
+<script src="assets/drill.js?v=8"></script>
+<script>
+/* Anchors are real (Jul '25 $316K, Dec '25 high $725K, May '26 $143K slowdown, Jul '26 $165K);
+   intermediate months approximated from the live chart's shape for this mockup. */
+const ML = ['Jan ’25','','Mar','','May','','Jul','','Sep','','Nov','','Jan ’26','','Mar','','May','','Jul'];
+const MLFULL = ['Jan ’25','Feb ’25','Mar ’25','Apr ’25','May ’25','Jun ’25','Jul ’25','Aug ’25','Sep ’25','Oct ’25','Nov ’25','Dec ’25','Jan ’26','Feb ’26','Mar ’26','Apr ’26','May ’26','Jun ’26','Jul ’26'];
+const netK   = [210,245,190,280,320,290,316,355,260,410,520,725,380,310,265,205,143,212,165];
+const marginPct = [48,52,45,55,58,54,56,59,50,60,63,66,57,53,50,46,41,52,53.6];
+function jobsTrendMain(el){
+  lineChart(el, {
+    labels: ML, h: 226, ymax: 800, ticks: 4,
+    yfmt: v => '$' + v + 'K',
+    series: [ { name:'Net profit', vals: netK, color: css('--acc'), width: 2 } ],
+    reflines: [ { v: 316, text: 'Jul ’25 · $316K — same month last year', anchor: 'start' } ],
+    annotations: [
+      { s:0, i:11, text: 'Dec ’25 · $725K\nhigh', dy: -24, anchor: 'middle' },
+      { s:0, i:16, text: '$143K net\nMay slowdown', dy: 30, anchor: 'middle' },
+      { s:0, i:18, text: 'Jul · $165K net', dy: -14, dx: -4, anchor: 'end' },
+    ],
+    xlabels: false,
+    tip: (i) => `<div class="tt-t">${MLFULL[i]}${i<18?' · representative':''}</div>
+      <div class="tt-r"><span><span class="sw" style="background:var(--acc)"></span>Net profit</span><b>$${netK[i]}K</b></div>`,
+  });
+}
+function jobsTrendMargin(el){
+  lineChart(el, {
+    labels: ML, h: 96, ymin: 30, ymax: 70, ticks: 2,
+    yfmt: v => v + '%',
+    series: [ { name:'Net margin %', vals: marginPct, color: css('--series-2'), width: 2 } ],
+    tip: (i) => `<div class="tt-t">${MLFULL[i]}</div>
+      <div class="tt-r"><span><span class="sw" style="background:var(--series-2)"></span>Net margin</span><b>${marginPct[i]}%</b></div>`,
+  });
+}
+</script>
+</body>
+</html>

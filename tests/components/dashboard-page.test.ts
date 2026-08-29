@@ -3,7 +3,8 @@ import test from "node:test";
 import { createElement, type ComponentProps, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DashboardPage } from "../../src/components/dashboard-page";
-import { losAngelesMonthKey, shiftMonthKey } from "../../src/components/period-selector";
+import { losAngelesMonthKey, PeriodSelector, shiftMonthKey } from "../../src/components/period-selector";
+import { StateError } from "../../src/components/reset";
 import type { FreshnessStatus } from "../../src/lib/metrics/freshness";
 
 const TestDashboardPage = DashboardPage as ComponentType<Omit<ComponentProps<typeof DashboardPage>, "children">>;
@@ -32,14 +33,15 @@ test("header renders the approved top grammar: Operations eyebrow, h1, sub, cont
   assert.match(html, /class="controls"/);
 });
 
-test("freshness pill states Updated N ago (never Live) and turns amber off-current", () => {
+test("freshness pill separates data cutoff from pipeline check time and turns amber off-current", () => {
   const current = renderToStaticMarkup(createElement(TestDashboardPage, {
     title: "Job Metrics",
     description: "d",
     freshness,
   }, createElement("section", null, "content")));
   assert.match(current, /class="pill"[^>]*role="status"/);
-  assert.match(current, /Updated \d+ (min|hr|hrs|days) ago/);
+  assert.match(current, /Data through Jun 30, 2026 · checked \d+ (min|hr|hrs|days) ago/);
+  assert.doesNotMatch(current, />Updated /);
   assert.doesNotMatch(current, />Live</);
 
   const stale = renderToStaticMarkup(createElement(TestDashboardPage, {
@@ -56,10 +58,10 @@ test("freshness pill states Updated N ago (never Live) and turns amber off-curre
   }, createElement("section", null, "content")));
   assert.match(missing, /class="pill warn"/);
   assert.match(missing, /No app-owned data yet/);
-  assert.doesNotMatch(missing, /Updated NaN/);
+  assert.doesNotMatch(missing, /checked NaN/);
 });
 
-test("commission period auto-controls render the month stepper inside the header and preserve summaryYear", () => {
+test("commission period controls reset summaryYear when month navigation crosses a year", () => {
   const model = {
     worksheet: { year: 2026, month: 6, periodLabel: "June 2026" },
     summary: { year: 2027 },
@@ -74,9 +76,25 @@ test("commission period auto-controls render the month stepper inside the header
   const contentStart = html.indexOf("data-period");
   const stepper = html.indexOf('aria-label="Commission period"');
   assert.ok(stepper > 0 && stepper < contentStart, "stepper renders inside the header, before page content");
-  assert.match(html, /class="ctl stepper"/);
-  assert.match(html, /June 2026/);
-  assert.match(html, /href="\/commissions\?summaryYear=2027(&amp;|&)month=2026-05"/);
+  assert.match(html, /class="ctl stepper period-picker"/);
+  assert.match(html, /type="month"[^>]*name="month"[^>]*value="2026-06"/);
+  assert.doesNotMatch(html, /name="summaryYear"/);
+  assert.match(html, />Go<\/button>/);
+  assert.match(html, /href="\/commissions\?month=2026-05"/);
+});
+
+test("direct picker preserves page-specific query fields when submitted or stepped", () => {
+  const html = renderToStaticMarkup(createElement(PeriodSelector, {
+    action: "/jobs",
+    value: "2026-06",
+    hiddenFields: { category: "HVAC", jobPage: "3", states: "1" },
+  }));
+  assert.match(html, /<form[^>]*action="\/jobs"[^>]*method="get"/);
+  assert.match(html, /type="hidden" name="category" value="HVAC"/);
+  assert.match(html, /type="hidden" name="jobPage" value="3"/);
+  assert.match(html, /type="hidden" name="states" value="1"/);
+  assert.match(html, /type="month"[^>]*min="2023-01"[^>]*max="\d{4}-\d{2}"/);
+  assert.match(html, /href="\/jobs\?category=HVAC(&amp;|&)jobPage=3(&amp;|&)states=1(&amp;|&)month=2026-05"/);
 });
 
 test("month stepper disables the forward step on the live month and links the previous month", () => {
@@ -97,8 +115,22 @@ test("month stepper disables the forward step on the live month and links the pr
   })));
 
   const prev = shiftMonthKey(liveMonth, -1);
-  assert.match(html, new RegExp(`href="/commissions\\?summaryYear=\\d+(&amp;|&)month=${prev}"`));
+  assert.match(html, new RegExp(`href="/commissions\\?month=${prev}"`));
   assert.match(html, /<button[^>]*class="stepbtn"[^>]*disabled/);
+});
+
+test("month stepper disables history before January 2023", () => {
+  const markup = renderToStaticMarkup(createElement(PeriodSelector, { action: "/technicians", value: "2023-01" }));
+  assert.match(markup, /December 2022 is outside available history/);
+  assert.doesNotMatch(markup, /technicians\?month=2022-12/);
+  assert.match(markup, /min="2023-01"/);
+});
+
+test("error retry renders a native keyboard-operable button only when actionable", () => {
+  const actionable = renderToStaticMarkup(createElement(StateError, { onRetry: () => undefined }, "Failed."));
+  assert.match(actionable, /<button[^>]*type="button"[^>]*class="retry"/);
+  const passive = renderToStaticMarkup(createElement(StateError, null, "Failed."));
+  assert.doesNotMatch(passive, /Try again|class="retry"/);
 });
 
 function CommissionChild({ model }: { model: { worksheet: { year: number; month: number; periodLabel: string }; summary: { year: number } } }) {

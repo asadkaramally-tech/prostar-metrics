@@ -11,10 +11,11 @@ import {
   type TechnicianScheduleVisitInput,
   type TechnicianTimesheetWorkDate,
 } from "@/lib/metrics/technicians";
+import { BACKFILL_START_MONTH, businessCurrentMonth, monthEndInclusive } from "@/lib/backfill/plan";
 import { queryPostgres } from "@/lib/store/postgres";
 import { TECHNICIAN_RECONCILIATION_SOURCE_FAMILIES } from "@/lib/store/technician-reconciliation";
 
-type TechnicianMetricConfiguration = {
+export type TechnicianMetricConfiguration = {
   onTimeThresholdMinutes: number;
   semanticsVerified: boolean;
   arrivalStatusIds: Set<string>;
@@ -134,7 +135,7 @@ export type CommissionSourceQuery = <T = Record<string, unknown>>(
   values?: unknown[],
 ) => Promise<{ rows: T[] }>;
 
-type MobileEventRow = {
+export type MobileEventRow = {
   source_log_id: string;
   employee_id: string | null;
   display_name: string | null;
@@ -145,29 +146,112 @@ type MobileEventRow = {
   status_name: string | null;
 };
 
+export type TechnicianPerformanceCorpus = {
+  rangeStart: string;
+  rangeEnd: string;
+  jobs: TechnicianJobInput[];
+  recordedTimesheets: TechnicianRecordedTimeInput[];
+  scheduleVisits: TechnicianScheduleVisitInput[];
+  mobileRows: MobileEventRow[];
+  configurations: Map<string, TechnicianMetricConfiguration>;
+  historicalTechnicians: TechnicianMonthlyTrend[];
+  rosterRows: EffectiveTechnicianRosterRow[];
+};
+
+let technicianPerformanceCorpus: Promise<TechnicianPerformanceCorpus> | null = null;
+
 export async function getTechnicianPerformanceInputs(periodStart: string, periodEnd: string) {
-  const [jobs, recordedTimesheets, scheduleVisits, mobileRows, configuration, historicalTechnicians, rosterRows] = await Promise.all([
-    getTechnicianJobs(periodStart, periodEnd),
-    getTechnicianRecordedTimesheets(periodStart, periodEnd),
-    getTechnicianScheduleVisits(periodStart, periodEnd),
-    getTechnicianMobileRows(periodStart, periodEnd),
-    getTechnicianMetricConfiguration(periodStart, periodEnd),
+  const [corpus, historicalTechnicians] = await Promise.all([
+    getTechnicianPerformanceCorpus(),
+    // Publication mutates the served history during the drain. Read this one
+    // input per job so later months observe earlier rebuilt months exactly as
+    // they did before corpus preloading.
     getHistoricalTechnicians(periodStart),
-    getEffectiveTechnicianRosterRows(periodStart, periodEnd),
   ]);
+  return technicianPerformanceInputsFromCorpus(corpus, periodStart, periodEnd, historicalTechnicians);
+}
+
+export function technicianPerformanceInputsFromCorpus(
+  corpus: TechnicianPerformanceCorpus,
+  periodStart: string,
+  periodEnd: string,
+  historicalTechnicians = corpus.historicalTechnicians,
+) {
+  if (periodStart < corpus.rangeStart || periodEnd > corpus.rangeEnd) {
+    throw new Error(`Technician period ${periodStart}..${periodEnd} is outside preloaded range ${corpus.rangeStart}..${corpus.rangeEnd}.`);
+  }
+  const recordedTimesheets = corpus.recordedTimesheets.filter((row) => dateInRange(row.workDate, periodStart, periodEnd));
+  const activeEmployeeIds = new Set(recordedTimesheets.filter((row) => row.hours > 0).map((row) => row.employeeId));
+  const rosterRows = corpus.rosterRows
+    .filter((row) => activeEmployeeIds.has(row.employee_id))
+    .map((row) => ({ ...row, has_in_period_work: true }));
+  const configuration = corpus.configurations.get(periodStart)
+    ?? parseTechnicianMetricConfiguration();
 
   return {
-    jobs,
+    jobs: sliceTechnicianJobs(corpus.jobs, periodStart, periodEnd),
     periodStart,
     periodEnd,
     recordedTimesheets,
-    scheduleVisits,
-    mobileEvents: mobileRows.map((row) => mapMobileEvent(row, configuration)),
+    scheduleVisits: corpus.scheduleVisits.filter((row) => dateInRange(pacificDateKey(row.plannedStartAt), periodStart, periodEnd)),
+    mobileEvents: sliceMobileRows(corpus.mobileRows, periodStart, periodEnd).map((row) => mapMobileEvent(row, configuration)),
     onTimeThresholdMinutes: configuration.onTimeThresholdMinutes,
-    historicalTechnicians,
+    historicalTechnicians: historicalTechnicians.filter((row) => row.periodStart <= periodStart),
     roster: mapEffectiveTechnicianRosterRows(rosterRows),
     capacityProfiles: mapTechnicianCapacityRows(rosterRows),
   };
+}
+
+async function getTechnicianPerformanceCorpus(): Promise<TechnicianPerformanceCorpus> {
+  if (!technicianPerformanceCorpus) {
+    const rangeStart = BACKFILL_START_MONTH;
+    const rangeEnd = monthEndInclusive(nextMonthStart(businessCurrentMonth()));
+    technicianPerformanceCorpus = Promise.all([
+      getTechnicianJobs(rangeStart, rangeEnd),
+      getTechnicianRecordedTimesheets(rangeStart, rangeEnd),
+      getTechnicianScheduleVisits(rangeStart, rangeEnd),
+      getTechnicianMobileRows(rangeStart, rangeEnd),
+      getTechnicianMetricConfigurations(rangeStart, rangeEnd),
+      getEffectiveTechnicianRosterRows(rangeStart, rangeEnd),
+    ]).then(([jobs, recordedTimesheets, scheduleVisits, mobileRows, configurations, rosterRows]) => ({
+      rangeStart,
+      rangeEnd,
+      jobs,
+      recordedTimesheets,
+      scheduleVisits,
+      mobileRows,
+      configurations,
+      historicalTechnicians: [],
+      rosterRows,
+    })).catch((error) => {
+      technicianPerformanceCorpus = null;
+      throw error;
+    });
+  }
+  return technicianPerformanceCorpus;
+}
+
+function sliceTechnicianJobs(jobs: TechnicianJobInput[], periodStart: string, periodEnd: string): TechnicianJobInput[] {
+  return jobs.filter((job) => dateInRange(job.completedDate, periodStart, periodEnd)).map((job) => ({
+    ...job,
+    timesheets: job.timesheets.map((timesheet) => ({
+      ...timesheet,
+      inPeriodHours: timesheet.workDates
+        ? timesheet.workDates
+          .filter((row) => row.workDate !== null && dateInRange(row.workDate, periodStart, periodEnd))
+          .reduce((total, row) => total + row.hours, 0)
+        : timesheet.inPeriodHours,
+    })),
+  }));
+}
+
+function sliceMobileRows(rows: MobileEventRow[], periodStart: string, periodEnd: string): MobileEventRow[] {
+  const lowerBound = pacificMidnightUtc(periodStart) - 12 * 60 * 60 * 1_000;
+  const upperBound = pacificMidnightUtc(nextDate(periodEnd)) + 24 * 60 * 60 * 1_000;
+  return rows.filter((row) => {
+    const occurredAt = Date.parse(row.occurred_at ?? "");
+    return Number.isFinite(occurredAt) && occurredAt >= lowerBound && occurredAt < upperBound;
+  });
 }
 
 export async function getTechnicianJobs(periodStart: string, periodEnd: string): Promise<TechnicianJobInput[]> {
@@ -779,47 +863,64 @@ async function getTechnicianMobileRows(periodStart: string, periodEnd: string): 
   return result.rows;
 }
 
-async function getTechnicianMetricConfiguration(
+async function getTechnicianMetricConfigurations(
   periodStart: string,
   periodEnd: string,
-): Promise<TechnicianMetricConfiguration> {
+): Promise<Map<string, TechnicianMetricConfiguration>> {
   const result = await queryPostgres<{
+    period_start: string;
     on_time_threshold_minutes: number;
     config_json: unknown;
   }>(
-    `select configured.on_time_threshold_minutes, configured.config_json
-       from (
-         select c.on_time_threshold_minutes,
-                jsonb_build_object(
-                  'technician', jsonb_build_object(
-                    'mobileStatus', jsonb_build_object(
-                      'verified', c.mobile_status_verified,
-                      'arrivalStatusIds', to_jsonb(c.arrival_status_ids),
-                      'completionStatusIds', to_jsonb(c.completion_status_ids),
-                      'evidence', c.evidence_json,
-                      'configHash', c.config_hash
-                    )
-                  )
-                ) as config_json,
-                0 as source_priority, c.effective_start as sort_date, c.revision as sort_revision
-           from metrics.technician_metric_configs c
-          where c.active
-            and c.effective_start <= $2::date
-            and (c.effective_end is null or c.effective_end >= $1::date)
-         union all
-         select c.on_time_threshold_minutes, c.config_json,
-                1 as source_priority, p.period_start as sort_date, c.revision as sort_revision
-           from metrics.commission_period_configs c
-           join metrics.commission_periods p on p.id = c.period_id
-          where c.active
-            and p.period_start <= $2::date
-            and p.period_end >= $1::date
-       ) configured
-      order by configured.source_priority, configured.sort_date desc, configured.sort_revision desc
-      limit 1`,
+    `with periods as (
+       select month_start::date as period_start,
+              (month_start + interval '1 month - 1 day')::date as period_end
+         from generate_series(
+           date_trunc('month', $1::date),
+           date_trunc('month', $2::date),
+           interval '1 month'
+         ) month_start
+     )
+     select periods.period_start::text,
+            configured.on_time_threshold_minutes,
+            configured.config_json
+       from periods
+       left join lateral (
+         select candidate.on_time_threshold_minutes, candidate.config_json
+           from (
+             select c.on_time_threshold_minutes,
+                    jsonb_build_object(
+                      'technician', jsonb_build_object(
+                        'mobileStatus', jsonb_build_object(
+                          'verified', c.mobile_status_verified,
+                          'arrivalStatusIds', to_jsonb(c.arrival_status_ids),
+                          'completionStatusIds', to_jsonb(c.completion_status_ids),
+                          'evidence', c.evidence_json,
+                          'configHash', c.config_hash
+                        )
+                      )
+                    ) as config_json,
+                    0 as source_priority, c.effective_start as sort_date, c.revision as sort_revision
+               from metrics.technician_metric_configs c
+              where c.active
+                and c.effective_start <= periods.period_end
+                and (c.effective_end is null or c.effective_end >= periods.period_start)
+             union all
+             select c.on_time_threshold_minutes, c.config_json,
+                    1 as source_priority, p.period_start as sort_date, c.revision as sort_revision
+               from metrics.commission_period_configs c
+               join metrics.commission_periods p on p.id = c.period_id
+              where c.active
+                and p.period_start <= periods.period_end
+                and p.period_end >= periods.period_start
+           ) candidate
+          order by candidate.source_priority, candidate.sort_date desc, candidate.sort_revision desc
+          limit 1
+       ) configured on true
+      order by periods.period_start`,
     [periodStart, periodEnd],
   );
-  return parseTechnicianMetricConfiguration(result.rows[0]);
+  return new Map(result.rows.map((row) => [row.period_start, parseTechnicianMetricConfiguration(row)]));
 }
 
 export async function getHistoricalTechnicians(
@@ -1114,6 +1215,62 @@ export function mapTimesheetWorkDates(value: unknown): TechnicianTimesheetWorkDa
     workDate: nullableText(entry.workDate),
     hours: numberValue(entry.hours),
   }));
+}
+
+const pacificDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Los_Angeles",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+function dateInRange(value: string, periodStart: string, periodEnd: string) {
+  return value >= periodStart && value <= periodEnd;
+}
+
+function pacificDateKey(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const parts = pacificDateFormatter.formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((entry) => entry.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+/** Convert a Pacific local calendar midnight to its exact UTC instant, including DST boundaries. */
+function pacificMidnightUtc(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  const desiredAsUtc = Date.UTC(year, month - 1, day);
+  let instant = desiredAsUtc + 8 * 60 * 60 * 1_000;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const parts = pacificDateFormatter.formatToParts(new Date(instant));
+    const numberPart = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((entry) => entry.type === type)?.value);
+    const actualAsUtc = Date.UTC(
+      numberPart("year"),
+      numberPart("month") - 1,
+      numberPart("day"),
+      numberPart("hour"),
+      numberPart("minute"),
+      numberPart("second"),
+    );
+    instant += desiredAsUtc - actualAsUtc;
+  }
+  return instant;
+}
+
+function nextDate(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function nextMonthStart(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCMonth(date.getUTCMonth() + 1, 1);
+  return date.toISOString().slice(0, 10);
 }
 
 function recordValue(value: unknown): Record<string, unknown> | null {

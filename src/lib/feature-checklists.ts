@@ -76,6 +76,15 @@ export const pageFeatureChecklists: Record<RollupScope, FeatureChecklistItem[]> 
     ["C-21", "Summary tables with sparklines, team totals, no-data cells"],
     ["C-22", "Summary loading progress and diagnostics"],
   ].map(toNotStarted),
+  materials: [
+    ["M-01", "Materials sold MTD with prior-month, prior-year day-aligned, and full-month pace"],
+    ["M-02", "Value by category from Simpro catalog parent groups"],
+    ["M-03", "Service Fee lines and Service Contract group excluded"],
+    ["M-04", "Raypak Cheat Sheet merged into Raypak Parts"],
+    ["M-05", "One-off material lines labeled Special order / non-stock"],
+    ["M-06", "Prebuilds reported as their own category"],
+    ["M-07", "All-items table ordered by total sold value with job drill"],
+  ].map(toNotStarted),
 };
 
 function toNotStarted([id, label]: string[]): FeatureChecklistItem {

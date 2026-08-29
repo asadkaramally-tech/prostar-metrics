@@ -31,18 +31,21 @@ export type TodayDashboardReadModel = TodayReadModel & {
 
 type TodayJobRow = {
   job_id: string;
+  job_no: string | null;
   name: string | null;
   completed_date: string;
   stage: string;
   total: string | null;
+  gross_profit_actual: string | null;
   net_profit_actual: string | null;
   site_name: string | null;
   customer_name: string | null;
+  updated_from_source_at: string | null;
 };
 
 type TodayQuoteRow = {
   quote_id: string;
-  date_approved: string;
+  date_issued: string;
   total_value: string | null;
 };
 
@@ -130,8 +133,9 @@ async function getTodayJobs(
   ranges: Array<{ start: string; end: string }>,
 ): Promise<TodayJobInput[]> {
   const result = await queryPostgres<TodayJobRow>(
-    `select j.job_id::text, j.name, j.completed_date::text, j.stage, j.total::text,
-            j.net_profit_actual::text, j.site_name, j.customer_name
+    `select j.job_id::text, j.job_no, j.name, j.completed_date::text, j.stage, j.total::text,
+            j.gross_profit_actual::text, j.net_profit_actual::text, j.site_name, j.customer_name,
+            j.updated_from_source_at::text
        from metrics.metrics_jobs j
       where j.source_deleted_at is null
         and lower(trim(j.stage)) in ('complete', 'archived')
@@ -143,28 +147,31 @@ async function getTodayJobs(
   );
   return result.rows.map((row) => ({
     jobId: row.job_id,
+    jobNo: row.job_no,
     name: row.name,
     completedDate: row.completed_date,
     stageName: row.stage,
     sellValue: nullableNumber(row.total),
+    grossProfitActual: nullableNumber(row.gross_profit_actual),
     netProfitActual: nullableNumber(row.net_profit_actual),
     siteName: row.site_name,
     customerName: row.customer_name,
+    updatedFromSourceAt: row.updated_from_source_at,
   }));
 }
 
 async function getTodayQuotes(range: { start: string; end: string }): Promise<TodayQuoteInput[]> {
   const result = await queryPostgres<TodayQuoteRow>(
-    `select q.quote_id::text, q.date_approved::text, q.total::text as total_value
+    `select q.quote_id::text, q.date_issued::text, q.total::text as total_value
        from metrics.metrics_quotes q
       where q.source_deleted_at is null
-        and q.date_approved between $1::date and $2::date
-      order by q.date_approved, q.quote_id`,
+        and q.date_issued between $1::date and $2::date
+      order by q.date_issued, q.quote_id`,
     [range.start, range.end],
   );
   return result.rows.map((row) => ({
     quoteId: row.quote_id,
-    dateApproved: row.date_approved,
+    dateIssued: row.date_issued,
     totalValue: nullableNumber(row.total_value),
   }));
 }

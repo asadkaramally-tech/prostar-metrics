@@ -7,13 +7,18 @@ import {
   type JobMetricsDashboardReadModel,
   type NormalizedJobSnapshot,
 } from "@/lib/metrics/jobs";
+import type { MaterialsReadModel } from "@/lib/metrics/materials";
 import { buildQuoteMonthlyReadModel, type NormalizedQuoteSnapshot, type QuoteMonthlyReadModel } from "@/lib/metrics/quotes";
 import { buildTechnicianPerformanceReadModel } from "@/lib/metrics/technicians";
+import { buildMaterialsReadModelPayload } from "@/lib/store/materials-read-model";
 import { BACKFILL_START_MONTH, businessCurrentMonth } from "@/lib/backfill/plan";
 import { queryPostgres, withPostgresTransaction, type PostgresQuery } from "@/lib/store/postgres";
 import {
   buildQuoteMetricsReadModel,
+  buildPersistedQuoteDashboardRecords,
   loadQuoteDashboardRows,
+  type PersistedQuoteDashboardRecord,
+  type QuoteCanonicalRow,
   type QuoteMetricsReadModel,
 } from "@/lib/store/quote-dashboard-read-model";
 import {
@@ -25,8 +30,15 @@ import {
 import type { RollupScope } from "@/lib/store/rollups";
 import { getIssuedQuoteInputs, getJobMetricInputs, getJobReconciliations } from "@/lib/store/job-dashboard-read-model";
 import { getTechnicianPerformanceInputs } from "@/lib/store/technician-read-model-inputs";
+import {
+  assertCurrentTechnicianReadModel,
+  assertServeableTechnicianReadModel,
+} from "@/lib/store/technician-read-model-contract";
 
-export type QuoteDashboardReadModelPayload = QuoteMonthlyReadModel & { dashboard: QuoteMetricsReadModel };
+export type QuoteDashboardReadModelPayload = QuoteMonthlyReadModel & {
+  dashboard: QuoteMetricsReadModel;
+  quoteRecords: PersistedQuoteDashboardRecord[];
+};
 export type JobDashboardReadModelPayload = ReturnType<typeof buildJobMonthlyReadModel> & {
   dashboard: JobMetricsDashboardReadModel;
 };
@@ -34,7 +46,8 @@ export type JobDashboardReadModelPayload = ReturnType<typeof buildJobMonthlyRead
 export type ReadModelPayload = QuoteDashboardReadModelPayload
   | JobDashboardReadModelPayload
   | ReturnType<typeof buildTechnicianPerformanceReadModel>
-  | CommissionReadModel;
+  | CommissionReadModel
+  | MaterialsReadModel;
 
 export type RollupRebuildJob = {
   id: number;
@@ -52,6 +65,17 @@ type JobDashboardSourceInputs = {
 };
 
 let jobDashboardSourceInputs: Promise<JobDashboardSourceInputs> | null = null;
+
+type QuoteDashboardSourceInputs = {
+  rows: QuoteCanonicalRow[];
+  snapshots: NormalizedQuoteSnapshot[];
+  overrideSummary: Awaited<ReturnType<typeof getQuoteOverrideSummary>>;
+};
+
+// A historical drain rebuilds many selected months from one canonical corpus.
+// Keep the expensive 2023-current SQL read process-local, just like Jobs does,
+// so --limit 100 pays for it once rather than once per queued month.
+let quoteDashboardSourceInputs: Promise<QuoteDashboardSourceInputs> | null = null;
 
 export type RollupRebuildQuery = <T = Record<string, unknown>>(
   text: string,
@@ -270,6 +294,9 @@ async function publishReadModelForJob(
   payload: ReadModelPayload,
   query: RollupRebuildQuery,
 ): Promise<void> {
+  if (job.metric_family === "technicians") {
+    assertCurrentTechnicianReadModel(payload, `${job.metric_family}/${job.period_start}`);
+  }
   const sourceHash = readModelSourceHash(payload);
   const published = await query<{ metric_family: string }>(
     `insert into metrics.dashboard_read_models (
@@ -437,7 +464,11 @@ async function assertRollupLease(
   if (result.rows.length !== 1) throw new Error(`Lost rollup lease for job ${job.id}.`);
 }
 
-export async function getLatestReadModelPayload(scope: RollupScope, periodStart?: string): Promise<{
+export async function getLatestReadModelPayload(
+  scope: RollupScope,
+  periodStart?: string,
+  compactTechnicianDetails = false,
+): Promise<{
   period_start: string;
   values_json: ReadModelPayload;
   source_coverage_json: Record<string, unknown>;
@@ -450,7 +481,13 @@ export async function getLatestReadModelPayload(scope: RollupScope, periodStart?
     source_coverage_json: Record<string, unknown>;
     rebuilt_at: string;
   }>(
-    `select period_start::text, values_json, source_coverage_json, rebuilt_at::text
+    `select period_start::text,
+            case
+              when $4::boolean and metric_family = 'technicians' then
+                values_json || '{"history":[],"visits":[],"crewLaborEfficiency":[]}'::jsonb
+              else values_json
+            end as values_json,
+            source_coverage_json, rebuilt_at::text
      from metrics.dashboard_read_models
      where metric_family = $1
        and period_grain = 'month'
@@ -480,10 +517,14 @@ export async function getLatestReadModelPayload(scope: RollupScope, periodStart?
        end,
        period_start desc
      limit 1`,
-    [scope, periodStart ?? null, upperBound],
+    [scope, periodStart ?? null, upperBound, compactTechnicianDetails],
   );
 
-  return result.rows[0] ?? null;
+  const row = result.rows[0] ?? null;
+  if (row && scope === "technicians") {
+    assertServeableTechnicianReadModel(row.values_json, `${scope}/${row.period_start}`);
+  }
+  return row;
 }
 
 function currentMonthStart() {
@@ -499,6 +540,8 @@ async function buildPayload(scope: RollupScope, periodStart: string, periodEnd: 
       return buildJobDashboardPayload(periodStart, periodEnd);
     case "technicians":
       return buildTechnicianPerformanceReadModel(await getTechnicianPerformanceInputs(periodStart, periodEnd));
+    case "materials":
+      return buildMaterialsReadModelPayload(periodStart);
     case "commissions":
       throw new Error("Commission rebuilds require the owner-fenced transactional publication workflow.");
     default:
@@ -533,15 +576,44 @@ function getJobDashboardSourceInputs(): Promise<JobDashboardSourceInputs> {
 }
 
 async function buildQuoteDashboardPayload(periodStart: string, periodEnd: string): Promise<QuoteDashboardReadModelPayload> {
-  // Rollup jobs deliberately use a one-connection pool. Keep these reads serial so a
-  // long monthly query cannot make sibling pool requests hit the acquisition timeout.
-  const monthly = await buildQuoteMonthlyRollup(periodStart, periodEnd);
-  const snapshots = await loadQuoteDashboardRows();
-  const overrideSummary = await getQuoteOverrideSummary();
-  const dashboard = buildQuoteMetricsReadModel(rollupFreshness("quotes"), snapshots, overrideSummary, { selectedMonth: periodStart.slice(0, 7) });
+  const source = await getQuoteDashboardSourceInputs();
+  const monthly = buildQuoteMonthlyReadModel({ quotes: source.snapshots, periodStart, periodEnd });
+  const dashboard = buildQuoteMetricsReadModel(rollupFreshness("quotes"), source.rows, source.overrideSummary, { selectedMonth: periodStart.slice(0, 7) });
   return {
     ...monthly,
     dashboard,
+    quoteRecords: buildPersistedQuoteDashboardRecords(source.rows, periodStart),
+  };
+}
+
+function getQuoteDashboardSourceInputs(): Promise<QuoteDashboardSourceInputs> {
+  if (!quoteDashboardSourceInputs) {
+    quoteDashboardSourceInputs = (async () => {
+      // The rollup worker intentionally uses a one-connection pool.
+      const rows = await loadQuoteDashboardRows();
+      const overrideSummary = await getQuoteOverrideSummary();
+      return { rows, snapshots: rows.map(quoteSnapshotFromDashboardRow), overrideSummary };
+    })().catch((error) => {
+      quoteDashboardSourceInputs = null;
+      throw error;
+    });
+  }
+  return quoteDashboardSourceInputs;
+}
+
+/** Exact monthly-rollup projection of the canonical dashboard row. */
+export function quoteSnapshotFromDashboardRow(row: QuoteCanonicalRow): NormalizedQuoteSnapshot {
+  return {
+    quoteId: String(row.quote_id),
+    quoteNo: row.quote_no,
+    totalValue: Number(row.total_value ?? 0),
+    dateIssued: row.date_issued,
+    dateApproved: row.date_approved,
+    statusName: row.status_name,
+    linkedJobId: row.linked_job_match === true && row.linked_job_id != null ? String(row.linked_job_id) : null,
+    convertedFromJobId: row.inverse_conversion_match === true ? "matched" : null,
+    outcomeOverride: row.override_outcome === "excluded" ? "excluded" : null,
+    sourceDeletedAt: null,
   };
 }
 
@@ -607,8 +679,10 @@ export async function getQuoteSnapshots(
       and linked_job.source_deleted_at is null
      left join lateral (
        select relationship.job_id
-         from metrics.job_source_quotes relationship
-        where relationship.source_quote_id = q.quote_id
+         from metrics.metrics_jobs relationship
+        where relationship.converted_from_type = 'Quote'
+          and relationship.converted_from_id = q.quote_id
+          and relationship.source_deleted_at is null
         order by relationship.job_id
         limit 1
      ) inverse_job on true
@@ -618,7 +692,7 @@ export async function getQuoteSnapshots(
         order by o.created_at desc, o.id desc limit 1
      ) excluded_override on true
      where q.source_deleted_at is null
-       and (q.date_approved between $1::date and $2::date or q.date_approved is null)`,
+       and q.date_issued between $1::date and $2::date`,
     [periodStart, periodEnd],
   );
 

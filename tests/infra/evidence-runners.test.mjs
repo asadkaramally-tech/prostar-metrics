@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { PRODUCTION_JOB_NAMES } from "../../scripts/lib/production-targets.mjs";
+import { withIsolatedBicepEnvironment } from "./helpers/bicep-environment.mjs";
 
 const [bicep, metricsBicep, parameters, dockerfile] = await Promise.all([
   readFile(new URL("../../infra/azure/evidence-runners.bicep", import.meta.url), "utf8"),
@@ -14,7 +15,7 @@ const [bicep, metricsBicep, parameters, dockerfile] = await Promise.all([
 ]);
 const parameterDocument = JSON.parse(parameters);
 
-test("three isolated event jobs remain outside the app plus 23 routine deployment contract", () => {
+test("three isolated event jobs remain outside the app plus 24 routine deployment contract", () => {
   const jobs = ["job-psm-evidence-gate", "job-psm-evidence-browser", "job-psm-evidence-reviewer"];
   for (const name of jobs) {
     assert.match(bicep, new RegExp(`jobName: '${name}'`));
@@ -81,28 +82,30 @@ test("template materializes the exact 19-assignment policy and fixed custom-role
 test("both lifecycle owners compile to the identical complete three-rule policy", (t) => {
   assert.match(bicep, /resource evidenceHandoffLifecycle 'Microsoft\.Storage\/storageAccounts\/managementPolicies@2023-05-01'/);
   assert.match(metricsBicep, /resource commissionExportLifecycle 'Microsoft\.Storage\/storageAccounts\/managementPolicies@2023-05-01'/);
-  const probe = spawnSync("az", ["bicep", "version"], { encoding: "utf8" });
-  if (probe.error?.code === "ENOENT") {
-    t.skip("Azure CLI is not installed");
-    return;
-  }
-  assert.equal(probe.status, 0, probe.stderr);
-  const policies = ["metrics.bicep", "evidence-runners.bicep"].map((name) => {
-    const path = fileURLToPath(new URL(`../../infra/azure/${name}`, import.meta.url));
-    const result = spawnSync("az", ["bicep", "build", "--file", path, "--stdout"], { encoding: "utf8" });
-    assert.equal(result.status, 0, result.stderr);
-    const template = JSON.parse(result.stdout);
-    const resources = template.resources.filter(({ type }) => type === "Microsoft.Storage/storageAccounts/managementPolicies");
-    assert.equal(resources.length, 1, `${name} must own exactly one managementPolicies/default singleton`);
-    assert.equal(resources[0].apiVersion, "2023-05-01");
-    return resources[0].properties.policy;
+  withIsolatedBicepEnvironment((options) => {
+    const probe = spawnSync("az", ["bicep", "version"], options);
+    if (probe.error?.code === "ENOENT") {
+      t.skip("Azure CLI is not installed");
+      return;
+    }
+    assert.equal(probe.status, 0, probe.stderr);
+    const policies = ["metrics.bicep", "evidence-runners.bicep"].map((name) => {
+      const path = fileURLToPath(new URL(`../../infra/azure/${name}`, import.meta.url));
+      const result = spawnSync("az", ["bicep", "build", "--file", path, "--stdout"], options);
+      assert.equal(result.status, 0, result.stderr);
+      const template = JSON.parse(result.stdout);
+      const resources = template.resources.filter(({ type }) => type === "Microsoft.Storage/storageAccounts/managementPolicies");
+      assert.equal(resources.length, 1, `${name} must own exactly one managementPolicies/default singleton`);
+      assert.equal(resources[0].apiVersion, "2023-05-01");
+      return resources[0].properties.policy;
+    });
+    assert.deepEqual(policies[0], policies[1]);
+    assert.deepEqual(policies[0].rules.map(({ name }) => name), [
+      "retain-commission-exports-seven-years",
+      "delete-orphaned-release-evidence-handoffs",
+      "expire-release-evidence-replay-ledger",
+    ]);
   });
-  assert.deepEqual(policies[0], policies[1]);
-  assert.deepEqual(policies[0].rules.map(({ name }) => name), [
-    "retain-commission-exports-seven-years",
-    "delete-orphaned-release-evidence-handoffs",
-    "expire-release-evidence-replay-ledger",
-  ]);
 });
 
 test("runner image contains Node and Azure CLI but no credential material", () => {

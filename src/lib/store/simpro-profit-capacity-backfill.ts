@@ -1,4 +1,9 @@
 import { createHash } from "node:crypto";
+import {
+  acquireNestedRefreshQueueLock,
+  ingestionJobTransaction,
+  type IngestionJobTransaction,
+} from "@/lib/store/ingestion-jobs";
 import { queryPostgres } from "@/lib/store/postgres";
 
 export const SIMPRO_PROFIT_CAPACITY_CONTRACT_VERSION = "026";
@@ -112,6 +117,7 @@ export async function enqueueProfitCapacityBackfill(params: {
   throughMonth?: string;
   approvedBy: string;
   query?: ProfitCapacityBackfillQuery;
+  transaction?: IngestionJobTransaction;
 }) {
   const query = params.query ?? queryPostgres;
   const approvedBy = params.approvedBy.trim().toLowerCase();
@@ -125,7 +131,9 @@ export async function enqueueProfitCapacityBackfill(params: {
 
   const entityId = `simpro-profit-capacity-${SIMPRO_PROFIT_CAPACITY_CONTRACT_VERSION}:${estimate.startMonth}:${estimate.throughMonth}`;
   const planHash = createHash("sha256").update(JSON.stringify({ entityId, estimate })).digest("hex");
-  const result = await query<{
+  const result = await ingestionJobTransaction(query, params.transaction)(async (transactionQuery) => {
+    await acquireNestedRefreshQueueLock(transactionQuery);
+    return transactionQuery<{
     generation: number;
     discovery_queued: number;
     job_details_queued: number;
@@ -197,19 +205,43 @@ export async function enqueueProfitCapacityBackfill(params: {
           and job.stage in ('Complete', 'Archived')
           and job.source_deleted_at is null
           and (job.profit_capacity_normalized_at is null or cost_center.job_id is not null)
+     ), job_detail_candidates as materialized (
+       select job.job_id,
+              coalesce(
+                (
+                  select queued.idempotency_key
+                    from metrics.ingestion_jobs queued
+                   where queued.entity_type = 'job_nested'::metrics.ingestion_entity_type
+                     and queued.status = 'queued'
+                     and queued.params->>'entityId' = job.job_id::text
+                   order by queued.updated_at desc, queued.created_at desc, queued.id desc
+                   limit 1
+                ),
+                (
+                  select 'job_nested:' || job.job_id::text || ':after-running:' || running.id::text || ':' || running.generation::text
+                    from metrics.ingestion_jobs running
+                   where running.entity_type = 'job_nested'::metrics.ingestion_entity_type
+                     and running.status = 'running'
+                     and running.params->>'entityId' = job.job_id::text
+                   order by running.locked_at desc nulls last, running.id desc
+                   limit 1
+                ),
+                'job_nested:' || job.job_id::text || ':simpro-profit-capacity-${SIMPRO_PROFIT_CAPACITY_CONTRACT_VERSION}'
+              ) as idempotency_key
+         from missing_jobs job
      ), job_details as (
        insert into metrics.ingestion_jobs (
          entity_type, idempotency_key, priority, request_budget, params
        )
        select 'job_nested'::metrics.ingestion_entity_type,
-              'job_nested:' || job_id::text || ':simpro-profit-capacity-${SIMPRO_PROFIT_CAPACITY_CONTRACT_VERSION}',
+              job.idempotency_key,
               10, 250,
               jsonb_build_object(
-                'entityId', job_id,
+                'entityId', job.job_id,
                 'contract', $3::text,
                 'seedGeneration', run_generation.generation
               )
-         from missing_jobs
+         from job_detail_candidates job
          cross join run_generation
        on conflict (entity_type, idempotency_key) do update set
          priority = least(metrics.ingestion_jobs.priority, excluded.priority),
@@ -295,7 +327,8 @@ export async function enqueueProfitCapacityBackfill(params: {
             (select count(*)::integer from employees) as employees_queued
        from audit`,
     [estimate.startMonth, estimate.throughDate, entityId, approvedBy, planHash],
-  );
+    );
+  });
   const row = result.rows[0];
   if (!row) throw new Error("Backfill queue generation was not recorded.");
   const queued = {

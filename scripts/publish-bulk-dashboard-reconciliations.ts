@@ -109,17 +109,18 @@ async function main() {
     const mismatches: Array<Record<string, unknown>> = [];
     const units: BulkDashboardReconciliationUnit[] = [];
 
-    mismatches.push(...compareExactProjectRows("jobs", sourceJobRows, canonicalJobRows, jobSnapshotRows));
-    mismatches.push(...compareExactProjectRows("quotes", sourceQuoteRows, canonicalQuoteRows, quoteSnapshotRows));
+    const through = (rows: ProjectRow[]) => rows.filter((row) => row.periodStart && row.periodStart <= throughMonth);
+    mismatches.push(...compareExactProjectRows("jobs", through(sourceJobRows), through(canonicalJobRows), through(jobSnapshotRows)));
+    mismatches.push(...compareExactProjectRows("quotes", through(sourceQuoteRows), through(canonicalQuoteRows), through(quoteSnapshotRows)));
     mismatches.push(...unverifiedPostArtifactRows(
       "jobs",
-      canonicalJobRows,
+      through(canonicalJobRows),
       verifiedDeltas.jobs,
       project.manifest.completedAt,
     ));
     mismatches.push(...unverifiedPostArtifactRows(
       "quotes",
-      canonicalQuoteRows,
+      through(canonicalQuoteRows),
       verifiedDeltas.quotes,
       project.manifest.completedAt,
     ));
@@ -200,13 +201,20 @@ async function main() {
         month,
         "technicians",
       );
+      const outsideRoster = requiredRecordArray(
+        technicianDashboard.values_json.outsideRoster,
+        "technicians",
+        month,
+        "outsideRoster",
+      );
+      const allTechnicians = [...technicians, ...outsideRoster];
       const technicianDashboardSummary = {
         totalJobs: requiredFiniteNumber(coverage.totalJobs, "technicians", month, "coverage.totalJobs"),
         jobsWithTimesheets: requiredFiniteNumber(coverage.jobsWithTimesheets, "technicians", month, "coverage.jobsWithTimesheets"),
-        allocatedSellValue: money(technicians.reduce((sum, row, index) => (
+        allocatedSellValue: money(allTechnicians.reduce((sum, row, index) => (
           sum + requiredFiniteNumber(row.allocatedSellValue, "technicians", month, `technicians[${index}].allocatedSellValue`)
         ), 0)),
-        actualJobHours: money(technicians.reduce((sum, row, index) => (
+        actualJobHours: money(allTechnicians.reduce((sum, row, index) => (
           sum + requiredFiniteNumber(row.actualJobHours, "technicians", month, `technicians[${index}].actualJobHours`)
         ), 0)),
       };
@@ -318,7 +326,7 @@ export async function readVerifiedProjectDeltas(client: ReconciliationQueryClien
         );
       }
       const project = flattenBulkProjectPage(family === "jobs" ? "job" : "quote", [row.payload], row.extracted_at).projects[0]!;
-      const date = family === "jobs" ? project.completedDate : project.dateApproved;
+      const date = family === "jobs" ? project.completedDate : project.dateIssued;
       const included = Boolean(date && (family === "quotes" || isCompletedJobStage(project.stageName)));
       return {
         id: row.id,
@@ -352,7 +360,7 @@ export function readProjectSource(artifact: Awaited<ReturnType<typeof verifyBulk
   for (const source of Object.values(artifact.sources)) {
     for (const payload of source.rows) {
       const row = flattenBulkProjectPage(source.family === "jobs" ? "job" : "quote", [payload], artifact.manifest.completedAt).projects[0]!;
-      const date = source.family === "jobs" ? row.completedDate : row.dateApproved;
+      const date = source.family === "jobs" ? row.completedDate : row.dateIssued;
       const included = Boolean(date && (source.family === "quotes" || isCompletedJobStage(row.stageName)));
       const periodStart = included ? `${date!.slice(0, 7)}-01` : null;
       const target = source.family === "jobs" ? jobs : quotes;
@@ -402,7 +410,7 @@ async function readCanonicalQuotes(client: ReconciliationQueryClient) {
   const result = await client.query<{
     id: string; period_start: string | null; total: string | null; outcome: string | null; fetched_at: string | null;
   }>(`
-    select quote_id::text id, to_char(date_approved, 'YYYY-MM-01') period_start,
+    select quote_id::text id, to_char(date_issued, 'YYYY-MM-01') period_start,
            total::text total, outcome, fetched_at::text
       from metrics.metrics_quotes
      where source_deleted_at is null
@@ -420,7 +428,7 @@ async function readCanonicalQuotes(client: ReconciliationQueryClient) {
 
 async function readQuoteSnapshots(client: ReconciliationQueryClient) {
   const result = await client.query<{ id: string; period_start: string | null; total: string | null }>(`
-    select quote_id::text id, to_char(date_approved, 'YYYY-MM-01') period_start,
+    select quote_id::text id, to_char(date_issued, 'YYYY-MM-01') period_start,
            total_value::text total
      from metrics.quote_snapshots
      order by quote_id
@@ -666,7 +674,7 @@ function unit(params: {
       sourceBasis: params.scope === "jobs"
         ? "Simpro CompletedDate with Stage Complete or Archived only; job Status is not used."
         : params.scope === "quotes"
-          ? "Simpro DateApproved activity with persisted app-owned outcome classification and overrides."
+          ? "Simpro DateIssued activity with persisted app-owned outcome classification and overrides."
           : "Derived from completed jobs and app-owned Simpro timesheets, schedules, and verified mobile status semantics.",
       projectManifestSha256: params.projectManifestSha256,
       operationalManifestSha256: params.operationalManifestSha256,

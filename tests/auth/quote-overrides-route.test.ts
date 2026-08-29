@@ -4,7 +4,7 @@ import type { AppRole, CurrentUser } from "../../src/lib/auth/roles";
 import {
   canReadQuoteOverrideHistory,
   quoteOverrideHistoryResponse,
-} from "../../src/app/api/quotes/overrides/route";
+} from "../../src/lib/api/quote-override-response";
 import type { QuoteOverrideRecord } from "../../src/lib/store/quote-overrides";
 
 test("quote override history GET access includes operators who can write actions", () => {

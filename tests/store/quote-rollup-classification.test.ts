@@ -6,6 +6,7 @@ import { PGlite } from "@electric-sql/pglite";
 import {
   buildQuoteMonthlyRollup,
   getQuoteSnapshots,
+  quoteSnapshotFromDashboardRow,
   type RollupRebuildQuery,
 } from "../../src/lib/store/read-model-rebuilds";
 
@@ -90,14 +91,15 @@ test("quote rollup accepts only exact status and direct/inverse relationships", 
         (5, 'Q5', date '2026-06-05', date '2026-06-05', 'Pending', 500, null, null),
         (6, 'Q6', date '2026-06-06', date '2026-06-06', 'Quote Accepted Online', 600, null, null),
         (7, 'Q7', date '2026-06-07', date '2026-06-07', 'Pending', 700, 700, null),
-        (8, 'Q8', date '2026-06-08', date '2026-06-08', 'Quote Accepted Online - Pending', 800, null, null);
+        (8, 'Q8', date '2026-06-08', date '2026-06-08', 'Quote Accepted Online - Pending', 800, null, null),
+        (9, 'Q9', date '2026-06-09', date '2026-06-09', 'Quote: Quote Accepted Online', 900, null, null);
 
       insert into metrics.metrics_jobs (
         job_id, job_no, converted_from_type, converted_from_id, source_deleted_at
       ) values
         (200, 'J-200', null, null, null),
         (300, '300', null, null, null),
-        (400, 'J-400', ' Quote ', 4, null),
+        (400, 'J-400', 'Quote', 4, null),
         (700, 'J-700', null, null, timestamptz '2026-06-09 00:00:00+00');
 
       insert into metrics.quote_classification_overrides (quote_id, outcome, active)
@@ -113,6 +115,7 @@ test("quote rollup accepts only exact status and direct/inverse relationships", 
         ('quote_details', '6', '{"ID":6,"LinkedJobID":null}', true, '2026-07-01T00:00:00Z'),
         ('quote_details', '7', '{"ID":7,"LinkedJobID":700}', true, '2026-07-01T00:00:00Z'),
         ('quote_details', '8', '{"ID":8,"LinkedJobID":null}', true, '2026-07-01T00:00:00Z'),
+        ('quote_details', '9', '{"ID":9,"LinkedJobID":null}', true, '2026-07-01T00:00:00Z'),
         ('job_details', '200', '{"ID":200,"ConvertedFrom":null}', true, '2026-07-01T00:00:00Z'),
         ('job_details', '300', '{"ID":300,"ConvertedFrom":null}', true, '2026-07-01T00:00:00Z'),
         ('job_details', '400', '{"ID":400,"ConvertedFrom":{"Type":"Quote","ID":4}}', true, '2026-07-01T00:00:00Z'),
@@ -129,13 +132,13 @@ test("quote rollup accepts only exact status and direct/inverse relationships", 
     assert.equal(byId.get(7)?.linkedJobId, null);
 
     const rollup = await buildQuoteMonthlyRollup("2026-06-01", "2026-06-30", query);
-    assert.equal(rollup.quoteCount, 7);
-    assert.equal(rollup.acceptedCount, 3);
+    assert.equal(rollup.quoteCount, 8);
+    assert.equal(rollup.acceptedCount, 4);
     assert.equal(rollup.notAcceptedCount, 4);
     assert.equal(rollup.excludedCount, 1);
     assert.deepEqual(rollup.acceptancePaths, {
       accepted_online_and_converted: 0,
-      accepted_online_only: 1,
+      accepted_online_only: 2,
       converted_only: 2,
       not_accepted: 4,
       excluded: 1,
@@ -145,15 +148,42 @@ test("quote rollup accepts only exact status and direct/inverse relationships", 
   }
 });
 
-test("quote rollup serving path uses persisted relationships instead of raw snapshot traversal", () => {
+test("quote rollup serving path uses direct indexed relationships instead of the non-pushdown view", () => {
   const getQuoteSnapshotsSource = readModelRebuildsSource.slice(
     readModelRebuildsSource.indexOf("export async function getQuoteSnapshots"),
     readModelRebuildsSource.indexOf("function monthWindow"),
   );
-  assert.match(getQuoteSnapshotsSource, /metrics\.job_source_quotes/);
+  assert.match(getQuoteSnapshotsSource, /metrics\.metrics_jobs relationship/);
+  assert.match(getQuoteSnapshotsSource, /relationship\.converted_from_id = q\.quote_id/);
   assert.match(getQuoteSnapshotsSource, /linked_job\.job_id = q\.linked_job_id/);
+  assert.doesNotMatch(getQuoteSnapshotsSource, /metrics\.job_source_quotes/);
   assert.doesNotMatch(getQuoteSnapshotsSource, /raw_simpro_snapshots/);
   assert.doesNotMatch(getQuoteSnapshotsSource, /authoritative_job_source_quote_id|authoritative_quote_linked_job_id/);
+});
+
+test("historical quote drains reuse one canonical corpus and project monthly facts without another SQL read", () => {
+  assert.match(readModelRebuildsSource, /let quoteDashboardSourceInputs: Promise<QuoteDashboardSourceInputs> \| null = null/);
+  const builder = readModelRebuildsSource.slice(
+    readModelRebuildsSource.indexOf("async function buildQuoteDashboardPayload"),
+    readModelRebuildsSource.indexOf("async function getQuoteOverrideSummary"),
+  );
+  assert.match(builder, /getQuoteDashboardSourceInputs\(\)/);
+  assert.match(builder, /buildQuoteMonthlyReadModel\(\{ quotes: source\.snapshots/);
+  assert.doesNotMatch(builder, /buildQuoteMonthlyRollup\(/);
+
+  const snapshot = quoteSnapshotFromDashboardRow({
+    quote_id: 42, quote_no: "Q42", name: "Test", status_name: "Pending",
+    linked_job_id: 99, linked_job_match: true, inverse_conversion_match: false,
+    date_issued: "2026-06-10", date_approved: null, total_value: "123.45",
+    deal_tier: null, category: null, category_basis: null, outcome: null,
+    outcome_reason: null, updated_at: "2026-06-10", override_id: null,
+    override_outcome: null, legacy_won_override: null, override_reason: null,
+    override_evidence_url: null, override_actor_email: null, override_revision: null,
+    override_created_at: null,
+  });
+  assert.equal(snapshot.dateIssued, "2026-06-10");
+  assert.equal(snapshot.linkedJobId, "99");
+  assert.equal(snapshot.totalValue, 123.45);
 });
 
 function pgliteQuery(db: PGlite): RollupRebuildQuery {

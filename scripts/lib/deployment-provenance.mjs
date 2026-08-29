@@ -544,11 +544,11 @@ export async function verifyAzureDeploymentLive({
     .sort((left, right) => left.name.localeCompare(right.name));
   const manifestTargets = [...manifest.targets].sort((left, right) => left.name.localeCompare(right.name));
   if (actualTargets.length !== manifestTargets.length) {
-    throw new Error("Live app plus exact 23-job target count does not match deployment manifest");
+    throw new Error("Live app plus exact 24-job target count does not match deployment manifest");
   }
   for (const [index, actual] of actualTargets.entries()) {
     if (!sameCanonicalValue(actual, manifestTargets[index])) {
-      throw new Error(`Live app plus exact 23-job target contracts do not match deployment manifest: ${actual.name}`);
+      throw new Error(`Live app plus exact 24-job target contracts do not match deployment manifest: ${actual.name}`);
     }
   }
 

@@ -83,7 +83,7 @@ param jobCpu string = '0.5'
 param jobMemory string = '1Gi'
 
 @description('Cron expression for bounded Simpro ingestion.')
-param ingestionCronExpression string = '0 */6 * * *'
+param ingestionCronExpression string = '*/20 * * * *'
 
 @description('Cron expression for rollup/snapshot reconciliation.')
 param reconciliationCronExpression string = '30 5 * * *'
@@ -472,10 +472,19 @@ var commonEnv = concat(sharedEnv, [
   }
 ])
 
+// Rollup workers need a second connection so their lease heartbeats are not
+// starved while a long monthly rebuild occupies the primary connection.
+var rollupEnv = concat(sharedEnv, [
+  {
+    name: 'POSTGRES_POOL_MAX'
+    value: '2'
+  }
+])
+
 var webEnv = concat(sharedEnv, [
   {
     name: 'POSTGRES_POOL_MAX'
-    value: '10'
+    value: '4'
   }
   {
     name: 'HOSTNAME'
@@ -534,8 +543,8 @@ var scheduledSourceJobs = [
   }
   {
     name: 'job-psm-candidate-drain'
-    cron: '2,17,32,47 * * * *'
-    args: ['run', 'ingest:worker', '--', '--request-budget', '250', '--drain-limit', '100']
+    cron: '2,32 * * * *'
+    args: ['run', 'ingest:worker', '--', '--request-budget', '250', '--drain-limit', '50']
   }
   {
     name: 'job-psm-timesheets-hourly'
@@ -549,13 +558,13 @@ var scheduledSourceJobs = [
   }
   {
     name: 'job-psm-employees-daily'
-    cron: '0 * * * *'
+    cron: '0 9,10 * * *'
     args: ['run', 'ingest:worker', '--', '--entity', 'employees', '--local-hour', '2', '--request-budget', '250', '--drain-limit', '20']
   }
   {
     name: 'job-psm-rollup-drain'
-    cron: '7,22,37,52 * * * *'
-    args: ['run', 'rollups:worker', '--', '--limit', '50']
+    cron: '12,42 * * * *'
+    args: ['run', 'rollups:worker', '--', '--limit', '30']
   }
   {
     name: 'job-psm-backfill-hourly'
@@ -579,8 +588,13 @@ var scheduledSourceJobs = [
   }
   {
     name: 'job-psm-commissions-nightly'
-    cron: '0 * * * *'
+    cron: '0 10,11 * * *'
     args: ['run', 'rollups:worker', '--', '--nightly-commissions', '--local-hour', '3', '--limit', '1']
+  }
+  {
+    name: 'job-psm-materials'
+    cron: '40 1,7,13,19 * * *'
+    args: ['run', 'materials:worker', '--', '--mode', 'incremental', '--hot-window-days', '7', '--request-limit', '8000', '--auto-close-prior-month']
   }
 ]
 
@@ -773,7 +787,7 @@ resource ingestionJob 'Microsoft.App/jobs@2023-05-01' = {
             '--request-budget'
             '250'
             '--lookback-days'
-            '90'
+            '7'
             '--drain-limit'
             '100'
           ]
@@ -834,7 +848,7 @@ resource jobsIngestionJob 'Microsoft.App/jobs@2023-05-01' = {
             '--request-budget'
             '250'
             '--lookback-days'
-            '90'
+            '7'
             '--drain-limit'
             '100'
           ]
@@ -887,7 +901,7 @@ resource scheduledSourceIngestionJobs 'Microsoft.App/jobs@2023-05-01' = [for job
             'npm'
           ]
           args: job.args
-          env: commonEnv
+          env: (job.name == 'job-psm-rollup-drain' || job.name == 'job-psm-commissions-nightly') ? rollupEnv : commonEnv
           resources: {
             cpu: json(jobCpu)
             memory: jobMemory
@@ -1046,7 +1060,7 @@ resource rollupRebuildJob 'Microsoft.App/jobs@2023-05-01' = {
             'run'
             'rollups:worker'
           ]
-          env: commonEnv
+          env: rollupEnv
           resources: {
             cpu: json(jobCpu)
             memory: jobMemory

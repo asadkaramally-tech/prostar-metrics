@@ -1,0 +1,22 @@
+[
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 18,
+  "EndLine": 18,
+  "StartColumn": 2,
+  "EndColumn": 61,
+  "Match": "SIMPRO_BEARER_TOKEN=REDACTED",
+  "Secret": "REDACTED",
+  "File": ".env.local",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.6873262,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "Fingerprint": ".env.local:generic-api-key:18"
+ }
+]

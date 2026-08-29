@@ -21,6 +21,8 @@ export type SourceFreshnessEvidence = {
   pendingCount?: number;
   failedCount?: number;
   completeWindow?: boolean | null;
+  /** Last completed source window that remains safe to serve during new work. */
+  servingWindowComplete?: boolean | null;
   manifestGeneration?: number | null;
   reconciliationGeneration?: number | null;
   expectedPageCount?: number | null;
@@ -39,6 +41,8 @@ export type RollupFreshnessEvidence = {
   status: "ready" | "building" | "failed" | "suspect" | "missing";
   rebuiltAt?: Date | string | null;
   detail?: string | null;
+  pendingCount?: number;
+  failedCount?: number;
 };
 
 export type ProfitCapacityCompletenessEvidence = {
@@ -93,6 +97,8 @@ export type AggregateFreshnessEvaluation = {
       status: RollupFreshnessEvidence["status"];
       rebuiltAt: string | null;
       detail: string | null;
+      pendingCount: number;
+      failedCount: number;
     };
     reconciliation: {
       status: ReconciliationFreshnessEvidence["status"];
@@ -124,7 +130,7 @@ const requirementsByPage: Record<AggregateFreshnessPageKey, readonly SourceRequi
     source("timesheets", "core", 2),
     source("schedules", "secondary", null),
     incrementalSource("schedule_logs", "secondary", 1),
-    source("mobile_status", "secondary", 1, true),
+    incrementalSource("mobile_status", "secondary", 1),
   ],
   commissions: [
     source("jobs", "core", 8),
@@ -230,7 +236,7 @@ export function evaluatePageFreshness(input: AggregateFreshnessInput): Aggregate
     };
   }
 
-  if (input.pageKey === "jobs" || input.pageKey === "technicians") {
+  if (!input.sealedHistoricalPeriod && (input.pageKey === "jobs" || input.pageKey === "technicians")) {
     const completeness = input.profitCapacityCompleteness;
     if (!completeness) {
       return {
@@ -355,6 +361,12 @@ function evaluateSource(requirement: SourceRequirement, evidence: SourceFreshnes
   const lastFailedRunAt = toDate(evidence?.lastFailedRunAt);
   const lastChangeAt = toDate(evidence?.lastChangeAt);
   const dataThrough = toDate(evidence?.dataThrough) ?? lastSuccessfulRunAt;
+  // Incremental windows can complete successfully without receiving any new
+  // events. Their data-through value intentionally remains at the latest
+  // event, so use the poll completion time for the SLA in that case.
+  const freshnessAt = requirement.requiresCurrentManifest
+    ? dataThrough
+    : lastSuccessfulRunAt ?? dataThrough;
   const manifestCompletedAt = toDate(evidence?.manifestCompletedAt);
   const manifestReconciledAt = toDate(evidence?.manifestReconciledAt);
   const pendingCount = nonNegativeInteger(evidence?.pendingCount);
@@ -375,13 +387,13 @@ function evaluateSource(requirement: SourceRequirement, evidence: SourceFreshnes
   let state: EvaluatedSourceState;
   let detail: string;
 
+  const servingWindowComplete = evidence?.servingWindowComplete ?? (evidence?.completeWindow === true);
   const hasCompleteServingEvidence = requirement.requiresCurrentManifest
     ? completeCurrentManifest
-    : Boolean(lastSuccessfulRunAt && evidence?.completeWindow === true);
+    : Boolean(lastSuccessfulRunAt && servingWindowComplete);
 
   if (
-    (failedCount > 0 || (lastFailedRunAt && (!lastSuccessfulRunAt || lastFailedRunAt > lastSuccessfulRunAt)))
-    && !hasCompleteServingEvidence
+    failedCount > 0 || (lastFailedRunAt && (!lastSuccessfulRunAt || lastFailedRunAt > lastSuccessfulRunAt))
   ) {
     state = "failed";
     detail = failedCount > 0
@@ -400,14 +412,20 @@ function evaluateSource(requirement: SourceRequirement, evidence: SourceFreshnes
       : "The current source/page manifest is incomplete.";
   } else if (
     requirement.maxAgeHours !== null
-    && dataThrough
-    && now.getTime() - dataThrough.getTime() > requirement.maxAgeHours * 36e5
+    && freshnessAt
+    && now.getTime() - freshnessAt.getTime() > requirement.maxAgeHours * 36e5
   ) {
     state = "stale";
-    detail = `Data-through exceeds the ${requirement.maxAgeHours}-hour source limit.`;
+    detail = `${requirement.requiresCurrentManifest ? "Data-through" : "Last successful poll"} exceeds the ${requirement.maxAgeHours}-hour source limit.`;
   } else if (!lastSuccessfulRunAt) {
     state = "missing";
     detail = "No successful complete source run is recorded.";
+  } else if (
+    pendingCount > 0
+    && hasCompleteServingEvidence
+  ) {
+    state = "successful";
+    detail = `Serving the last complete source window while ${pendingCount} source job${pendingCount === 1 ? " is" : "s are"} queued or running.`;
   } else if (pendingCount > 0 || (requirement.requiresCompleteWindow && evidence?.completeWindow !== true)) {
     state = "building";
     detail = pendingCount > 0
@@ -471,6 +489,8 @@ function buildCoverage(
       status: rollup.status,
       rebuiltAt: toIso(toDate(rollup.rebuiltAt)),
       detail: rollup.detail ?? null,
+      pendingCount: nonNegativeInteger(rollup.pendingCount),
+      failedCount: nonNegativeInteger(rollup.failedCount),
     },
     reconciliation: {
       status: reconciliation.status,
@@ -508,7 +528,10 @@ function preserveExplicitSuspect(input: AggregateFreshnessInput, reconciliationC
     explicitReconciledAt
     && input.reconciliation.status === "matched"
     && reconciliationCheckedAt
-    && reconciliationCheckedAt > explicitReconciledAt
+    // The reconciliation worker can persist the matched timestamp before the
+    // aggregate evaluator clears the prior suspect state. Equality therefore
+    // means the stored state has already observed this authoritative match.
+    && reconciliationCheckedAt >= explicitReconciledAt
   );
 }
 

@@ -14,7 +14,7 @@
 - optional control-plane secret definitions for PostgreSQL, Simpro, Easy Auth, and the PostgreSQL CA only;
 - no PostgreSQL or Container Apps network, private endpoint, schedule, or unrelated secret resource.
 
-`metrics.bicep` uses versionless Key Vault references with that user-assigned identity. The web app references DB, Simpro, and Easy Auth. The immutable app plus exact 23-job allowlist in `scripts/lib/production-targets.mjs` is shared by routine deployment and migration. Jobs reference DB and Simpro. The CA reference is included everywhere only when the production parameter file enables it.
+`metrics.bicep` uses versionless Key Vault references with that user-assigned identity. The web app references DB, Simpro, and Easy Auth. The immutable app plus exact 24-job allowlist in `scripts/lib/production-targets.mjs` is shared by routine deployment and migration. Jobs reference DB and Simpro. The CA reference is included everywhere only when the production parameter file enables it.
 
 ## Vault Prerequisite
 
@@ -89,7 +89,7 @@ The migration fails before baseline capture unless the dedicated vault has RBAC,
 
 The script has no resource, app, job, vault, identity, secret-name, or CA override. It derives those values from immutable repository contracts and rejects unknown target arguments. The optional CA setting comes only from `main.parameters.prod.example.json`.
 
-One workflow owns preflight, branch selection, verification, and schema-v3 evidence. It first reads only ARM secret definitions and Key Vault version metadata. If all exact app plus 23 job definitions are already valid versionless references, both dry-run and `--execute` take a metadata-only no-op path. That path does not call Container Apps `listSecrets`, does not fetch a Key Vault secret version value, does not require Key Vault Secrets Officer, and performs no vault or Microsoft.App mutation. It still verifies:
+One workflow owns preflight, branch selection, verification, and schema-v3 evidence. It first reads only ARM secret definitions and Key Vault version metadata. If all exact app plus 24 job definitions are already valid versionless references, both dry-run and `--execute` take a metadata-only no-op path. That path does not call Container Apps `listSecrets`, does not fetch a Key Vault secret version value, does not require Key Vault Secrets Officer, and performs no vault or Microsoft.App mutation. It still verifies:
 
 - the exact 24-resource allowlist and exact owned definition set on every resource;
 - every versionless vault URL and the application user-assigned identity;
@@ -140,7 +140,7 @@ Key Vault Secrets Officer is needed only for operator value writes and version d
 
 ## Routine Release Contract
 
-The release-owned `scripts/deploy-prod.mjs` currently imports the canonical 23-job allowlist and implements the versionless-reference preflight. That worker must retain these requirements:
+The release-owned `scripts/deploy-prod.mjs` currently imports the canonical 24-job allowlist and implements the versionless-reference preflight. That worker must retain these requirements:
 
 1. Production parameters with `useKeyVaultSecretReferences=true` remain authoritative.
 2. Container Apps what-if, candidate, and rollback calls never submit DB, Simpro, Easy Auth, or CA values.

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser, assertRole } from "@/lib/auth/roles";
+import { commissionDashboardReadModelParams } from "@/lib/api/dashboard-route-params";
 import { getCommissionDashboardReadModel } from "@/lib/store/commissions-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -13,12 +14,15 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const today = new Date();
-  const year = parseInt(url.searchParams.get("year") ?? String(today.getFullYear()), 10);
-  const month = parseInt(url.searchParams.get("month") ?? String(today.getMonth() + 1), 10);
-  const summaryYear = parseInt(url.searchParams.get("summaryYear") ?? String(year), 10);
+  const period = commissionDashboardReadModelParams(url.searchParams);
+  if (!period) {
+    return NextResponse.json(
+      { error: "month must be YYYY-MM (or a numeric month with year), within the supported reporting range." },
+      { status: 400 },
+    );
+  }
 
-  return NextResponse.json(await cachedPageLoad(`api:commissions:${year}-${month}:${summaryYear}`, 120_000, () =>
-    getCommissionDashboardReadModel({ year, month, summaryYear }),
+  return NextResponse.json(await cachedPageLoad(`api:commissions:${period.year}-${period.month}:${period.summaryYear}`, 120_000, () =>
+    getCommissionDashboardReadModel({ ...period, includeAllocationDetails: false }),
   ));
 }

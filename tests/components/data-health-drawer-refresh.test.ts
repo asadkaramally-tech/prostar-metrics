@@ -10,6 +10,11 @@ test("owner diagnostics exposes bounded enqueue controls and polls queue status"
 
   assert.match(source, /fetch\("\/api\/data-refresh", \{ cache: "no-store" \}\)/);
   assert.match(source, /window\.setInterval\([^]*5_000\)/);
+  assert.match(source, /event\.key !== "Tab" \|\| !panelRef\.current/);
+  assert.match(source, /document\.activeElement === first/);
+  assert.match(source, /document\.activeElement === last/);
+  assert.match(source, /ref=\{panelRef\}/);
+  assert.match(source, /data-health-mobile-trigger/);
   assert.match(source, /kind: "entity_refresh"|"entity_refresh"/);
   assert.match(source, /"period_backfill"/);
   assert.match(source, /type="month"/);

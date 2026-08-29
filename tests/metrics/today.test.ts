@@ -53,7 +53,7 @@ const now = new Date("2026-07-14T19:00:00Z");
 
 const model = buildTodayReadModel({
   jobs,
-  quotesSent: fixture.quotesSent.map((row) => ({ quoteId: row.id, dateApproved: row.approved, totalValue: row.value })),
+  quotesSent: fixture.quotesSent.map((row) => ({ quoteId: row.id, dateIssued: row.approved, totalValue: row.value })),
   timesheets: fixture.timesheets,
   roster: { size: fixture.rosterSize, source: "effective_technician_roster" },
   now,
@@ -75,7 +75,7 @@ test("MTD KPIs reproduce the verified July figures", () => {
   assert.equal(Math.round((model.mtd.avgJobValue ?? 0) * 100) / 100, Math.round(model.mtd.revenue / 101 * 100) / 100);
   assert.equal(model.mtd.quotesSent, 14);
   assert.equal(Math.round(model.mtd.quotesSentValue), 91636);
-  assert.match(model.mtd.quotesSentBasis, /DateApproved/);
+  assert.match(model.mtd.quotesSentBasis, /DateIssued/);
   assert.equal(model.mtd.poolPercent, DEFAULT_POOL_PERCENT);
   assert.equal(model.mtd.poolSoFar, 1307.13);
   assert.equal(model.mtd.poolSoFarCents, 130713);
@@ -84,6 +84,27 @@ test("MTD KPIs reproduce the verified July figures", () => {
   assert.match(model.mtd.capacityRule, /holidays are not deducted/i);
   assert.equal(model.mtd.rosterSize, 9);
   assert.equal(model.mtd.rosterSource, "effective_technician_roster");
+});
+
+test("today profitability includes only the current Pacific completed cohort and preserves coverage", () => {
+  const daily = buildTodayReadModel({
+    jobs: [
+      { jobId: 1, jobNo: "J-1", name: "Covered", completedDate: "2026-07-14", stageName: "Complete", sellValue: 1000, grossProfitActual: 700, netProfitActual: 500, updatedFromSourceAt: "2026-07-14T18:00:00Z" },
+      { jobId: 2, jobNo: "J-2", name: "Missing net", completedDate: "2026-07-14", stageName: "Archived", sellValue: 500, grossProfitActual: 300, netProfitActual: null, updatedFromSourceAt: "2026-07-14T19:00:00Z" },
+      { jobId: 3, completedDate: "2026-07-13", stageName: "Complete", sellValue: 900, grossProfitActual: 600, netProfitActual: 400 },
+      { jobId: 4, completedDate: "2026-07-14", stageName: "Progress", sellValue: 800, grossProfitActual: 500, netProfitActual: 300 },
+    ],
+    quotesSent: [], timesheets: [], roster: { size: 0, source: "recorded_work_month" }, now,
+  }).today;
+  assert.equal(daily.completedJobs, 2);
+  assert.equal(daily.revenue, 1500);
+  assert.equal(daily.revenueCoveredJobs, 2);
+  assert.equal(daily.grossProfit, 1000);
+  assert.equal(daily.grossProfitCoveredJobs, 2);
+  assert.equal(daily.netProfit, 500);
+  assert.equal(daily.netProfitCoveredJobs, 1);
+  assert.equal(daily.netMargin, 50, "net margin uses the same covered-job revenue denominator");
+  assert.deepEqual(daily.jobs.map((row) => row.jobNo), ["J-2", "J-1"], "newest source update sorts first");
 });
 
 test("daily cumulative revenue serves the live month plus both comparison months", () => {
@@ -152,9 +173,9 @@ test("cohort rules and windows stay honest under edge inputs", () => {
       { jobId: 4, completedDate: "2026-07-04", stageName: "Archived", sellValue: 50, netProfitActual: -10, sourceDeletedAt: "2026-07-05T00:00:00Z" },
     ],
     quotesSent: [
-      { quoteId: 10, dateApproved: "2026-07-03", totalValue: 500 },
-      { quoteId: 11, dateApproved: "2026-07-20", totalValue: 700 },
-      { quoteId: 12, dateApproved: "2026-06-30", totalValue: 900 },
+      { quoteId: 10, dateIssued: "2026-07-03", totalValue: 500 },
+      { quoteId: 11, dateIssued: "2026-07-20", totalValue: 700 },
+      { quoteId: 12, dateIssued: "2026-06-30", totalValue: 900 },
     ],
     timesheets: [
       { workDate: "2026-07-02", hours: 8 },

@@ -1,4 +1,5 @@
 import { queryPostgres } from "@/lib/store/postgres";
+import { acceptedOnlineStatusSql } from "@/lib/metrics/quotes";
 import { QUOTE_CLASSIFICATION_LOCK_KEY } from "@/lib/store/quote-classification-rebuild";
 import type { QuoteOutcome } from "@/lib/store/quote-dashboard-read-model";
 
@@ -88,6 +89,7 @@ export async function persistQuoteOverrideAction(
   query: QuoteOverrideQuery = queryPostgres,
 ): Promise<QuoteOverrideRecord> {
   validateQuoteOverrideAction(params);
+  const acceptedOnline = acceptedOnlineStatusSql("q.status_name");
 
   let result: QueryResult<PersistResultRow>;
   try {
@@ -173,16 +175,16 @@ export async function persistQuoteOverrideAction(
              or inverse.source_quote_id = quote.quote_id
           order by job.job_id
        ), target as materialized (
-         select q.quote_id, q.category, q.outcome, q.date_approved, q.total,
+         select q.quote_id, q.category, q.outcome, q.date_issued, q.date_approved, q.total,
                 case
-                  when lower(trim(coalesce(q.status_name, ''))) = 'quote accepted online'
+                  when ${acceptedOnline}
                     or exists (select 1 from locked_evidence_jobs) then 'won'
                   else 'lost'
                 end as source_outcome,
                 case
-                  when lower(trim(coalesce(q.status_name, ''))) = 'quote accepted online'
+                  when ${acceptedOnline}
                     and exists (select 1 from locked_evidence_jobs) then 'accepted_online_and_converted'
-                  when lower(trim(coalesce(q.status_name, ''))) = 'quote accepted online' then 'accepted_online'
+                  when ${acceptedOnline} then 'accepted_online'
                   when exists (select 1 from locked_evidence_jobs) then 'converted_job'
                   else 'no_acceptance_evidence'
                 end as source_reason
@@ -261,6 +263,7 @@ export async function persistQuoteOverrideAction(
                 case when i.action = 'exclude' then 'excluded' else t.source_outcome end as projected_outcome,
                 case when i.action = 'exclude' then 'manual_excluded' else t.source_reason end as projected_reason,
                 t.outcome as canonical_before_outcome,
+                t.date_issued,
                 t.date_approved,
                 t.total
            from inserted i
@@ -309,9 +312,9 @@ export async function persistQuoteOverrideAction(
        ), affected_periods as materialized (
          select distinct period_start
            from (
-             select date_trunc('month', p.date_approved)::date as period_start
+             select date_trunc('month', p.date_issued)::date as period_start
                from projected p
-              where p.date_approved is not null
+              where p.date_issued is not null
              union all
              select date_trunc('month', $8::date)::date
               where $8::date is not null

@@ -47,6 +47,7 @@
         "job-psm-reconcile-trailing-24m",
         "job-psm-reconcile-stable-history",
         "job-psm-commissions-nightly",
+        "job-psm-materials",
         "job-prostar-metrics-reconcile",
         "job-prostar-metrics-employees",
         "job-prostar-metrics-timesheets",

@@ -7,6 +7,7 @@ import type {
   CommissionReadModel,
 } from "@/lib/metrics/commissions";
 import type { FreshnessStatus } from "@/lib/metrics/freshness";
+import { requireCommissionDashboardPeriod } from "@/lib/commissions/period";
 import { getCommissionExportBlobStatus } from "@/lib/store/blob-exports";
 import {
   verifyCommissionCanonicalRun,
@@ -183,6 +184,7 @@ export type CommissionReadyWorksheetModel = CommissionWorksheetBase & {
   payrollTotal: number;
   activeTechnicians: number;
   zeroPayoutTechnicians: number;
+  allocationBasis: "equal-split" | "hours-share";
   technicians: CommissionTechnicianRow[];
   coverage: CommissionCoverage;
   invariants: CommissionInvariants;
@@ -249,6 +251,8 @@ export type CommissionSummaryMonth = CommissionSummaryPeriod & {
 export type CommissionDashboardReadModel = {
   freshness: FreshnessStatus;
   worksheet: CommissionWorksheetModel;
+  /** Previous calendar month's immutable pool, used for the January cross-year comparison. */
+  priorMonthCommissionPool?: number | null;
   summary: {
     year: number;
     loadedFinalizedMonths: number;
@@ -288,6 +292,7 @@ type CommissionSummarySourceRow = PeriodRunRow | CommissionSummaryRunRow;
 export type CommissionReadModelDependencies = {
   query?: PostgresQuery;
   getFreshness?: typeof getPageFreshness;
+  now?: Date;
 };
 
 const defaultConfig: CommissionConfig = {
@@ -302,10 +307,14 @@ export async function getCommissionDashboardReadModel(params: {
   year: number;
   month: number;
   summaryYear: number;
+  includeAllocationDetails?: boolean;
 }, dependencies: CommissionReadModelDependencies = {}): Promise<CommissionDashboardReadModel> {
-  const year = clamp(params.year, 2023, 2100);
-  const month = clamp(params.month, 1, 12);
-  const summaryYear = clamp(params.summaryYear, 2023, 2100);
+  const period = requireCommissionDashboardPeriod({
+    year: String(params.year),
+    month: String(params.month),
+    summaryYear: String(params.summaryYear),
+  }, dependencies.now);
+  const { year, month, summaryYear } = period;
   const query = dependencies.query ?? queryPostgres;
   const freshnessPromise = (dependencies.getFreshness ?? getPageFreshness)(
     "commissions",
@@ -316,9 +325,10 @@ export async function getCommissionDashboardReadModel(params: {
     Promise.allSettled([
       getWorksheet(year, month, query),
       getSummaryRows(summaryYear, query),
+      month === 1 && year > 2023 ? getPriorMonthCommissionPool(year, month, query) : Promise.resolve(null),
     ]),
   ]);
-  const [worksheetResult, summaryRowsResult] = settledReadResults;
+  const [worksheetResult, summaryRowsResult, priorMonthPoolResult] = settledReadResults;
   const worksheet = worksheetResult.status === "fulfilled"
     ? worksheetResult.value
     : unavailableWorksheet(year, month, {
@@ -331,13 +341,40 @@ export async function getCommissionDashboardReadModel(params: {
     : buildCommissionSummary(summaryYear, [], [
       `Annual commission summary is unavailable: ${errorMessage(summaryRowsResult.reason)}`,
     ]);
-  return {
+  const dashboard = {
     freshness,
     worksheet,
+    priorMonthCommissionPool: priorMonthPoolResult.status === "fulfilled" ? priorMonthPoolResult.value : null,
     summary,
     warnings: buildWarnings(worksheet),
     dataContractGaps: buildDataContractGaps(worksheet),
   };
+  return params.includeAllocationDetails === false ? withoutCommissionAllocationDetails(dashboard) : dashboard;
+}
+
+/** Removes expandable job detail from the page payload; totals remain intact. */
+export function withoutCommissionAllocationDetails(model: CommissionDashboardReadModel): CommissionDashboardReadModel {
+  if (model.worksheet.servingStatus !== "ready") return model;
+  return {
+    ...model,
+    worksheet: {
+      ...model.worksheet,
+      technicians: model.worksheet.technicians.map((technician) => ({ ...technician, jobAllocations: [] })),
+    },
+  };
+}
+
+/** Detail is fetched only after its technician row is opened. */
+export async function getCommissionTechnicianAllocations(params: {
+  year: number; month: number; employeeId: string;
+}, dependencies: CommissionReadModelDependencies = {}): Promise<CommissionJobAllocation[]> {
+  const period = requireCommissionDashboardPeriod({
+    year: String(params.year),
+    month: String(params.month),
+  }, dependencies.now);
+  const worksheet = await getWorksheet(period.year, period.month, dependencies.query ?? queryPostgres);
+  if (worksheet.servingStatus !== "ready") return [];
+  return worksheet.technicians.find((technician) => technician.employeeId === params.employeeId)?.jobAllocations ?? [];
 }
 
 async function getWorksheet(year: number, month: number, query: PostgresQuery): Promise<CommissionWorksheetModel> {
@@ -359,18 +396,33 @@ async function getWorksheet(year: number, month: number, query: PostgresQuery): 
 }
 
 async function getSummaryRows(year: number, query: PostgresQuery) {
-  const result = await query<CommissionSummaryRunRow>(`${summaryRunSelect({ distinctByPeriod: true })}
+  const result = await query<CommissionSummaryRunRow>(`${summaryRunSelect({ distinctByPeriod: true, slim: true })}
       where p.period_start >= $1::date
         and p.period_start < $2::date
       order by p.period_start, p.revision desc`, [`${year}-01-01`, `${year + 1}-01-01`]);
   return result.rows;
 }
 
+async function getPriorMonthCommissionPool(year: number, month: number, query: PostgresQuery): Promise<number | null> {
+  const prior = new Date(Date.UTC(year, month - 2, 1));
+  const priorYear = prior.getUTCFullYear();
+  const priorMonth = prior.getUTCMonth() + 1;
+  const periodStart = `${priorYear}-${String(priorMonth).padStart(2, "0")}-01`;
+  const result = await query<CommissionSummaryRunRow>(`${summaryRunSelect({ slim: true })}
+      where p.period_start = $1::date
+      order by p.revision desc
+      limit 1`, [periodStart]);
+  const row = result.rows[0];
+  if (!row) return null;
+  const serving = summaryWorksheetFromRow(priorYear, priorMonth, row);
+  return serving.ready ? serving.worksheet.commissionPool : null;
+}
+
 function periodRunSelect() {
   return summaryRunSelect();
 }
 
-function summaryRunSelect(options: { distinctByPeriod?: boolean } = {}) {
+function summaryRunSelect(options: { distinctByPeriod?: boolean; slim?: boolean } = {}) {
   return `select ${options.distinctByPeriod ? "distinct on (p.period_start)" : ""} p.id::text as period_id, p.period_start::text, p.period_end::text,
                  p.status::text as status, p.revision, p.edit_revision,
                  p.source_watermarks as period_watermarks, p.override_hash as period_override_hash,
@@ -380,7 +432,7 @@ function summaryRunSelect(options: { distinctByPeriod?: boolean } = {}) {
                  p.created_at::text as period_created_at, p.revision_reason,
                  r.id::text as run_id, r.revision as run_revision, r.run_status,
                  r.source_watermarks as run_watermarks, r.override_hash as run_override_hash,
-                 r.read_model, r.created_by as calculated_by, r.created_at::text as calculated_at,
+                 ${options.slim ? "r.read_model - 'jobAllocations' as read_model" : "r.read_model"}, r.created_by as calculated_by, r.created_at::text as calculated_at,
                  r.source_complete, r.config_hash, r.source_hash,
                  r.input_manifest_hash, r.calculation_hash, r.immutable,
                  r.completed_jobs as run_completed_jobs,
@@ -499,6 +551,7 @@ function worksheetFromRow(
     payrollTotal: readModel.payrollTotal,
     activeTechnicians: technicians.length,
     zeroPayoutTechnicians: technicians.filter((technician) => technician.payrollBonus === 0).length,
+    allocationBasis: allocationBasisFromAllocations(allocations),
     technicians,
     coverage: readModel.coverage,
     invariants: readModel.invariants,
@@ -509,6 +562,14 @@ function worksheetFromRow(
     auditHistory,
     revisionHistory,
   };
+}
+
+function allocationBasisFromAllocations(allocations: CommissionJobAllocation[]): "equal-split" | "hours-share" {
+  const byJob = groupAllocations(allocations);
+  const multiTech = [...byJob.values()].filter((entries) => entries.length > 1);
+  return multiTech.length > 0 && multiTech.every((entries) => entries.every((entry) => Math.abs(entry.share - entries[0].share) < 1e-9))
+    ? "equal-split"
+    : "hours-share";
 }
 
 export function buildCommissionExportGate(params: {
@@ -640,9 +701,8 @@ function summaryWorksheetFromRow(
     return { ready: false, code: serving.code, message: serving.message };
   }
   const readModel = serving.readModel;
-  const allocations = normalizeJobAllocations(readModel.jobAllocations);
-  const allocationsByEmployee = groupAllocations(allocations);
-  const technicians = readModel.technicians.map((entry, index) => normalizeTechnician(entry, index, allocationsByEmployee));
+  const jobCountByEmployee = new Map(readModel.coverage.technicianWork.map((entry) => [entry.employeeId, entry.jobCount]));
+  const technicians = readModel.technicians.map((entry, index) => normalizeSummaryTechnician(entry, index, jobCountByEmployee));
   return {
     ready: true,
     worksheet: {
@@ -694,7 +754,7 @@ function evaluateCommissionSummaryRunForServing(row: CommissionSummarySourceRow)
     return summaryServingFailure("READ_MODEL_INVALID", "The persisted commission summary does not match the current override revision.");
   }
 
-  const readModel = coerceCommissionSummaryReadModel(row.read_model);
+  const readModel = coerceCommissionSummaryReadModel(row.read_model, true);
   if (!readModel) return summaryServingFailure("READ_MODEL_INVALID", "The persisted commission read model has an invalid summary shape.");
   if (!commissionSummaryInvariantsPass(readModel.invariants)) {
     return summaryServingFailure("READ_MODEL_INVALID", "The persisted commission summary has failed invariants.");
@@ -726,7 +786,7 @@ const commissionInvariantKeys = [
   "nonnegativePayroll",
 ] as const satisfies ReadonlyArray<keyof CommissionInvariants>;
 
-function coerceCommissionSummaryReadModel(value: unknown): CommissionReadModel | null {
+function coerceCommissionSummaryReadModel(value: unknown, allowSlim = false): CommissionReadModel | null {
   const row = asRecordOrNull(value);
   if (!row) return null;
   if (
@@ -737,10 +797,11 @@ function coerceCommissionSummaryReadModel(value: unknown): CommissionReadModel |
     || !isFiniteNumber(row.outsidePoolTotal)
     || !isFiniteNumber(row.payrollTotal)
   ) return null;
-  if (!Array.isArray(row.technicians) || !Array.isArray(row.jobAllocations) || !Array.isArray(row.diagnostics)) return null;
+  if (!Array.isArray(row.technicians) || !Array.isArray(row.diagnostics)) return null;
+  if (!allowSlim && !Array.isArray(row.jobAllocations)) return null;
   if (!isSummaryCoverage(row.coverage) || !isSummaryInvariants(row.invariants)) return null;
   if (!row.technicians.every(isSummaryTechnician)) return null;
-  if (!row.jobAllocations.every(isSummaryAllocation)) return null;
+  if (Array.isArray(row.jobAllocations) && !row.jobAllocations.every(isSummaryAllocation)) return null;
   return value as CommissionReadModel;
 }
 
@@ -1089,6 +1150,16 @@ function normalizeTechnician(entry: CommissionReadModel["technicians"][number], 
   };
 }
 
+function normalizeSummaryTechnician(
+  entry: CommissionReadModel["technicians"][number], index: number, jobCountByEmployee: Map<string, number>,
+): CommissionTechnicianRow {
+  return {
+    ...normalizeTechnician(entry, index, new Map()),
+    jobCount: jobCountByEmployee.get(String(entry.employeeId)) ?? 0,
+    jobAllocations: [],
+  };
+}
+
 function normalizeJobAllocations(value: CommissionReadModel["jobAllocations"]): CommissionJobAllocation[] {
   return value.map((entry) => {
     const row = entry as CommissionReadModel["jobAllocations"][number] & {
@@ -1189,10 +1260,6 @@ function formatPeriod(year: number, month: number) {
 function shortMonth(year: number, month: number) {
   return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: "UTC" })
     .format(new Date(Date.UTC(year, month - 1, 1)));
-}
-
-function clamp(value: number, minimum: number, maximum: number) {
-  return Number.isFinite(value) ? Math.min(maximum, Math.max(minimum, Math.trunc(value))) : minimum;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

@@ -16,6 +16,11 @@ import { refreshPageFreshness, upsertFreshness } from "@/lib/store/freshness";
 import { preferredCandidateFamily } from "@/lib/store/ingestion-claim-strategy";
 import { inclusivePacificDateWindow } from "@/lib/store/ingestion-window";
 import { completedJobDiscoveryParams } from "@/lib/store/simpro-profit-capacity-backfill";
+import {
+  acquireWorkerExecutionLease,
+  heartbeatWorkerExecutionLease,
+  releaseWorkerExecutionLease,
+} from "@/lib/store/worker-execution-leases";
 
 export type Args = {
   dryRun: boolean;
@@ -74,6 +79,27 @@ async function main() {
     return;
   }
 
+  await runWithExecutionLease(args);
+}
+
+async function runWithExecutionLease(args: Args) {
+  const lease = {
+    lockKey: args.entity ? `ingest:${args.entity}` : "ingest:candidate-drain",
+    owner: workerId,
+  };
+  if (!await acquireWorkerExecutionLease(lease)) {
+    console.log(JSON.stringify({ workerId, skipped: true, reason: "prior execution is still active", lease: lease.lockKey }, null, 2));
+    return;
+  }
+  let leaseHeartbeatError: unknown;
+  const leaseHeartbeat = setInterval(() => {
+    void heartbeatWorkerExecutionLease(lease).catch((error) => {
+      leaseHeartbeatError = error;
+    });
+  }, 60_000);
+
+  try {
+
   if (args.entity && shouldEnqueueIngestionJob(args)) {
     const entity = args.entity;
     for (const params of ingestionParamSets(args)) {
@@ -102,6 +128,7 @@ async function main() {
     index < args.drainLimit && Date.now() - startedAt < 19 * 60_000 && totalRequests < 1000;
     index += 1
   ) {
+    if (leaseHeartbeatError) throw leaseHeartbeatError;
     const preferredEntity = args.entity ?? preferredCandidateFamily(index);
     const preferredJob = await claimNextIngestionJob(workerId, preferredEntity, args.idempotencySuffix);
     const job = preferredJob ?? (args.entity
@@ -201,6 +228,12 @@ async function main() {
   if (failures.length > 0) {
     console.error(JSON.stringify({ workerId, failed: failures.length, failures }, null, 2));
     process.exitCode = 1;
+  }
+  } finally {
+    clearInterval(leaseHeartbeat);
+    await releaseWorkerExecutionLease(lease).catch((error) => {
+      console.error(JSON.stringify({ workerId, lease: lease.lockKey, releaseError: error instanceof Error ? error.message : String(error) }));
+    });
   }
 }
 
@@ -417,6 +450,9 @@ function ingestionParams(args: Args) {
     }
     return { entityId: args.entityId };
   }
+  if (args.entityId !== undefined) {
+    return { entityId: args.entityId };
+  }
   if (args.entity === "jobs" && args.startDate && args.startDate === args.endDate) {
     return completedJobDiscoveryParams(args.startDate);
   }
@@ -431,23 +467,27 @@ function ingestionParams(args: Args) {
   };
 }
 
-function ingestionParamSets(args: Args) {
-  if (
-    (args.entity === "jobs" || args.entity === "quotes") &&
-    args.startDate &&
-    args.endDate &&
-    args.startDate !== args.endDate
-  ) {
-    return dateRange(args.startDate, args.endDate).map((day) =>
-      args.entity === "jobs" ? completedJobDiscoveryParams(day) : { DateApproved: day },
-    );
+export function ingestionParamSets(args: Args) {
+  if ((args.entity === "jobs" || args.entity === "quotes") && args.startDate && args.endDate) {
+    const days = dateRange(args.startDate, args.endDate);
+    return args.entity === "jobs"
+      ? days.map(completedJobDiscoveryParams)
+      : days.flatMap((day) => [
+          { DateApproved: day },
+          { DateIssued: day },
+        ]);
   }
 
   return [ingestionParams(args)];
 }
 
-function ingestionIdempotencyKey(entity: IngestionEntity, params: Record<string, unknown>, suffix?: string) {
-  const dateKey = params.entityId ?? params.CompletedDate ?? params.DateApproved ?? params.StartDate ?? params.startDate;
+export function ingestionIdempotencyKey(entity: IngestionEntity, params: Record<string, unknown>, suffix?: string) {
+  const dateFilter = params.DateApproved !== undefined
+    ? `date-approved:${String(params.DateApproved)}`
+    : params.DateIssued !== undefined
+      ? `date-issued:${String(params.DateIssued)}`
+      : undefined;
+  const dateKey = params.entityId ?? params.CompletedDate ?? dateFilter ?? params.StartDate ?? params.startDate;
   const suffixKey = suffix ? `:${suffix}` : "";
   if (dateKey) {
     return `${entity}:${String(dateKey)}${suffixKey}`;

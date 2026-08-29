@@ -36,6 +36,43 @@ export function backwardCompatibilityViolations(filename, sql) {
   ));
 }
 
+// The static release gate records whether a migration is strictly additive,
+// while backwardCompatibilityViolations() remains the fail-closed boundary
+// for destructive prior-image changes. Full-data cloning is reserved for an
+// explicit manual probe, not ordinary deployment.
+export function classifyStrictlyAdditiveMigration(filename, sql) {
+  if (typeof filename !== "string" || !filename.endsWith(".sql")) {
+    return { additive: false, reason: "migration filename must end in .sql" };
+  }
+  if (typeof sql !== "string" || !sql.trim()) {
+    return { additive: false, reason: "migration SQL must be non-empty" };
+  }
+  const statements = splitSqlStatements(stripSqlComments(sql)).map((statement) => statement.trim()).filter(Boolean);
+  if (statements.length === 0) return { additive: false, reason: "migration has no executable statements" };
+  for (const statement of statements) {
+    const normalized = statement.replace(/\s+/g, " ").trim();
+    const additive = /^create schema if not exists [a-z_][a-z0-9_]*$/i.test(normalized)
+      || (/^create table if not exists [a-z_][a-z0-9_.]* \(/i.test(normalized)
+        && !/\b(?:as\s+select|like)\b/i.test(normalized))
+      || /^create (?:unique )?index (?:concurrently )?if not exists [a-z_][a-z0-9_]* on [a-z_][a-z0-9_.]* \(/i.test(normalized)
+      || /^comment on (?:table|column|index) [a-z_][a-z0-9_.]* is /i.test(normalized);
+    if (!additive) {
+      return { additive: false, reason: `statement is not in the strictly additive routine allowlist: ${normalized.slice(0, 120)}` };
+    }
+  }
+  return { additive: true, statements: statements.length };
+}
+
+export function parseMigrationCompatibilityMode(argv = [], environmentMode = "static") {
+  if (!Array.isArray(argv) || argv.length > 1 || (argv.length === 1 && argv[0] !== "--clone")) {
+    throw new Error("Compatibility check accepts only --clone for the manual full-data probe");
+  }
+  if (typeof environmentMode !== "string" || !["static", "clone"].includes(environmentMode)) {
+    throw new Error("MIGRATION_COMPATIBILITY_MODE must be static or clone");
+  }
+  return argv[0] === "--clone" ? "clone" : environmentMode;
+}
+
 export function createCompatibilityDatabaseName() {
   return assertCompatibilityDatabaseName(`metrics_compat_${randomUUID().replaceAll("-", "")}`);
 }
@@ -816,4 +853,46 @@ function stripSqlComments(sql) {
   return sql
     .replace(/\/\*[\s\S]*?\*\//g, " ")
     .replace(/--[^\n]*/g, " ");
+}
+
+function splitSqlStatements(sql) {
+  const statements = [];
+  let start = 0;
+  let quote = null;
+  let dollarTag = null;
+  for (let index = 0; index < sql.length; index += 1) {
+    const character = sql[index];
+    if (dollarTag) {
+      if (sql.startsWith(dollarTag, index)) {
+        index += dollarTag.length - 1;
+        dollarTag = null;
+      }
+      continue;
+    }
+    if (quote) {
+      if (character === quote) {
+        if (sql[index + 1] === quote) index += 1;
+        else quote = null;
+      }
+      continue;
+    }
+    if (character === "'" || character === '"') {
+      quote = character;
+      continue;
+    }
+    if (character === "$") {
+      const match = /^\$[a-z_][a-z0-9_]*\$|^\$\$/i.exec(sql.slice(index));
+      if (match) {
+        dollarTag = match[0];
+        index += dollarTag.length - 1;
+        continue;
+      }
+    }
+    if (character === ";") {
+      statements.push(sql.slice(start, index));
+      start = index + 1;
+    }
+  }
+  statements.push(sql.slice(start));
+  return statements;
 }

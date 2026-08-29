@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { queryPostgres } from "@/lib/store/postgres";
+import { queryPostgres, withPostgresTransaction, type PostgresQuery } from "@/lib/store/postgres";
 import type { IngestionEntity, IngestionResult } from "@/lib/simpro/ingest";
 
 export type IngestionJobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
@@ -20,6 +20,25 @@ export type IngestionJob = {
 };
 
 const retiredIngestionEntities = new Set(["invoices", "customer_invoice_logs"]);
+const nestedRefreshQueueLockKey = "metrics:ingestion_jobs:nested_refresh_queue";
+
+export type IngestionJobTransaction = <T>(callback: (query: PostgresQuery) => Promise<T>) => Promise<T>;
+
+export function ingestionJobTransaction(
+  query: PostgresQuery,
+  transaction?: IngestionJobTransaction,
+): IngestionJobTransaction {
+  return transaction ?? (query === queryPostgres
+    ? withPostgresTransaction
+    : async <T>(callback: (transactionQuery: PostgresQuery) => Promise<T>) => callback(query));
+}
+
+export async function acquireNestedRefreshQueueLock(query: PostgresQuery): Promise<void> {
+  // This is deliberately acquired in a transaction before any queue read. A
+  // statement-local lock is insufficient: a waiter would retain its earlier
+  // snapshot and could still collide with the partial queued-entity index.
+  await query("select pg_advisory_xact_lock(hashtext($1))", [nestedRefreshQueueLockKey]);
+}
 
 function assertActiveIngestionEntity(entity: unknown) {
   if (typeof entity !== "string" || retiredIngestionEntities.has(entity)) {
@@ -35,13 +54,43 @@ export async function enqueueIngestionJob(params: {
   continuationToken?: Record<string, unknown> | null;
   params?: Record<string, unknown>;
   preserveSucceeded?: boolean;
-}, query: typeof queryPostgres = queryPostgres) {
+}, query: typeof queryPostgres = queryPostgres, options: { transaction?: IngestionJobTransaction } = {}) {
   assertActiveIngestionEntity(params.entity);
-  await query(
-    `insert into metrics.ingestion_jobs (
+  await ingestionJobTransaction(query, options.transaction)(async (transactionQuery) => {
+    if (params.entity === "quote_nested" || params.entity === "job_nested") {
+      await acquireNestedRefreshQueueLock(transactionQuery);
+    }
+    await transactionQuery(
+    `with selected_key as materialized (
+       select case
+         when $1::text in ('quote_nested', 'job_nested') then coalesce(
+           (
+             select queued.idempotency_key
+               from metrics.ingestion_jobs queued
+              where queued.entity_type = $1::metrics.ingestion_entity_type
+                and queued.status = 'queued'
+                and queued.params->>'entityId' = ($6::jsonb)->>'entityId'
+              order by queued.updated_at desc, queued.created_at desc, queued.id desc
+              limit 1
+           ),
+           (
+             select $2 || ':after-running:' || running.id::text || ':' || running.generation::text
+               from metrics.ingestion_jobs running
+              where running.entity_type = $1::metrics.ingestion_entity_type
+                and running.status = 'running'
+                and running.params->>'entityId' = ($6::jsonb)->>'entityId'
+              order by running.locked_at desc nulls last, running.id desc
+              limit 1
+           ),
+           $2
+         )
+         else $2
+       end as idempotency_key
+     )
+     insert into metrics.ingestion_jobs (
        entity_type, idempotency_key, priority, request_budget, continuation_token, params
      )
-     values ($1, $2, $3, $4, $5::jsonb, $6::jsonb)
+     values ($1::metrics.ingestion_entity_type, (select idempotency_key from selected_key), $3, $4, $5::jsonb, $6::jsonb)
      on conflict (entity_type, idempotency_key) do update set
        priority = least(metrics.ingestion_jobs.priority, excluded.priority),
        request_budget = case
@@ -91,6 +140,8 @@ export async function enqueueIngestionJob(params: {
        end,
        params = case
          when metrics.ingestion_jobs.status = 'succeeded' and not $7::boolean then excluded.params
+         when metrics.ingestion_jobs.status = 'queued'
+           and metrics.ingestion_jobs.entity_type::text in ('quote_nested', 'job_nested') then excluded.params
          else metrics.ingestion_jobs.params
        end,
        next_attempt_at = case
@@ -108,7 +159,8 @@ export async function enqueueIngestionJob(params: {
       JSON.stringify(params.params ?? {}),
       params.preserveSucceeded ?? false,
     ],
-  );
+    );
+  });
 }
 
 export async function claimNextIngestionJob(
@@ -212,10 +264,16 @@ export async function completeIngestionJob(params: {
   continuationToken: Record<string, unknown> | null;
   candidateRefreshes?: IngestionResult["candidateRefreshes"];
   affectedPeriods: IngestionResult["affectedPeriods"];
-}, query: typeof queryPostgres = queryPostgres) {
+}, query: typeof queryPostgres = queryPostgres, options: { transaction?: IngestionJobTransaction } = {}) {
   const hasMore = Boolean(params.continuationToken);
   const publications = buildCompletionPublications(params.job, params.candidateRefreshes, params.affectedPeriods);
-  const result = await query<{ candidate_count: number; rollup_count: number }>(
+  return ingestionJobTransaction(query, options.transaction)(async (transactionQuery) => {
+  if (publications.candidates.some((candidate) => (
+    candidate.entity_type === "quote_nested" || candidate.entity_type === "job_nested"
+  ))) {
+    await acquireNestedRefreshQueueLock(transactionQuery);
+  }
+  const result = await transactionQuery<{ candidate_count: number; rollup_count: number }>(
     `with completed_job as (
        update metrics.ingestion_jobs j
           set status = $4::metrics.ingestion_job_status,
@@ -297,18 +355,45 @@ export async function completeIngestionJob(params: {
                 case when c.entity_type = 'job_nested' then job_source.source_updated_at end,
                 '-infinity'::timestamptz
               )
-            )
           )
+          )
+     ), candidate_queue_keys as (
+       select c.*,
+              case
+                when c.entity_type in ('quote_nested', 'job_nested') then coalesce(
+                  (
+                    select queued.idempotency_key
+                      from metrics.ingestion_jobs queued
+                     where queued.entity_type::text = c.entity_type
+                       and queued.status = 'queued'
+                       and queued.params->>'entityId' = c.entity_id::text
+                     order by queued.updated_at desc, queued.created_at desc, queued.id desc
+                     limit 1
+                  ),
+                  (
+                    select c.idempotency_key || ':after-running:' || running.id::text || ':' || running.generation::text
+                      from metrics.ingestion_jobs running
+                     where running.entity_type::text = c.entity_type
+                       and running.status = 'running'
+                       and running.params->>'entityId' = c.entity_id::text
+                     order by running.locked_at desc nulls last, running.id desc
+                     limit 1
+                  ),
+                  c.idempotency_key
+                )
+                else c.idempotency_key
+              end as queue_idempotency_key
+         from eligible_candidates c
      ), published_candidates as (
        insert into metrics.ingestion_jobs (
          entity_type, idempotency_key, priority, request_budget, params
        )
        select c.entity_type::metrics.ingestion_entity_type,
-              c.idempotency_key,
+              c.queue_idempotency_key,
               20,
               250,
               coalesce(c.params, '{}'::jsonb) || jsonb_build_object('entityId', c.entity_id)
-         from eligible_candidates c
+         from candidate_queue_keys c
          cross join completed_run
        on conflict (entity_type, idempotency_key) do update set
          priority = least(metrics.ingestion_jobs.priority, excluded.priority),
@@ -336,6 +421,12 @@ export async function completeIngestionJob(params: {
          next_attempt_at = case
            when metrics.ingestion_jobs.status in ('failed', 'cancelled') then now()
            else metrics.ingestion_jobs.next_attempt_at
+         end,
+         params = case
+           when metrics.ingestion_jobs.status = 'queued'
+             and metrics.ingestion_jobs.entity_type::text in ('quote_nested', 'job_nested')
+             then excluded.params
+           else metrics.ingestion_jobs.params
          end,
          updated_at = now()
        returning id
@@ -403,6 +494,7 @@ export async function completeIngestionJob(params: {
     );
   }
   return completed;
+  });
 }
 
 function buildCompletionPublications(
@@ -418,7 +510,9 @@ function buildCompletionPublications(
   }>();
   for (const candidate of candidateRefreshes ?? []) {
     if (!Number.isInteger(candidate.entityId) || candidate.entityId <= 0 || !candidate.sourceHash) continue;
-    const idempotencyKey = `${candidate.entity}:${candidate.entityId}:${candidate.sourceHash}`;
+    const idempotencyKey = candidate.entity === "quote_nested" || candidate.entity === "job_nested"
+      ? `${candidate.entity}:${candidate.entityId}`
+      : `${candidate.entity}:${candidate.entityId}:${candidate.sourceHash}`;
     candidates.set(idempotencyKey, {
       entity_type: candidate.entity,
       entity_id: candidate.entityId,

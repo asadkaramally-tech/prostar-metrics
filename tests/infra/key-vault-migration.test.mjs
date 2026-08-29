@@ -289,8 +289,8 @@ test("migration execution requires the fixed confirmation and rejects every targ
 
 test("canonical production targets are frozen and match monitoring plus metrics exactly", () => {
   const monitoringJobs = monitoringParameters.parameters.containerAppsJobNames.value;
-  assert.equal(PRODUCTION_JOB_NAMES.length, 23);
-  assert.equal(PRODUCTION_TARGETS.length, 24);
+  assert.equal(PRODUCTION_JOB_NAMES.length, 24);
+  assert.equal(PRODUCTION_TARGETS.length, 25);
   assert.ok(Object.isFrozen(PRODUCTION_JOB_NAMES));
   assert.ok(Object.isFrozen(PRODUCTION_TARGETS));
   assert.ok(PRODUCTION_TARGETS.every(Object.isFrozen));
@@ -298,10 +298,10 @@ test("canonical production targets are frozen and match monitoring plus metrics 
   const bicepJobs = [...new Set([...metricsBicep.matchAll(/'(job-[^']+)'/g)].map((match) => match[1]))];
   assert.deepEqual(assertExactProductionJobNames(bicepJobs), [...PRODUCTION_JOB_NAMES].sort());
   assert.equal(assertExactProductionTargets(PRODUCTION_TARGETS), PRODUCTION_TARGETS);
-  assert.throws(() => assertExactProductionTargets(PRODUCTION_TARGETS.slice(1)), /immutable app plus exact 23-job/);
+  assert.throws(() => assertExactProductionTargets(PRODUCTION_TARGETS.slice(1)), /immutable app plus exact 24-job/);
   assert.throws(
     () => assertExactProductionTargets([...PRODUCTION_TARGETS, { ...PRODUCTION_TARGETS[0] }]),
-    /immutable app plus exact 23-job/,
+    /immutable app plus exact 24-job/,
   );
 });
 
@@ -357,7 +357,7 @@ test("migration source resolution classifies exact inline and referenced states 
   }), /Invalid Key Vault reference contract/);
 });
 
-test("complete already-referenced workflow is a schema-v3 metadata-only no-op across all 24 targets", async () => {
+test("complete already-referenced workflow is a schema-v3 metadata-only no-op across all 25 targets", async () => {
   const { counters, operations, reports } = createWorkflowHarness();
   const outcome = await runKeyVaultMigrationWorkflow({
     args: parseMigrationArgs([
@@ -371,11 +371,11 @@ test("complete already-referenced workflow is a schema-v3 metadata-only no-op ac
   });
   assert.deepEqual(outcome.result, {
     changed: 0,
-    verified: 24,
+    verified: 25,
     verificationMode: "metadata-only",
     secretValuesAccessed: false,
   });
-  assert.equal(counters.targetMetadataReads, 48);
+  assert.equal(counters.targetMetadataReads, 50);
   assert.equal(counters.vaultMetadataReads, 6);
   assert.equal(counters.targetValueReads, 0);
   assert.equal(counters.vaultValueReads, 0);
@@ -407,10 +407,10 @@ test("complete already-referenced workflow is a schema-v3 metadata-only no-op ac
     operatorSecretsOfficerRequired: false,
     migrationRunId: null,
     noOpVerified: true,
-    targetCount: 24,
-    referencesVerified: 24,
+    targetCount: 25,
+    referencesVerified: 25,
   });
-  assert.equal(reports[0].targetBaseline.length, 24);
+  assert.equal(reports[0].targetBaseline.length, 25);
   assert.equal(reports[0].vaultVersionBaseline.length, 3);
   assert.ok(reports[0].targetBaseline.every(({ secrets }) => secrets.every((secret) => (
     secret.mode === "key-vault" && secret.valueInspected === false && !("valuePresent" in secret)
@@ -442,7 +442,7 @@ test("workflow rejects reused migration run IDs case-insensitively before every 
       targets: PRODUCTION_TARGETS,
       operations,
     }), /not fresh/);
-    assert.equal(counters.targetMetadataReads, 24);
+    assert.equal(counters.targetMetadataReads, 25);
     assert.equal(counters.vaultMetadataReads, 3);
     assert.equal(counters.targetValueReads, 0);
     assert.equal(counters.vaultValueReads, 0);
@@ -472,7 +472,7 @@ test("workflow rejects malformed migration ownership tags before every value rea
     targets: PRODUCTION_TARGETS,
     operations,
   }), /malformed migration run ownership tag/);
-  assert.equal(counters.targetMetadataReads, 24);
+  assert.equal(counters.targetMetadataReads, 25);
   assert.equal(counters.vaultMetadataReads, 3);
   assert.equal(counters.targetValueReads, 0);
   assert.equal(counters.vaultValueReads, 0);
@@ -891,7 +891,7 @@ test("migration Easy Auth verification rejects browser and API drift", async (t)
 });
 
 test("verification failure restores vault versions first, then all attempted targets in reverse order", async () => {
-  const targets = Array.from({ length: 24 }, (_, index) => ({ name: `target-${index}` }));
+  const targets = Array.from({ length: 25 }, (_, index) => ({ name: `target-${index}` }));
   const events = [];
   await assert.rejects(
     applyReferenceMigration({
@@ -914,7 +914,7 @@ test("verification failure restores vault versions first, then all attempted tar
     /verification failed/,
   );
 
-  assert.equal(events.filter((entry) => entry.startsWith("set:")).length, 24);
+  assert.equal(events.filter((entry) => entry.startsWith("set:")).length, 25);
   assert.equal(events.indexOf("vault-restore") < events.findIndex((entry) => entry.startsWith("restore:")), true);
   assert.deepEqual(
     events.filter((entry) => entry.startsWith("restore:")),

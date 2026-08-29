@@ -42,6 +42,11 @@ export function buildFreshnessStatus(input: FreshnessInput): FreshnessStatus {
       input.coverageDetail ?? "Required source windows or rollups are still incomplete.");
   }
 
+  if (input.explicitState === "stale") {
+    return status(input, "stale", "Data is stale", dataThrough, lastSuccessfulRunAt, lastFailedRunAt,
+      input.coverageDetail ?? (dataThrough ? `Data-through is ${formatDate(dataThrough)}.` : "Required source evidence is stale."));
+  }
+
   if (!dataThrough || !lastSuccessfulRunAt) {
     return {
       pageKey: input.pageKey,

@@ -46,22 +46,19 @@ function dashboardCommissionPeriod(children: React.ReactNode) {
   if (!model || typeof model !== "object") return undefined;
   const record = model as {
     worksheet?: { year?: unknown; month?: unknown };
-    summary?: { year?: unknown };
   };
   const year = record.worksheet?.year;
   const month = record.worksheet?.month;
   if (typeof year !== "number" || typeof month !== "number") return undefined;
-  const summaryYear = typeof record.summary?.year === "number" ? record.summary.year : year;
-  return { year, month, summaryYear };
+  return { year, month };
 }
 
-function CommissionPeriodControls({ year, month, summaryYear }: { year: number; month: number; summaryYear: number }) {
+function CommissionPeriodControls({ year, month }: { year: number; month: number }) {
   return (
     <PeriodSelector
       action="/commissions"
       label="Commission period"
       value={`${year}-${String(month).padStart(2, "0")}`}
-      hiddenFields={{ summaryYear: String(summaryYear) }}
     />
   );
 }

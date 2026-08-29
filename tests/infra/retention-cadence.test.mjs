@@ -34,7 +34,7 @@ test("commission exports keep the seven-year Blob lifecycle policy", () => {
 test("scheduled Container Apps job cadence remains locked", () => {
   assert.match(
     metricsBicep,
-    /param ingestionCronExpression string = '0 \*\/6 \* \* \*'/,
+    /param ingestionCronExpression string = '\*\/20 \* \* \* \*'/,
   );
   assert.match(
     metricsBicep,
@@ -51,16 +51,17 @@ test("scheduled Container Apps job cadence remains locked", () => {
     "job-psm-job-logs": "*/15 * * * *",
     "job-psm-schedule-logs": "*/15 * * * *",
     "job-psm-mobile-logs": "*/15 * * * *",
-    "job-psm-candidate-drain": "2,17,32,47 * * * *",
+    "job-psm-candidate-drain": "2,32 * * * *",
     "job-psm-timesheets-hourly": "0 * * * *",
     "job-psm-ts-jobs-hourly": "5 * * * *",
-    "job-psm-employees-daily": "0 * * * *",
-    "job-psm-rollup-drain": "7,22,37,52 * * * *",
+    "job-psm-employees-daily": "0 9,10 * * *",
+    "job-psm-rollup-drain": "12,42 * * * *",
     "job-psm-backfill-hourly": "20,50 * * * *",
     "job-psm-operational-health": "10,25,40,55 * * * *",
     "job-psm-reconcile-trailing-24m": "0 8 * * *",
     "job-psm-reconcile-stable-history": "0 9 1 * *",
-    "job-psm-commissions-nightly": "0 * * * *",
+    "job-psm-commissions-nightly": "0 10,11 * * *",
+    "job-psm-materials": "40 1,7,13,19 * * *",
   });
   assert.doesNotMatch(metricsBicep, /job-psm-invoice|customer_invoice_logs|'--entity', 'invoices'/);
 });
@@ -73,12 +74,16 @@ test("extended reconciliation and commission cadences are active worker jobs", (
   assert.equal([...metricsBicep.matchAll(/'--runtime-minutes', '20'/g)].length, 2);
   assert.equal([...metricsBicep.matchAll(/'--request-budget', '1000'/g)].length, 2);
   assert.match(metricsBicep, /'--nightly-commissions', '--local-hour', '3', '--limit', '1'/);
-});
-
-test("current Jobs, Quotes, and nested candidates drain to the bounded worker maximum", () => {
   assert.match(
     metricsBicep,
-    /name: 'job-psm-candidate-drain'[\s\S]*?'--drain-limit', '100'/,
+    /name: 'job-psm-materials'[\s\S]*?'--mode', 'incremental'[\s\S]*?'--auto-close-prior-month'/,
+  );
+});
+
+test("current Jobs, Quotes, and nested candidates use bounded hot-window drains", () => {
+  assert.match(
+    metricsBicep,
+    /name: 'job-psm-candidate-drain'[\s\S]*?'--drain-limit', '50'/,
   );
   assert.match(
     metricsBicep,
@@ -88,4 +93,5 @@ test("current Jobs, Quotes, and nested candidates drain to the bounded worker ma
     metricsBicep,
     /'--entity'\s*'jobs'[\s\S]*?'--drain-limit'\s*'100'/,
   );
+  assert.equal([...metricsBicep.matchAll(/'--lookback-days'\s*'7'/g)].length, 2);
 });

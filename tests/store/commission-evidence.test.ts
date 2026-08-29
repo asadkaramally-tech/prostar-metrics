@@ -137,10 +137,18 @@ test("period evidence and manifest retain every source row needed to replay fiel
       })),
     })),
   });
-  assert.equal(model.coverage.nonFieldTechnicianHours, 2);
-  assert.equal(model.coverage.eligibleAllocatedWorkValue, 900);
-  assert.equal(model.coverage.ineligibleAllocatedWorkValue, 300);
-  assert.equal(model.technicians[0].finalBonus, model.poolAmount);
+  // FINAL OWNER RULE (2026-07-20): every mapped hour earns its hours-share —
+  // the field/roster flags above are provenance only and never gate the
+  // allocation denominators or membership.
+  assert.equal(model.coverage.nonFieldTechnicianHours, 0);
+  assert.equal(model.coverage.eligibleAllocatedWorkValue, 1200);
+  assert.equal(model.coverage.ineligibleAllocatedWorkValue, 0);
+  assert.deepEqual(
+    model.jobAllocations.map((allocation) => [allocation.employeeId, allocation.allocatedValue]),
+    [["10", 600], ["20", 200], ["30", 400]],
+  );
+  const payoutCents = model.technicians.reduce((sum, technician) => sum + Math.round(technician.finalBonus * 100), 0);
+  assert.equal(payoutCents, Math.round(model.poolAmount * 100));
 });
 
 test("efficiency quote evidence distinguishes no qualifying work from missing, loading, and error", () => {

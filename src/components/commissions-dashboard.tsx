@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { DevBars, fmt, Histogram, type HistogramBucket } from "@/components/charts";
 import {
   Card,
@@ -8,17 +8,9 @@ import {
   Def,
   DefTooltipProvider,
   Fnote,
-  Focal,
-  FocalCov,
-  FocalLabel,
-  FocalMeta,
-  FocalValue,
-  Hero,
-  Insight,
   LDetail,
   Legend,
   LRow,
-  Mgn,
   Seg,
   Skel,
   StateEmpty,
@@ -28,6 +20,7 @@ import {
   TierChip,
   type LRowSegment,
 } from "@/components/reset";
+import { KpiBand, KpiBandNote, KpiTile, KpiTiles, PrimaryStatCard } from "@/components/band";
 import {
   allocateLargestRemainder,
   efficiencyMultiplier,
@@ -42,13 +35,21 @@ import type {
   CommissionWorksheetModel,
 } from "@/lib/store/commissions-read-model";
 
-/* /commissions — implements the approved
-   APPROVED-2026-07-15/mockups/commissions.html exactly, data-driven from the
-   commission read model. The pool %, efficiency toggle, and ±max slider drive
-   a session-only client recalculation (contract Q5 — nothing persists); at the
-   saved defaults the page renders the persisted server-verified run
-   number-for-number. Rejected surfaces (lifecycle, status/audit/export/
-   revision/manifest/roster-admin UI — brief §4/§8) are not rendered. */
+/* /commissions — implements the owner-approved redesign
+   docs/approved-design/mockups/commissions.html exactly, data-driven from the
+   commission read model. Composition: KPI band (primary CALCULATED COMMISSION
+   DUE card with cents styling + bullet vs the prior month, plus COMPLETED
+   REVENUE / TECHNICIANS EARNING / TOP CALCULATED PAYOUT / YEAR TO DATE tiles)
+   → Worksheet/Summary tabs → toolbar → ONE ranked leaderboard.
+   FINAL OWNER RULE: membership and shares come ONLY from recorded hours on
+   the period's jobs — everyone with hours is a row, included by default; the
+   per-row include checkboxes are the ONLY exclusion mechanism, and unchecking
+   redistributes the unchanged pool across everyone still included. There is
+   no "eligibility" anywhere. The pool %, efficiency toggle, ±max slider and
+   checkboxes drive a session-only client recalculation (nothing persists); at
+   the saved defaults the page renders the persisted server-verified run
+   number-for-number. Rejected surfaces (lifecycle/status/export UI) are not
+   rendered. */
 
 export type CommissionsDashboardProps = {
   model: CommissionDashboardReadModel;
@@ -56,13 +57,10 @@ export type CommissionsDashboardProps = {
   showStates?: boolean;
 };
 
-/* ── Approved colors ───────────────────────────────────── */
+/* ── Approved colors (mockup .lbar: base --acc-2, boost --acc) ── */
 
-/** Hero strip: monotonic 8-step indigo→grey rank ramp; never reuses the
- *  "Rank boost" legend color #4b52c0 (ledger C3). */
-export const RANK_RAMP = ["#8087ec", "#6a72e0", "#5b63d3", "#4650b8", "#3c42a0", "#8a92a4", "#a9b0bf", "#c3cad6"];
 const SEG_BASE = "#8087ec";
-const SEG_BOOST = "#4b52c0";
+const SEG_BOOST = "#5b63d3";
 const SEG_EFF_UP = "#1a8a5a";
 const SEG_EFF_DOWN = "#eab3ac";
 const EFF_NEG_BAR = "#d0463a";
@@ -79,7 +77,8 @@ export type CommissionSessionControls = {
   efficiencyEnabled: boolean;
   maxAdjustmentPercent: number;
   /** Employees the owner unchecked: removed from the calculation entirely, and
-   *  the pool redistributes across everyone still included. Session-only. */
+   *  the pool redistributes across everyone still included. Session-only;
+   *  seeded from any saved `included` overrides on the persisted run. */
   excludedEmployeeIds?: readonly string[];
 };
 
@@ -110,20 +109,51 @@ export type CommissionComputedRow = CommissionSessionTechnician & {
   excluded: boolean;
 };
 
-export function savedControls(config: CommissionConfig): CommissionSessionControls {
+/** Saved checkbox state: employees whose persisted run carries an `included:
+ *  false` override. Everyone else defaults to checked. */
+export function savedExcludedIds(worksheet: CommissionReadyWorksheetModel): string[] {
+  return worksheet.coverage.technicianWork.filter((entry) => !entry.included).map((entry) => entry.employeeId);
+}
+
+export function savedControls(config: CommissionConfig, savedExcluded: readonly string[] = []): CommissionSessionControls {
   return {
     poolPercent: config.poolPercent,
     efficiencyEnabled: config.efficiencyEnabled,
     maxAdjustmentPercent: config.maxEfficiencyAdjustmentPercent,
-    excludedEmployeeIds: [],
+    excludedEmployeeIds: [...savedExcluded],
   };
 }
 
-export function controlsMatchSaved(controls: CommissionSessionControls, config: CommissionConfig): boolean {
+export function controlsMatchSaved(
+  controls: CommissionSessionControls,
+  config: CommissionConfig,
+  savedExcluded: readonly string[] = [],
+): boolean {
+  const excluded = new Set(controls.excludedEmployeeIds ?? []);
+  const saved = new Set(savedExcluded);
   return Math.abs(controls.poolPercent - config.poolPercent) < 1e-9
     && controls.efficiencyEnabled === config.efficiencyEnabled
     && controls.maxAdjustmentPercent === config.maxEfficiencyAdjustmentPercent
-    && (controls.excludedEmployeeIds?.length ?? 0) === 0;
+    && excluded.size === saved.size
+    && [...excluded].every((employeeId) => saved.has(employeeId));
+}
+
+/** Rows from coverage.technicianWork that have no payout row on the persisted
+ *  run — zero-hour directory rows plus anyone a saved override excluded. ALL
+ *  of them render; nobody is silently dropped. */
+function coverageOnlyInputs(worksheet: CommissionReadyWorksheetModel): CommissionSessionTechnician[] {
+  const seen = new Set(worksheet.technicians.map((technician) => technician.employeeId));
+  return worksheet.coverage.technicianWork
+    .filter((entry) => !seen.has(entry.employeeId))
+    .map((entry) => ({
+      employeeId: entry.employeeId,
+      displayName: entry.displayName,
+      allocatedValue: entry.allocatedWorkValue,
+      effectiveValue: entry.effectiveAllocatedWorkValue,
+      efficiencyRatio: null,
+      jobCount: entry.jobCount,
+      jobAllocations: [] as CommissionJobAllocation[],
+    }));
 }
 
 export function buildSessionInputs(worksheet: CommissionReadyWorksheetModel): CommissionSessionTechnician[] {
@@ -136,19 +166,7 @@ export function buildSessionInputs(worksheet: CommissionReadyWorksheetModel): Co
     jobCount: technician.jobCount,
     jobAllocations: technician.jobAllocations,
   }));
-  const seen = new Set(withWork.map((technician) => technician.employeeId));
-  const noWork = worksheet.coverage.technicianWork
-    .filter((entry) => entry.included && !seen.has(entry.employeeId))
-    .map((entry) => ({
-      employeeId: entry.employeeId,
-      displayName: entry.displayName,
-      allocatedValue: entry.allocatedWorkValue,
-      effectiveValue: entry.effectiveAllocatedWorkValue,
-      efficiencyRatio: null,
-      jobCount: entry.jobCount,
-      jobAllocations: [] as CommissionJobAllocation[],
-    }));
-  return [...withWork, ...noWork];
+  return [...withWork, ...coverageOnlyInputs(worksheet)];
 }
 
 export function runCommissionSessionEngine(params: {
@@ -238,9 +256,10 @@ export function runCommissionSessionEngine(params: {
 }
 
 /** The persisted server-verified run, in session-row shape — rendered
- *  verbatim while the controls sit at the saved defaults. */
+ *  verbatim while the controls sit at the saved state. */
 export function persistedWorksheetRows(worksheet: CommissionReadyWorksheetModel): { pool: number; rows: CommissionComputedRow[] } {
   const multipliers = worksheet.config.tierMultipliers;
+  const excluded = new Set(savedExcludedIds(worksheet));
   const rows: CommissionComputedRow[] = [
     ...worksheet.technicians.map((technician) => ({
       employeeId: technician.employeeId,
@@ -258,18 +277,16 @@ export function persistedWorksheetRows(worksheet: CommissionReadyWorksheetModel)
       belowMinimum: technician.belowMinimum,
       excluded: false,
     })),
-    ...buildSessionInputs(worksheet)
-      .filter((entry) => entry.effectiveValue <= 0)
-      .map((entry) => ({
-        ...entry,
-        tier: "Standard" as CommissionTier,
-        tierMultiplier: 1,
-        base: 0,
-        post: 0,
-        final: 0,
-        belowMinimum: false,
-        excluded: false,
-      })),
+    ...coverageOnlyInputs(worksheet).map((entry) => ({
+      ...entry,
+      tier: "Standard" as CommissionTier,
+      tierMultiplier: 1,
+      base: 0,
+      post: 0,
+      final: 0,
+      belowMinimum: false,
+      excluded: excluded.has(entry.employeeId),
+    })),
   ];
   return { pool: worksheet.commissionPool, rows };
 }
@@ -278,7 +295,7 @@ export function buildWorksheetRows(
   worksheet: CommissionReadyWorksheetModel,
   controls: CommissionSessionControls,
 ): { pool: number; rows: CommissionComputedRow[] } {
-  const result = controlsMatchSaved(controls, worksheet.config)
+  const result = controlsMatchSaved(controls, worksheet.config, savedExcludedIds(worksheet))
     ? persistedWorksheetRows(worksheet)
     : runCommissionSessionEngine({
       totalWorkValue: worksheet.totalWorkValue,
@@ -371,6 +388,15 @@ export function summaryQuarters(vm: CommissionSummaryVM): Array<{ label: string;
   });
 }
 
+export function priorCommissionPool(
+  worksheetMonth: number,
+  vm: CommissionSummaryVM,
+  crossYearPool: number | null,
+): number | null {
+  if (worksheetMonth === 1) return crossYearPool;
+  return vm.months.find((month) => month.month === worksheetMonth - 1)?.pool ?? null;
+}
+
 export function buildSummaryCsv(vm: CommissionSummaryVM, mode: CommissionSummaryMode): string {
   const csvPool = (pool: number | null) => (pool === null ? "N/A" : pool.toFixed(2));
   if (mode === "monthly") {
@@ -429,10 +455,16 @@ export function CommissionsDashboard({ model, showStates }: CommissionsDashboard
 
 function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) {
   const worksheet = model.worksheet;
-  const [controls, setControls] = useState<CommissionSessionControls>(() => savedControls(worksheet.config));
+  const [controls, setControls] = useState<CommissionSessionControls>(() =>
+    savedControls(worksheet.config, worksheet.servingStatus === "ready" ? savedExcludedIds(worksheet) : []),
+  );
   const [tab, setTab] = useState<"monthly" | "summary">("monthly");
   const [mode, setMode] = useState<CommissionSummaryMode>("monthly");
-  const [openTech, setOpenTech] = useState<string | null>(() => (worksheet.servingStatus === "ready" ? topPayoutId(worksheet) : null));
+  const [openTech, setOpenTech] = useState<string | null>(null);
+  const [allocationDetails, setAllocationDetails] = useState<Record<string, CommissionJobAllocation[]>>({});
+  const [allocationLoading, setAllocationLoading] = useState<ReadonlySet<string>>(() => new Set());
+  const [allocationErrors, setAllocationErrors] = useState<Record<string, string>>({});
+  const allocationRequests = useRef(new Set<string>());
   const interacted = useRef(false);
 
   const computed = useMemo(
@@ -450,6 +482,34 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
   const toggleOpen = (employeeId: string) => {
     interacted.current = true;
     setOpenTech((current) => (current === employeeId ? null : employeeId));
+    if (allocationDetails[employeeId] || allocationRequests.current.has(employeeId) || worksheet.servingStatus !== "ready" || !computed?.rows.find((row) => row.employeeId === employeeId)?.jobCount) return;
+    allocationRequests.current.add(employeeId);
+    setAllocationLoading((current) => new Set(current).add(employeeId));
+    setAllocationErrors((current) => {
+      const next = { ...current };
+      delete next[employeeId];
+      return next;
+    });
+    const search = commissionAllocationDetailSearch(worksheet.periodStart, employeeId);
+    void fetch(`/api/commissions/allocations?${search.toString()}`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Allocation detail could not be loaded.");
+        const payload = await response.json() as { allocations?: CommissionJobAllocation[] };
+        if (!Array.isArray(payload.allocations)) throw new Error("Allocation detail could not be loaded.");
+        setAllocationDetails((current) => ({ ...current, [employeeId]: payload.allocations! }));
+      })
+      .catch((error: unknown) => setAllocationErrors((current) => ({
+        ...current,
+        [employeeId]: error instanceof Error ? error.message : "Allocation detail could not be loaded.",
+      })))
+      .finally(() => {
+        allocationRequests.current.delete(employeeId);
+        setAllocationLoading((current) => {
+          const next = new Set(current);
+          next.delete(employeeId);
+          return next;
+        });
+      });
   };
 
   /** Uncheck/recheck a person: the pool is unchanged, but it redistributes
@@ -466,7 +526,13 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
   return (
     <>
       {worksheet.servingStatus === "ready" && computed ? (
-        <CommissionsHero worksheet={worksheet} computed={computed} controls={controls} />
+        <CommissionsBand
+          worksheet={worksheet}
+          computed={computed}
+          controls={controls}
+          vm={vm}
+          priorMonthCommissionPool={model.priorMonthCommissionPool ?? null}
+        />
       ) : null}
       <div className="tabs" id="pageTabs">
         <button type="button" className={tab === "monthly" ? "on" : undefined} data-tab="monthly" onClick={() => setTab("monthly")}>
@@ -486,6 +552,9 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
             openTech={openTech}
             onToggleOpen={toggleOpen}
             onToggleExclude={toggleExclude}
+            allocationDetails={allocationDetails}
+            allocationLoading={allocationLoading}
+            allocationErrors={allocationErrors}
           />
         ) : (
           <WorksheetStateCard worksheet={worksheet} />
@@ -497,9 +566,8 @@ function CommissionsContent({ model }: { model: CommissionDashboardReadModel }) 
   );
 }
 
-function topPayoutId(worksheet: CommissionReadyWorksheetModel): string | null {
-  const top = [...worksheet.technicians].sort((a, b) => b.finalBonus - a.finalBonus)[0];
-  return top && top.finalBonus > 0 ? top.employeeId : null;
+export function commissionAllocationDetailSearch(periodStart: string, employeeId: string): URLSearchParams {
+  return new URLSearchParams({ month: periodStart.slice(0, 7), employeeId });
 }
 
 /* ── Honest non-ready states (never fabricated zeros) ──── */
@@ -531,115 +599,96 @@ function WorksheetStateCard({ worksheet }: { worksheet: CommissionWorksheetModel
   );
 }
 
-/* ── Hero ──────────────────────────────────────────────── */
+/* ── Row 1: KPI band ───────────────────────────────────── */
 
-function CommissionsHero({
+function CommissionsBand({
   worksheet,
   computed,
   controls,
+  vm,
+  priorMonthCommissionPool,
 }: {
   worksheet: CommissionReadyWorksheetModel;
   computed: { pool: number; rows: CommissionComputedRow[] };
   controls: CommissionSessionControls;
+  vm: CommissionSummaryVM;
+  priorMonthCommissionPool: number | null;
 }) {
   const { pool, rows } = computed;
   const monthLong = monthLongName(worksheet.periodLabel);
   const earning = rows.filter((row) => row.final > 0);
-  const eligible = rows.length;
   const multipliers = worksheet.config.tierMultipliers;
   const basis = allocationBasis(rows);
   const poolText = fmt.cents(pool);
   const dot = poolText.lastIndexOf(".");
   const top = rows[0];
-  const heroDef = `Pool = completed-cohort work value × pool percent (${monthShortName(worksheet.periodLabel)}: ${controls.poolPercent.toFixed(2)}% × ${fmt.cents(worksheet.totalWorkValue)} = ${fmt.cents(pool)}), distributed by each technician’s allocated share (${basis.label}) with rank boosts, normalized so payouts always sum exactly to the pool. Calculated — not proof of payment.`;
+  const primaryDef = `Pool = completed-cohort work value × pool percent (${monthShortName(worksheet.periodLabel)}: ${controls.poolPercent.toFixed(2)}% × ${fmt.cents(worksheet.totalWorkValue)} = ${fmt.cents(pool)}), distributed by each technician’s allocated share (${basis.label}) with rank boosts, normalized so payouts always sum exactly to the pool. Calculated — not proof of payment.`;
+
+  const priorPool = priorCommissionPool(worksheet.month, vm, priorMonthCommissionPool);
+  const priorName = shiftedSeriesName(worksheet.periodStart, -1);
+  const lyName = shiftedSeriesName(worksheet.periodStart, -12);
+  const loaded = vm.months.filter((month) => month.pool !== null);
+  const poolsRange = loaded.length === 0
+    ? "no pools loaded"
+    : loaded.length === 1
+      ? `pool ${loaded[0].short}`
+      : `pools ${loaded[0].short}–${loaded[loaded.length - 1].short}`;
 
   return (
-    <Hero>
-      <Focal style={{ paddingBottom: 24 }}>
-        <FocalLabel>
-          <Def def={heroDef}>Calculated Commission Due</Def> · {monthLong}
-        </FocalLabel>
-        <FocalValue>
-          {poolText.slice(0, dot)}
-          <span style={{ fontSize: ".48em", verticalAlign: ".26em" }}>{poolText.slice(dot)}</span>
-        </FocalValue>
-        <FocalMeta>
-          <Mgn>
-            {controls.poolPercent.toFixed(2)}% of {fmt.moneyFull(worksheet.totalWorkValue)} completed work value
-          </Mgn>
-        </FocalMeta>
-        <FocalCov>
-          {earning.length} technician{earning.length === 1 ? "" : "s"} earning · rank boosts Gold{" "}×{multipliers.Gold.toFixed(2)}, Silver{" "}×{multipliers.Silver.toFixed(2)}, Bronze{" "}×{multipliers.Bronze.toFixed(2)}
-        </FocalCov>
-        <div style={{ marginTop: "auto", paddingTop: 18 }}>
-          <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden", background: "rgba(255,255,255,.08)" }}>
-            {earning.map((row, index) => (
-              <div
-                key={row.employeeId}
-                style={{ width: `${pool > 0 ? (row.final / pool) * 100 : 0}%`, background: RANK_RAMP[index % RANK_RAMP.length] }}
-                title={`${row.displayName} · ${fmt.cents(row.final)}`}
-              />
-            ))}
-          </div>
-          <div className="herolegend" style={{ marginTop: 8 }}>
-            {earning.slice(0, 3).map((row, index) => (
-              <span key={row.employeeId} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <i style={{ width: 9, height: 9, borderRadius: 3, background: RANK_RAMP[index], display: "inline-block" }} />
-                #{index + 1} {row.displayName} · {fmt.cents(row.final)}
-              </span>
-            ))}
-            {earning.length > 3 ? (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <i style={{ width: 9, height: 9, borderRadius: 3, background: "#a9b0bf", display: "inline-block" }} />
-                + {earning.length - 3} more
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </Focal>
-      <div className="stats">
-        <Stat
-          label="Revenue"
-          def={`Σ Simpro job Total (ex-tax) across the ${monthLong} completed cohort — the same cohort as the Jobs page.`}
-          value={fmt.moneyFull(worksheet.totalWorkValue)}
-          context={`${worksheet.completedJobs} completed jobs`}
+    <>
+      <KpiBand ariaLabel={`${monthLong} key metrics`}>
+        <PrimaryStatCard
+          label="What-if commission preview"
+          labelDef={primaryDef}
+          value={
+            <>
+              {poolText.slice(0, dot)}
+              <span className="cents">{poolText.slice(dot)}</span>
+            </>
+          }
+          sub={`${controls.poolPercent.toFixed(2)}% pool of completed work value · not saved or approved`}
+          bullet={{
+            value: pool,
+            m1: { label: lyName, value: null, ghost: "· no run" },
+            m2: priorPool !== null ? { label: `${priorName} · full`, value: priorPool } : { label: priorName, value: null, ghost: "· no run" },
+            fmt: fmt.cents,
+            ariaLabel: `Commission pool ${fmt.cents(pool)}${
+              priorPool !== null ? `; tick marks ${priorName} ${fmt.cents(priorPool)}` : ""
+            }; ${lyName} had no run`,
+          }}
         />
-        <Stat
-          label="Pool Percent"
-          def="Pool = work value × this percent. Payouts use deterministic cent allocation and always sum exactly to the pool."
-          value={`${controls.poolPercent.toFixed(2)}%`}
-          context="of revenue"
-        />
-        <Stat
-          label="Technicians Earning"
-          def="Technicians whose calculated final bonus is above zero this month."
-          value={String(earning.length)}
-          context={`of ${eligible} eligible`}
-        />
-        <Stat
-          label="Top Calculated Payout"
-          def="The largest single calculated payout under the current settings — after rank boosts, the efficiency adjustment (when on), and re-scaling to the pool."
-          value={top && top.final > 0 ? fmt.cents(top.final) : "N/A"}
-          context={top && top.final > 0 ? `${top.displayName} · ${top.tier}` : "no payouts"}
-        />
-      </div>
-    </Hero>
-  );
-}
-
-function Stat({ label, def, value, context }: { label: string; def: string; value: string; context: string }) {
-  return (
-    <div className="stat">
-      <div className="l" style={{ textWrap: "balance" } as CSSProperties}>
-        <Def def={def}>{label}</Def>
-      </div>
-      <div className="v tnum">{value}</div>
-      <div className="r">
-        <span className="dl tnum">
-          <span className="c">{context}</span>
-        </span>
-      </div>
-    </div>
+        <KpiTiles>
+          <KpiTile
+            label="Completed revenue"
+            labelDef={`Σ Simpro job Total (ex-tax) across the ${monthLong} completed cohort — the same cohort as the Jobs page.`}
+            value={fmt.moneyFull(worksheet.totalWorkValue)}
+            sub={`${worksheet.completedJobs} completed jobs`}
+          />
+          <KpiTile
+            label="Technicians earning"
+            labelDef="Worksheet rows whose calculated payout is above zero this month, of every technician on the worksheet."
+            value={String(earning.length)}
+            sub={`of ${rows.length} technicians`}
+          />
+          <KpiTile
+            label="Top calculated payout"
+            labelDef="The largest single calculated payout under the current settings — after rank boosts, the efficiency adjustment (when on), and re-scaling to the pool."
+            value={top && top.final > 0 ? fmt.cents(top.final) : "N/A"}
+            sub={top && top.final > 0 ? `${top.displayName} · ${top.tier}` : "no payouts"}
+          />
+          <KpiTile
+            label="Year to date"
+            labelDef={`Σ of every loaded ${vm.year} monthly pool. Months without a run stay N/A and add nothing.`}
+            value={vm.ytd !== null ? fmt.cents(vm.ytd) : "N/A"}
+            sub={`${vm.year} · ${poolsRange}`}
+          />
+        </KpiTiles>
+      </KpiBand>
+      <KpiBandNote>
+        Rank boosts: Gold ×{multipliers.Gold.toFixed(2)} · Silver ×{multipliers.Silver.toFixed(2)} · Bronze ×
+        {multipliers.Bronze.toFixed(2)}.
+      </KpiBandNote>
+    </>
   );
 }
 
@@ -655,6 +704,9 @@ function WorksheetTab({
   openTech,
   onToggleOpen,
   onToggleExclude,
+  allocationDetails,
+  allocationLoading,
+  allocationErrors,
 }: {
   worksheet: CommissionReadyWorksheetModel;
   computed: { pool: number; rows: CommissionComputedRow[] };
@@ -663,15 +715,13 @@ function WorksheetTab({
   openTech: string | null;
   onToggleOpen: (employeeId: string) => void;
   onToggleExclude: (employeeId: string) => void;
+  allocationDetails: Record<string, CommissionJobAllocation[]>;
+  allocationLoading: ReadonlySet<string>;
+  allocationErrors: Record<string, string>;
 }) {
   const eff = controls.efficiencyEnabled;
   const monthLong = monthLongName(worksheet.periodLabel);
-  const basis = allocationBasis(computed.rows);
-  const outside = worksheet.coverage.ineligibleAllocatedWorkValue;
-  const outsideNames = worksheet.coverage.technicianWork
-    .filter((entry) => !entry.included && entry.allocatedWorkValue > 0)
-    .map((entry) => entry.displayName);
-  const earningCount = computed.rows.filter((row) => row.final > 0).length;
+  const basis = allocationBasis(computed.rows, worksheet.allocationBasis);
   const legendItems = [
     { label: "Base share", color: SEG_BASE },
     { label: "Rank boost", color: SEG_BOOST },
@@ -685,6 +735,11 @@ function WorksheetTab({
 
   return (
     <>
+      <div className="callout" style={{ marginBottom: 12 }}>
+        <span className="diam">◆</span>
+        <b>What-if preview.</b> Pool, efficiency, and technician checkboxes on this screen are temporary and are not saved,
+        approved, or exported. Reloading restores the persisted calculation.
+      </div>
       <div className="toolbar">
         <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, fontWeight: 600, color: "var(--ink-2)" }}>
           Commission pool
@@ -717,7 +772,7 @@ function WorksheetTab({
             }}
           />
           <span>
-            Efficiency adjustment · <span style={{ color: "var(--subtle)" }}>{eff ? "on" : "off"}</span>
+            Efficiency adjustment · <span style={{ color: "var(--muted)" }}>{eff ? "on" : "off"}</span>
           </span>
         </label>
         <label
@@ -744,7 +799,7 @@ function WorksheetTab({
             style={{ width: 130 }}
             onChange={(event) => onControls({ ...controls, maxAdjustmentPercent: Number(event.target.value) })}
           />
-          <b className="tnum" style={{ color: eff ? "var(--ink-2)" : "var(--faint)" }}>
+          <b className="tnum" style={{ color: eff ? "var(--ink-2)" : "var(--muted)" }}>
             ±{controls.maxAdjustmentPercent}%
           </b>
         </label>
@@ -772,12 +827,33 @@ function WorksheetTab({
         }
         aside={<Legend style={{ padding: 0, justifyContent: "flex-end", rowGap: 6 }} items={legendItems} />}
       >
-        <div>
-          {computed.rows.map((row, index) => (
+        <div data-viz="">
+          <div data-primary-viz="">
+            {computed.rows.slice(0, 3).map((row, index) => (
+              <BoardRow
+                key={row.employeeId}
+                row={row}
+                rank={index + 1}
+                pool={computed.pool}
+                rows={computed.rows}
+                controls={controls}
+                worksheet={worksheet}
+                basis={basis}
+                monthLong={monthLong}
+                open={openTech === row.employeeId}
+                onToggle={() => onToggleOpen(row.employeeId)}
+                onToggleExclude={() => onToggleExclude(row.employeeId)}
+                allocations={allocationDetails[row.employeeId]}
+                allocationLoading={allocationLoading.has(row.employeeId)}
+                allocationError={allocationErrors[row.employeeId] ?? null}
+              />
+            ))}
+          </div>
+          {computed.rows.slice(3).map((row, index) => (
             <BoardRow
               key={row.employeeId}
               row={row}
-              rank={index + 1}
+              rank={index + 4}
               pool={computed.pool}
               rows={computed.rows}
               controls={controls}
@@ -787,25 +863,20 @@ function WorksheetTab({
               open={openTech === row.employeeId}
               onToggle={() => onToggleOpen(row.employeeId)}
               onToggleExclude={() => onToggleExclude(row.employeeId)}
+              allocations={allocationDetails[row.employeeId]}
+              allocationLoading={allocationLoading.has(row.employeeId)}
+              allocationError={allocationErrors[row.employeeId] ?? null}
             />
           ))}
         </div>
         <CardBody style={{ paddingTop: 4 }}>
-          {outside > 0 ? (
-            <Insight style={{ marginTop: 0, marginBottom: 12 }}>
-              <b>
-                {moneyK1(outside)} of {monthLong}’s revenue came from people outside the roster
-              </b>{" "}
-              ({outsideNames.join(", ")}). It stays in the pool and is redistributed to technicians with {monthLong} hours ({earningCount} this month) — your call to include or exclude.
-            </Insight>
-          ) : null}
           <Fnote style={{ marginTop: 0 }}>
             Shares are{" "}
             <span className={basis.repr ? "repr" : "def"} data-def={basis.def}>
               {basis.label}
             </span>{" "}
-            of each job’s value
-            {outside > 0 ? <>; the {moneyK1(outside)} of outside-roster work never changes the pool</> : null}.
+            of each job’s value — everyone with recorded {monthLong} hours is a row, included by default; unchecking a row
+            redistributes the unchanged pool across everyone still included.
           </Fnote>
         </CardBody>
       </Card>
@@ -816,6 +887,11 @@ function WorksheetTab({
 }
 
 /* ── Board row + expandable detail ─────────────────────── */
+
+/** "18 jobs · $46K allocated" (mockup grammar — full dollars under $10K). */
+function allocatedText(value: number): string {
+  return value >= 10_000 ? `$${Math.round(value / 1000)}K` : fmt.money(value);
+}
 
 function BoardRow({
   row,
@@ -829,6 +905,9 @@ function BoardRow({
   open,
   onToggle,
   onToggleExclude,
+  allocations,
+  allocationLoading,
+  allocationError,
 }: {
   row: CommissionComputedRow;
   rank: number;
@@ -841,6 +920,9 @@ function BoardRow({
   open: boolean;
   onToggle: () => void;
   onToggleExclude: () => void;
+  allocations?: CommissionJobAllocation[];
+  allocationLoading: boolean;
+  allocationError: string | null;
 }) {
   const eff = controls.efficiencyEnabled;
   const preEff = eff ? row.post : row.final;
@@ -857,10 +939,13 @@ function BoardRow({
   const ceff = eff ? compositeAdjustment(row.post, row.final) : null;
   const multipliers = worksheet.config.tierMultipliers;
   const tierDef = `Rank boosts go to the top three by allocated ${monthLong} value: Gold ×${multipliers.Gold.toFixed(2)}, Silver ×${multipliers.Silver.toFixed(2)}, Bronze ×${multipliers.Bronze.toFixed(2)} — everyone else ×1.00. Boosts shift relative shares; the pool total never changes.`;
+  const zero = row.jobCount === 0 && row.effectiveValue <= 0;
+  const detailId = useId();
 
   return (
     <div style={{ borderBottom: "1px solid var(--hair-2)" }}>
       <LRow
+        className={zero ? "zerorow" : undefined}
         rank={
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             <input
@@ -868,6 +953,7 @@ function BoardRow({
               checked={!row.excluded}
               onChange={onToggleExclude}
               onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
               aria-label={`Include ${row.displayName} in the commission calculation`}
               title={row.excluded ? "Excluded — check to put back in and redistribute" : "Included — uncheck to remove and redistribute"}
               style={{ width: 15, height: 15, accentColor: "var(--acc)", cursor: "pointer" }}
@@ -877,11 +963,15 @@ function BoardRow({
         }
         open={open}
         onClick={onToggle}
+        ariaControls={detailId}
+        ariaLabel={`${open ? "Collapse" : "Expand"} commission details for ${row.displayName}`}
         name={row.displayName}
         sub={
-          row.jobCount > 0 ? (
+          zero ? (
+            `no ${monthLong} work`
+          ) : row.jobCount > 0 ? (
             <>
-              {row.jobCount} jobs · {fmt.money(row.allocatedValue)} allocated
+              {row.jobCount} {row.jobCount === 1 ? "job" : "jobs"} · {allocatedText(row.allocatedValue)} allocated
               {row.belowMinimum ? (
                 <>
                   {" · "}
@@ -924,7 +1014,10 @@ function BoardRow({
         amount={row.final > 0 ? fmt.cents(row.final) : "$0.00"}
       />
       {open ? (
-        <RowDetail row={row} pool={pool} controls={controls} basis={basis} monthLong={monthLong} worksheet={worksheet} />
+        <div id={detailId}>
+          <RowDetail row={row} pool={pool} controls={controls} basis={basis} monthLong={monthLong} worksheet={worksheet}
+            allocations={allocations} loading={allocationLoading} error={allocationError} />
+        </div>
       ) : null}
     </div>
   );
@@ -937,6 +1030,9 @@ function RowDetail({
   basis,
   monthLong,
   worksheet,
+  allocations,
+  loading,
+  error,
 }: {
   row: CommissionComputedRow;
   pool: number;
@@ -944,12 +1040,18 @@ function RowDetail({
   basis: AllocationBasis;
   monthLong: string;
   worksheet: CommissionReadyWorksheetModel;
+  allocations?: CommissionJobAllocation[];
+  loading: boolean;
+  error: string | null;
 }) {
-  const allocations = [...row.jobAllocations].sort((a, b) => b.allocatedValue - a.allocatedValue);
+  const loadedAllocations = allocations ?? row.jobAllocations;
+  const sortedAllocations = [...loadedAllocations].sort((a, b) => b.allocatedValue - a.allocatedValue);
   const trace = row.effectiveValue > 0 ? (
     <Trace row={row} pool={pool} controls={controls} basis={basis} monthLong={monthLong} worksheet={worksheet} />
   ) : null;
-  if (allocations.length === 0) {
+  if (loading) return <LDetail style={{ fontSize: 13, paddingBottom: 14 }}><span style={{ color: "var(--subtle)" }}>Loading job allocations…</span>{trace}</LDetail>;
+  if (error) return <LDetail style={{ fontSize: 13, paddingBottom: 14 }}><span style={{ color: "var(--down)" }}>{error}</span>{trace}</LDetail>;
+  if (sortedAllocations.length === 0) {
     return (
       <LDetail style={{ fontSize: 13, paddingBottom: 14 }}>
         <span style={{ color: "var(--subtle)" }}>
@@ -974,7 +1076,7 @@ function RowDetail({
             </tr>
           </thead>
           <tbody>
-            {allocations.map((allocation) => (
+            {sortedAllocations.map((allocation) => (
               <tr key={allocation.jobId}>
                 <td style={{ padding: "8px 12px 8px 0", border: 0 }}>
                   {allocation.jobId} · {allocation.customer} — {allocation.jobName}
@@ -992,7 +1094,7 @@ function RowDetail({
             ))}
             <tr>
               <td colSpan={4} style={{ padding: "8px 12px 0 0", border: 0, color: "var(--subtle)", fontSize: 13 }}>
-                All {allocations.length} {monthLong} allocations by allocated value.
+                All {sortedAllocations.length} {monthLong} allocations by allocated value.
               </td>
             </tr>
           </tbody>
@@ -1034,19 +1136,9 @@ function Trace({
     </>
   );
   return (
-    <div
-      style={{
-        marginTop: 10,
-        padding: "9px 12px",
-        background: "#f8f9fc",
-        border: "1px solid var(--hair-2)",
-        borderRadius: 9,
-        fontSize: 13,
-        color: "var(--muted)",
-        lineHeight: 1.7,
-      }}
-    >
-      <b style={{ color: "var(--ink-2)" }}>How this was calculated:</b>{" "}
+    <div className="callout" style={{ lineHeight: 1.7 }}>
+      <span className="diam">◆</span>
+      <b>How this was calculated:</b>{" "}
       allocated <b className="tnum">{fmt.money(row.allocatedValue)}</b> (
       <span className={basis.repr ? "repr" : "def"} data-def={basis.def}>
         {basis.label}
@@ -1188,11 +1280,19 @@ function SummaryTab({
       }
     >
       <CardBody style={{ paddingBottom: 6 }}>
-        <div className="kv kv4">
-          <KvCell label="Year to date" value={vm.ytd !== null ? fmt.cents(vm.ytd) : "N/A"} />
-          <KvCell label="Average month" value={vm.average !== null ? fmt.cents(vm.average) : "N/A"} />
-          <KvCell label="Peak month" value={vm.peak ? `${vm.peak.short} · ${fmt.cents(vm.peak.value)}` : "N/A"} />
-          <KvCell label="Earning technicians · YTD" value={vm.earningYtd !== null ? String(vm.earningYtd) : "N/A"} />
+        <div className="strip">
+          <span className="s">
+            <span className="l">Average month</span>
+            <span className="v">{vm.average !== null ? fmt.cents(vm.average) : "N/A"}</span>
+          </span>
+          <span className="s">
+            <span className="l">Peak month</span>
+            <span className="v">{vm.peak ? `${vm.peak.short} · ${fmt.cents(vm.peak.value)}` : "N/A"}</span>
+          </span>
+          <span className="s">
+            <span className="l">Earning technicians · YTD</span>
+            <span className="v">{vm.earningYtd !== null ? String(vm.earningYtd) : "N/A"}</span>
+          </span>
         </div>
         {loaded.length === 0 ? (
           <StateEmpty>No finalized months yet for {vm.year} — KPIs render N/A, never $0.</StateEmpty>
@@ -1214,11 +1314,11 @@ function SummaryTab({
               {draftMonths[0].short}–{draftMonths[draftMonths.length - 1].short} pools are{" "}
               <span
                 className="repr"
-                data-def="Draft runs — recomputed on the approved roster before they become final; per-month history verification is pending."
+                data-def="Draft runs — recomputed on the recorded-hours worksheet before they become final; per-month history verification is pending."
               >
                 draft runs
               </span>{" "}
-              until recomputed on the approved roster; months without a run show N/A, never $0.
+              until recomputed on the recorded-hours worksheet; months without a run show N/A, never $0.
             </>
           ) : (
             <>Months without a run show N/A, never $0.</>
@@ -1226,15 +1326,6 @@ function SummaryTab({
         </Fnote>
       </CardBody>
     </Card>
-  );
-}
-
-function KvCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="cell">
-      <div className="l">{label}</div>
-      <div className="v tnum">{value}</div>
-    </div>
   );
 }
 
@@ -1365,7 +1456,7 @@ function SummaryStatusPill({ status }: { status: "current" | "draft" | "final" |
     return (
       <span
         className="srcpill def"
-        data-def="Draft run — recomputed on the approved roster before it becomes final."
+        data-def="Draft run — recomputed on the recorded-hours worksheet before it becomes final."
         style={{ background: "#faf3df", color: "#8a6a14" }}
       >
         Draft
@@ -1374,7 +1465,7 @@ function SummaryStatusPill({ status }: { status: "current" | "draft" | "final" |
   }
   if (status === "final") {
     return (
-      <span className="srcpill def" data-def="Recomputed on the approved roster and reconciled — a finalized run.">
+      <span className="srcpill def" data-def="Recomputed on the recorded-hours worksheet and reconciled — a finalized run.">
         Final
       </span>
     );
@@ -1390,7 +1481,7 @@ type AllocationBasis = { label: string; def: string; repr: boolean };
  *  data (dotted amber repr mark); when the payload's allocations are real
  *  timesheet hours-shares the copy states that instead (contract map:
  *  "equal-split interim disclosed until timesheet hours-share verified"). */
-function allocationBasis(rows: CommissionComputedRow[]): AllocationBasis {
+function allocationBasis(rows: CommissionComputedRow[], savedBasis?: "equal-split" | "hours-share"): AllocationBasis {
   const byJob = new Map<string, number[]>();
   for (const row of rows) {
     for (const allocation of row.jobAllocations) {
@@ -1400,7 +1491,7 @@ function allocationBasis(rows: CommissionComputedRow[]): AllocationBasis {
   const multiTech = [...byJob.values()].filter((shares) => shares.length > 1);
   const equalSplit = multiTech.length > 0
     && multiTech.every((shares) => shares.every((share) => Math.abs(share - shares[0]) < 1e-9));
-  if (equalSplit) {
+  if (equalSplit || (byJob.size === 0 && savedBasis === "equal-split")) {
     return {
       label: "interim equal-split",
       repr: true,
@@ -1410,7 +1501,7 @@ function allocationBasis(rows: CommissionComputedRow[]): AllocationBasis {
   return {
     label: "timesheet hours-share",
     repr: false,
-    def: "Each job’s value is allocated by each technician’s share of the job’s mapped timesheet hours.",
+    def: "Each job’s value is allocated by each technician’s share of the job’s mapped timesheet hours — every recorded hour counts.",
   };
 }
 
@@ -1443,10 +1534,6 @@ function tierClass(tier: CommissionTier): "gold" | "silver" | "bronze" | "std" {
   return "std";
 }
 
-function moneyK1(value: number): string {
-  return value >= 1000 ? `$${(value / 1000).toFixed(1)}K` : fmt.moneyFull(value);
-}
-
 /** "June 2026" → "June". */
 function monthLongName(periodLabel: string): string {
   return periodLabel.split(" ")[0] ?? periodLabel;
@@ -1455,6 +1542,15 @@ function monthLongName(periodLabel: string): string {
 /** "June 2026" → "Jun". */
 function monthShortName(periodLabel: string): string {
   return monthLongName(periodLabel).slice(0, 3);
+}
+
+/** "2026-07-01" shifted by n months → "Jun ’26" / "Jul ’25". */
+function shiftedSeriesName(periodStart: string, shiftMonths: number): string {
+  const [year, month] = periodStart.split("-").map(Number);
+  if (!year || !month) return periodStart;
+  const date = new Date(Date.UTC(year, month - 1 + shiftMonths, 1));
+  const mon = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(date);
+  return `${mon} ’${String(date.getUTCFullYear()).slice(2)}`;
 }
 
 function exactShares(totalCents: number, entries: Array<{ id: string; weight: number }>): Map<string, number> {

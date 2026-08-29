@@ -1,31 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
-import { fmt, tipRow, Bullet, Heatmap, TrendChart, type BulletProps, type TrendAnnotation, type TrendSeries } from "@/components/charts";
-import { useContainerWidth } from "@/components/charts/use-container-width";
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { fmt, tipRow, tipTitle, Heatmap, LineChart, type LineAnnotation, type LineRefline, type LineSeries } from "@/components/charts";
+import {
+  BarList,
+  BarListRow,
+  Dpill,
+  KpiBand,
+  KpiBandNote,
+  KpiTile,
+  KpiTiles,
+  moneyK,
+  PrimaryStatCard,
+} from "@/components/band";
+
+export { moneyK };
 import {
   Card,
   CardBody,
-  Chipd,
-  DCell,
-  Def,
   DefTooltipProvider,
-  DGrid,
   DNote,
+  Drawer,
   DSec,
   Fnote,
-  Focal,
-  FocalCov,
-  FocalLabel,
-  FocalMeta,
-  FocalValue,
-  Hero,
-  Insight,
   KV,
   KVCell,
-  Legend,
   MetricPicker,
-  Mgn,
   Skel,
   StateEmpty,
   StateError,
@@ -34,46 +34,42 @@ import {
 } from "@/components/reset";
 import {
   type QuoteDealTier,
+  type QuoteClassificationRow,
   type QuoteFollowUpQueue,
   type QuoteFollowUpQueueRow,
   type QuoteMetricsReadModel,
   type QuoteMonthlyMetric,
 } from "@/lib/store/quote-dashboard-read-model";
+import { csvCell } from "@/lib/csv";
 
-/* /quotes — implements the approved
-   redesign-handoff/product-reset/APPROVED-2026-07-15/mockups/quotes.html
-   exactly, with every figure taken from the read-model payload (the mockup's
-   numbers were the June-2026 snapshot). Fused hero-split, Overview/History
-   tabs, status mix first, tier rows + tier×month heatmap, 12-month history
-   table with computed T12 row, honest states, one-line footline. */
+/* /quotes — implements the owner-approved redesign
+   docs/approved-design/mockups/quotes.html exactly, with every figure taken
+   from the read-model payload (the mockup's July numbers are sample
+   content). Composition: KPI band (primary dark card + 2×2 tiles + one
+   day-alignment footnote) → full-width Acceptance Trend → full-width Deal
+   Size (4-up tier grid + the one allowed callout) → tier×month heatmap →
+   always-present Monthly Breakdown (tabs removed). Honest states, one
+   source line. */
+
+const ACC = "#5b63d3"; /* var(--acc) */
+const SERIES2 = "#0e9aae"; /* var(--series-2) */
 
 export type QuoteMetricsDashboardProps = {
   model: QuoteMetricsReadModel;
   /** Renders the design-reference state strip (mockups' ?states=1 gate). */
   showStates?: boolean;
-  /** Deep-link parity with the approved mockup (?history=1). */
-  initialTab?: "overview" | "history";
-  /** Deep-link parity with the approved mockup (?mode=volume). */
+  /** Deep-link parity (?mode=volume) — pre-enables the Volume panel. */
   initialTrendVolume?: boolean;
 };
 
-export function QuoteMetricsDashboard({
-  model,
-  showStates,
-  initialTab = "overview",
-  initialTrendVolume = false,
-}: QuoteMetricsDashboardProps) {
+export function QuoteMetricsDashboard({ model, showStates, initialTrendVolume = false }: QuoteMetricsDashboardProps) {
   const failed = model.quotesLoaded === 0 && model.warnings.length > 0;
   return (
     <DefTooltipProvider>
       {failed ? (
         <QuotesLoadError detail={model.warnings[0]} />
       ) : (
-        <QuotesContent
-          model={model}
-          initialTab={initialTab}
-          initialTrendVolume={initialTrendVolume}
-        />
+        <QuotesContent model={model} initialTrendVolume={initialTrendVolume} />
       )}
       <StatesStrip show={showStates}>
         <StateMini label="Loading">
@@ -92,7 +88,7 @@ export function QuoteMetricsDashboard({
         </StateMini>
       </StatesStrip>
       <div className="footline">
-        Source: Simpro quotes · month assigned by DateApproved · acceptance requires verified online acceptance or an exact converted job
+        Source: Simpro quotes · month assigned by DateIssued · acceptance requires verified online acceptance or an exact converted job
       </div>
     </DefTooltipProvider>
   );
@@ -134,17 +130,12 @@ export function partialMonthStateCopy(model: QuoteMetricsReadModel): ReactNode {
 
 /* ── Page content ──────────────────────────────────────── */
 
-function QuotesContent({
-  model,
-  initialTab,
-  initialTrendVolume,
-}: {
-  model: QuoteMetricsReadModel;
-  initialTab: "overview" | "history";
-  initialTrendVolume: boolean;
-}) {
-  const [tab, setTab] = useState<"overview" | "history">(initialTab);
+type TierSegment = QuoteMetricsReadModel["acceptanceByTier"][number];
+
+function QuotesContent({ model, initialTrendVolume }: { model: QuoteMetricsReadModel; initialTrendVolume: boolean }) {
   const months = useMemo(() => [...model.monthlyBreakdown].reverse(), [model.monthlyBreakdown]);
+  const [tierDrill, setTierDrill] = useState<TierSegment | null>(null);
+  const [quoteDrill, setQuoteDrill] = useState<QuoteClassificationRow | null>(null);
   const cur = model.currentMonth;
   if (!cur) {
     return (
@@ -155,181 +146,228 @@ function QuotesContent({
       </Card>
     );
   }
+  const long = monthLong(model.selectedMonth);
   return (
     <>
-      <Hero split>
-        <QuotesFocal model={model} cur={cur} months={months} />
-        <QuoteStatusMixCard model={model} cur={cur} />
-      </Hero>
-
-      <div className="tabs" id="pageTabs">
-        <button type="button" data-tab="overview" className={tab === "overview" ? "on" : undefined} aria-pressed={tab === "overview"} onClick={() => setTab("overview")}>
-          Overview
-        </button>
-        <button type="button" data-tab="history" className={tab === "history" ? "on" : undefined} aria-pressed={tab === "history"} onClick={() => setTab("history")}>
-          History
-        </button>
+      <QuotesBand model={model} cur={cur} />
+      <div className="grid12">
+        <TrendCard model={model} months={months} initialVolume={initialTrendVolume} />
       </div>
-
-      <div id="tab-overview" style={tab === "overview" ? undefined : { display: "none" }}>
-        <div className="g57">
-          <TrendCard model={model} months={months} initialVolume={initialTrendVolume} />
-          <TiersCard model={model} cur={cur} />
-        </div>
-        <div style={{ marginTop: 18 }}>
-          <HeatmapCard model={model} months={months} />
-        </div>
+      <div className="grid12">
+        <DealSizeCard model={model} cur={cur} onOpen={setTierDrill} />
       </div>
-
-      <div id="tab-history" style={tab === "history" ? undefined : { display: "none" }}>
+      <div className="grid12">
+        <HeatmapCard model={model} months={months} />
+      </div>
+      <div className="grid12">
         <HistoryCard model={model} months={months} />
       </div>
+      <div className="grid12">
+        <QuoteReviewCard model={model} onOpen={setQuoteDrill} />
+      </div>
+      <Drawer
+        open={tierDrill !== null}
+        onClose={() => setTierDrill(null)}
+        ariaLabel="Deal-size tier detail"
+        title={tierDrill ? displayTier(tierDrill.tier) : null}
+        sub={tierDrill ? `${long} · ${tierDrill.quoteCount} ${tierDrill.quoteCount === 1 ? "quote" : "quotes"}` : null}
+      >
+        {tierDrill ? <TierDrawerBody tier={tierDrill} /> : null}
+      </Drawer>
+      <Drawer
+        open={quoteDrill !== null}
+        onClose={() => setQuoteDrill(null)}
+        ariaLabel="Quote classification detail"
+        title={quoteDrill ? `Quote ${quoteDrill.quoteNo}` : null}
+        sub={quoteDrill?.name ?? null}
+      >
+        {quoteDrill ? <QuoteClassificationDetail row={quoteDrill} /> : null}
+      </Drawer>
     </>
   );
 }
 
-/* ── Hero focal ────────────────────────────────────────── */
+function QuoteReviewCard({ model, onOpen }: { model: QuoteMetricsReadModel; onOpen: (row: QuoteClassificationRow) => void }) {
+  const rows = model.classificationRows ?? [];
+  const { page, classificationPages, classificationTotal } = model.pagination ?? {
+    page: 1,
+    classificationPages: 1,
+    classificationTotal: rows.length,
+  };
+  const movePage = (nextPage: number) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("page", String(nextPage));
+    window.location.assign(url.toString());
+  };
+  return (
+    <Card
+      className="span12"
+      title="Quote Classification Review"
+      subtitle={`${monthLong(model.selectedMonth)} · ${classificationTotal} quotes · select a quote to review or exclude it from metrics`}
+      aside={classificationPages > 1 ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button type="button" className="ctl" disabled={page <= 1} onClick={() => movePage(page - 1)}>Previous</button>
+          <span className="tnum" style={{ fontSize: 12, color: "var(--muted)" }}>{page} / {classificationPages}</span>
+          <button type="button" className="ctl" disabled={page >= classificationPages} onClick={() => movePage(page + 1)}>Next</button>
+        </div>
+      ) : null}
+    >
+      {rows.length === 0 ? (
+        <CardBody><StateEmpty>No quotes match this month and filter selection.</StateEmpty></CardBody>
+      ) : (
+        <div className="tblwrap">
+          <table>
+            <thead><tr><th>Quote</th><th>Status</th><th>Classification</th><th className="num">Value</th><th className="num hide-sm">Issued</th></tr></thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.quoteId}>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => onOpen(row)}
+                      style={{ border: 0, background: "none", color: "var(--acc)", cursor: "pointer", padding: 0, textAlign: "left", font: "inherit" }}
+                    >
+                      <b>{row.quoteNo}</b><br /><span style={{ color: "var(--muted)", fontSize: 12 }}>{row.name}</span>
+                    </button>
+                  </td>
+                  <td>{row.status}</td>
+                  <td>{classificationLabel(row.outcome)}</td>
+                  <td className="num tnum">{fmt.moneyFull(row.value)}</td>
+                  <td className="num tnum hide-sm">{shortDateYear(row.dateIssued)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
 
-function QuotesFocal({ model, cur, months }: { model: QuoteMetricsReadModel; cur: QuoteMonthlyMetric; months: QuoteMonthlyMetric[] }) {
+function QuoteClassificationDetail({ row }: { row: QuoteClassificationRow }) {
+  return (
+    <>
+      <KV>
+        <KVCell label="Value" value={fmt.moneyFull(row.value)} />
+        <KVCell label="Issued" value={shortDateYear(row.dateIssued)} valueStyle={{ fontSize: 14 }} />
+        <KVCell label="Classification" value={classificationLabel(row.outcome)} valueStyle={{ fontSize: 14 }} />
+        <KVCell label="Status" value={row.status} valueStyle={{ fontSize: 14 }} />
+      </KV>
+      <DSec>Evidence</DSec>
+      <DNote>{row.evidence}</DNote>
+      {row.override?.effective ? <DNote>Excluded by {row.override.actorEmail}: {row.override.reason}</DNote> : null}
+      <QuoteOverridePanel quoteId={row.quoteId} />
+    </>
+  );
+}
+
+function classificationLabel(outcome: QuoteClassificationRow["outcome"]) {
+  return outcome === "accepted" ? "Accepted" : outcome === "excluded" ? "Excluded" : "Not Accepted";
+}
+
+/* ── Row 1: KPI band ───────────────────────────────────── */
+
+function QuotesBand({ model, cur }: { model: QuoteMetricsReadModel; cur: QuoteMonthlyMetric }) {
   const partial = model.provisional.isCurrentMonthPartial;
   const long = monthLong(model.selectedMonth);
+  const monShort = long.slice(0, 3);
+  const day = model.provisional.elapsedDays;
   const ly = partial ? model.priorYearSameDay : model.priorYearSameMonth;
-  const lyLabel = `${seriesName(addYears(model.selectedMonth, -1))}${partial ? ` · day ${model.provisional.elapsedDays}` : ""}`;
+  const lyName = seriesName(addYears(model.selectedMonth, -1));
+  const lyWin = partial ? `d${day}` : "full";
   const prior = model.priorMonth;
-  const priorWord = prior ? monthLong(prior.month) : "prior month";
-  const momClause = (curVal: number | null, priorVal: number | null | undefined) => {
-    const pct = percentChange(curVal, priorVal ?? null);
-    return pct === null ? "" : ` Vs ${priorWord}: ${signedPct(pct)}.`;
-  };
+  const priorName = prior ? seriesName(prior.month) : null;
+  const priorShort = prior ? monthLong(prior.month).slice(0, 3) : null;
+  const lyDef = partial ? `vs ${lyName}, aligned to day ${day}` : `vs ${lyName}, full month`;
+  const priorDef = `vs ${priorShort ?? "prior month"}, full month`;
+
   const rateDelta = displayRoundedPtsDelta(cur.acceptanceRateCount, ly?.acceptanceRateCount ?? null);
   const momRateDelta = displayRoundedPtsDelta(cur.acceptanceRateCount, prior?.acceptanceRateCount ?? null);
-  const sentYoY = percentChange(cur.quoteCount, ly?.quoteCount ?? null);
-  const high = highRateMonth(months);
+
   return (
-    <Focal style={{ paddingBottom: 24 }}>
-      <FocalLabel>
-        <Def
-          def={`Accepted ÷ (accepted + not accepted) among non-excluded quotes whose DateApproved falls in ${long}. Accepted requires verified online acceptance or an exact converted-job link — never quote stage or status alone.`}
-        >
-          Acceptance Rate
-        </Def>
-        {" · "}
-        {long}
-        {partial ? " to date" : ""}
-      </FocalLabel>
-      <FocalValue>{rateText(cur.acceptanceRateCount)}</FocalValue>
-      <FocalMeta>
-        <Mgn>
-          {cur.acceptedCount} of {cur.quoteCount} quotes accepted
-        </Mgn>
-        {rateDelta !== null && ly ? (
-          <Chipd
-            tone={rateDelta < 0 ? "dn" : rateDelta > 0 ? "up" : "neutral"}
-            def={ptsChipDef(cur.acceptanceRateCount, ly.acceptanceRateCount, `${long.slice(0, 3)} ’${model.selectedMonth.slice(2, 4)}`, seriesName(addYears(model.selectedMonth, -1)), rateDelta)}
-          >
-            {rateDelta < 0 ? "↓" : "↑"} {Math.abs(rateDelta).toFixed(1)} pts vs {lyLabel}
-          </Chipd>
-        ) : null}
-        {momRateDelta !== null && prior ? (
-          <Chipd tone="neutral">
-            {momRateDelta < 0 ? "↓" : "↑"} {Math.abs(momRateDelta).toFixed(1)} pts vs {priorWord}
-          </Chipd>
-        ) : null}
-      </FocalMeta>
-      <FocalCov style={{ display: "flex", gap: 22, flexWrap: "wrap", marginTop: 12 }}>
-        <span>
-          <span style={covLabelStyle("#6bd3a0")}>Won</span>
-          <b className="tnum" style={{ fontSize: 16, color: "#e9ebf4" }}>{fmt.moneyFull(cur.acceptedValue)}</b>{" "}
-          <span style={{ color: "#9ba2b6" }}>· {rateText(cur.acceptanceRateValue)} of quoted value</span>
-        </span>
-        <span>
-          <span style={covLabelStyle("#f0937f")}>Open — not yet accepted</span>
-          <b className="tnum" style={{ fontSize: 16, color: "#e9ebf4" }}>{fmt.moneyFull(cur.notAcceptedValue)}</b>{" "}
-          <span style={{ color: "#9ba2b6" }}>
-            · {cur.notAcceptedCount} quotes{" "}
-            <Def def="Simpro records no declined status — an open quote counts as in play until verified acceptance, conversion, or archival. Age is the practical dead-signal.">
-              still in play
-            </Def>
-          </span>
-        </span>
-      </FocalCov>
-      <DGrid>
-        <DCell
-          label="Quotes Sent"
-          def={`Count of non-excluded quotes with DateApproved in ${long}. DateApproved sets the month only — it is not acceptance evidence.${momClause(cur.quoteCount, prior?.quoteCount)}`}
-          value={fmt.n(cur.quoteCount)}
-          u={deltaU(cur.quoteCount, ly?.quoteCount ?? null)}
-        />
-        <DCell
-          label="Quote Value"
-          def={`Σ quote total (ex-tax) across the ${long} cohort.${momClause(cur.quoteValue, prior?.quoteValue)}`}
-          value={fmt.moneyFull(cur.quoteValue)}
-          u={deltaU(cur.quoteValue, ly?.quoteValue ?? null)}
-        />
-        <DCell
-          label="Won Value"
-          def={`Σ quote total across ${long} quotes classified Accepted (verified online acceptance or exact converted job).${momClause(cur.acceptedValue, prior?.acceptedValue)}`}
+    <>
+      <KpiBand ariaLabel={`${long} key metrics`}>
+        <PrimaryStatCard
+          href="#trend"
+          label={partial ? "Accepted · month to date" : "Accepted"}
+          labelDef={`Σ quote total across ${long} quotes classified Accepted — verified online acceptance or an exact converted-job link, never quote stage or status alone.`}
+          pills={pctPill(cur.acceptedValue, ly?.acceptedValue ?? null, lyName, lyDef)}
           value={fmt.moneyFull(cur.acceptedValue)}
-          u={deltaU(cur.acceptedValue, ly?.acceptedValue ?? null)}
+          sub={
+            <>
+              {cur.acceptedCount} of {cur.quoteCount} quotes accepted · {rateText(cur.acceptanceRateValue)} of value sent
+            </>
+          }
+          bullet={{
+            value: cur.acceptedValue,
+            m1: { label: `${lyName} · ${lyWin}`, value: ly?.acceptedValue ?? null, ghost: "no data" },
+            m2: prior ? { label: `${priorName} · full`, value: prior.acceptedValue } : null,
+            fmt: moneyK,
+            ariaLabel: `Accepted ${partial ? "month to date" : long} ${moneyK(cur.acceptedValue)}${
+              ly ? `; ticks mark ${lyName} ${lyWin === "full" ? "full" : "day-aligned"} ${moneyK(ly.acceptedValue)}` : ""
+            }${prior ? ` and full ${priorName} ${moneyK(prior.acceptedValue)}` : ""}`,
+          }}
         />
-        <DCell
-          label="Avg Accepted Deal"
-          def={`Accepted value ÷ accepted count for ${long}.${momClause(cur.averageAcceptedDeal, prior?.averageAcceptedDeal)}`}
-          value={cur.averageAcceptedDeal === null ? "N/A" : fmt.moneyFull(cur.averageAcceptedDeal)}
-          u={deltaU(cur.averageAcceptedDeal, ly?.averageAcceptedDeal ?? null)}
-        />
-      </DGrid>
-      <div style={{ marginTop: "auto", paddingTop: 18 }}>
-        {cur.acceptanceRateCount !== null && high ? (
-          <HeroBullet
-            cur={{ m: long, v: round1(cur.acceptanceRateCount) }}
-            comp={ly?.acceptanceRateCount != null ? { m: seriesName(addYears(model.selectedMonth, -1)), v: round1(ly.acceptanceRateCount) } : null}
-            high={{ m: seriesName(high.month), v: round1(high.rate) }}
-            fmt={(v) => v.toFixed(1) + "%"}
+        <KpiTiles>
+          <KpiTile
+            label="Acceptance rate"
+            labelDef={`Accepted ÷ (accepted + not accepted) among non-excluded quotes whose DateIssued falls in ${long}.`}
+            pills={
+              <>
+                {rateDelta !== null && ly
+                  ? ptsPill(rateDelta, lyName, ptsChipDef(cur.acceptanceRateCount, ly.acceptanceRateCount, `${monShort} ’${model.selectedMonth.slice(2, 4)}`, lyName, rateDelta))
+                  : null}
+                {momRateDelta !== null && priorShort ? ptsPill(momRateDelta, priorShort, priorDef) : null}
+              </>
+            }
+            value={rateText(cur.acceptanceRateCount)}
           />
-        ) : null}
-      </div>
-      <FocalCov style={{ paddingTop: 14 }}>
-        Tile deltas compare to {lyLabel}
-        {rateDelta !== null && rateDelta < 0 && sentYoY !== null && sentYoY > 0 && aboveZero(percentChange(cur.acceptedValue, ly?.acceptedValue ?? null))
-          ? ` · a rate drop on ${Math.round(sentYoY)}% more volume still means more won work`
-          : ""}
-      </FocalCov>
-    </Focal>
+          <KpiTile
+            label="Quotes sent"
+            labelDef={`Count of non-excluded quotes with DateIssued in ${long}. DateIssued sets the month only — it is not acceptance evidence.`}
+            pills={pctPill(cur.quoteCount, ly?.quoteCount ?? null, lyName, lyDef)}
+            value={fmt.n(cur.quoteCount)}
+          />
+          <KpiTile
+            label="Value of quotes sent"
+            labelDef={`Σ quote total (ex-tax) across the ${long} cohort.`}
+            pills={pctPill(cur.quoteValue, ly?.quoteValue ?? null, lyName, lyDef)}
+            value={fmt.moneyFull(cur.quoteValue)}
+          />
+          <KpiTile
+            label="Avg accepted deal"
+            labelDef={`Accepted value ÷ accepted count for ${long}.`}
+            pills={pctPill(cur.averageAcceptedDeal, ly?.averageAcceptedDeal ?? null, lyName, lyDef)}
+            value={cur.averageAcceptedDeal === null ? "N/A" : fmt.moneyFull(cur.averageAcceptedDeal)}
+          />
+        </KpiTiles>
+      </KpiBand>
+      <KpiBandNote>
+        {partial
+          ? `All vs-comparisons are day-aligned through ${monShort} ${day} (“d${day}”) unless marked “full”.`
+          : "All vs-comparisons are full-month."}
+      </KpiBandNote>
+    </>
   );
 }
 
-/** Bullet plus the approved collision guard (quotes.html page-local script):
- *  if the comparison label runs into the right-pinned High label, move High
- *  to the free top-right slot in the same 11px style. */
-function HeroBullet(props: BulletProps) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const rows = ref.current?.firstElementChild?.children;
-    if (!rows || rows.length < 3) return;
-    const bottom = [...rows[2].querySelectorAll("span")].filter((span) => span.textContent?.trim());
-    const highLabel = bottom.find((span) => /^High/.test(span.textContent?.trim() ?? ""));
-    const compLabel = bottom.find((span) => span !== highLabel);
-    if (
-      highLabel instanceof HTMLElement &&
-      compLabel instanceof HTMLElement &&
-      compLabel.getBoundingClientRect().right + 8 > highLabel.getBoundingClientRect().left
-    ) {
-      highLabel.style.fontSize = "11px";
-      highLabel.style.fontWeight = "400";
-      highLabel.style.color = "#8b90a6";
-      rows[0].appendChild(highLabel);
-    }
-  });
+/** Green up / red down labeled percent pill; null when there is no basis. */
+function pctPill(current: number | null, prior: number | null, vsLabel: string, def?: string): ReactNode {
+  const pct = percentChange(current, prior);
+  if (pct === null) return null;
   return (
-    <div ref={ref}>
-      <Bullet {...props} />
-    </div>
+    <Dpill tone={pct < 0 ? "down" : pct > 0 ? "up" : "neutral"} def={def}>
+      {pct < 0 ? "↓" : "↑"} {Math.abs(pct).toFixed(1)}% vs {vsLabel}
+    </Dpill>
   );
 }
 
-function covLabelStyle(color: string): CSSProperties {
-  return { display: "block", fontSize: 11.5, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color };
+function ptsPill(delta: number, vsLabel: string, def?: string): ReactNode {
+  return (
+    <Dpill tone={delta < 0 ? "down" : delta > 0 ? "up" : "neutral"} def={def}>
+      {delta < 0 ? "↓" : "↑"} {Math.abs(delta).toFixed(1)} pts vs {vsLabel}
+    </Dpill>
+  );
 }
 
 function ptsChipDef(cur: number | null, prior: number | null, curLabel: string, priorLabel: string, delta: number): string {
@@ -340,247 +378,143 @@ function ptsChipDef(cur: number | null, prior: number | null, curLabel: string, 
   return `Display-rounded: ${arithmetic} = ${abs} pts. Deltas are computed on the one-decimal rates shown.`;
 }
 
-function QuoteStatusMixCard({ model, cur }: { model: QuoteMetricsReadModel; cur: QuoteMonthlyMetric }) {
-  const long = monthLong(model.selectedMonth);
-  const quoteValue = Math.max(cur.quoteValue, 0);
-  const acceptedPct = quoteValue > 0 ? (cur.acceptedValue / quoteValue) * 100 : 0;
-  const openPct = quoteValue > 0 ? (cur.notAcceptedValue / quoteValue) * 100 : 0;
-  const aging = agingBins(model.followUpQueue.rows);
-  return (
-    <Card
-      style={{ marginTop: 0 }}
-      title="Quote Status Mix"
-      def="Accepted value versus still-open/not-yet-accepted value inside the selected quote cohort. This is a metric view, not a task queue."
-      subtitle={`${long} cohort · accepted vs open quoted value`}
-    >
-      <CardBody>
-        <div className="status-mix-bar" aria-label="Accepted and open quote value split">
-          <span style={{ width: `${Math.max(0, Math.min(acceptedPct, 100))}%`, background: "#5b63d3" }} />
-          <span style={{ width: `${Math.max(0, Math.min(openPct, 100 - Math.max(0, Math.min(acceptedPct, 100))))}%`, background: "#9aa2b2" }} />
-        </div>
-        <div className="compact-split" style={{ marginTop: 10 }}>
-          <b>{fmt.moneyFull(cur.acceptedValue)} accepted</b>
-          <span>{fmt.moneyFull(cur.notAcceptedValue)} open</span>
-        </div>
-        <div className="mini-metric-grid" style={{ marginTop: 16 }}>
-          <div>
-            <span>Accepted quotes</span>
-            <b className="tnum">{cur.acceptedCount}</b>
-          </div>
-          <div>
-            <span>Open quotes</span>
-            <b className="tnum">{cur.notAcceptedCount}</b>
-          </div>
-          <div>
-            <span>Value rate</span>
-            <b className="tnum">{rateText(cur.acceptanceRateValue)}</b>
-          </div>
-          <div>
-            <span>Count rate</span>
-            <b className="tnum">{rateText(cur.acceptanceRateCount)}</b>
-          </div>
-        </div>
-        <div className="aging-strip" aria-label="Open quote aging distribution">
-          {aging.map((bin) => (
-            <div key={bin.label}>
-              <span>{bin.label}</span>
-              <b className="tnum">{bin.count}</b>
-            </div>
-          ))}
-        </div>
-        <Fnote>
-          Open quote aging is aggregated from {model.followUpQueue.totalCount} still-open quotes as of {shortDate(model.followUpQueue.asOf)}.
-        </Fnote>
-        <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--hair-2)" }}>
-          <div className="ti">Deal Size Mix</div>
-          <div className="st">Acceptance rate and quoted value by tier</div>
-          <div className="source-mix-list">
-            {model.acceptanceByTier.map((tier) => (
-              <div key={tier.tier}>
-                <span>
-                  <i style={{ background: tier.acceptanceRateCount !== null && tier.acceptanceRateCount < 15 ? "#d0463a" : "#5b63d3" }} />
-                  {displayTier(tier.tier)}
-                </span>
-                <b className="tnum">{rateText(tier.acceptanceRateCount)}</b>
-                <em className="tnum">
-                  {fmt.moneyFull(tier.quoteValue)} quoted · {tier.quoteCount} quotes
-                </em>
-              </div>
-            ))}
-          </div>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
-function agingBins(rows: QuoteFollowUpQueueRow[]) {
-  return [
-    { label: "0-30d", count: rows.filter((row) => row.ageDays <= 30).length },
-    { label: "31-45d", count: rows.filter((row) => row.ageDays > 30 && row.ageDays <= 45).length },
-    { label: "46d+", count: rows.filter((row) => row.ageDays > 45).length },
-  ];
-}
-
-/** Green up / red down YoY suffix for a dark dgrid tile; null when no basis. */
-function deltaU(current: number | null, prior: number | null): ReactNode {
-  const pct = percentChange(current, prior);
-  if (pct === null) return null;
-  if (pct >= 0) return `↑ ${pct.toFixed(1)}%`;
-  return <span style={{ color: "#f0937f" }}>↓ {Math.abs(pct).toFixed(1)}%</span>;
-}
-
-function highRateMonth(months: QuoteMonthlyMetric[]): { month: string; rate: number } | null {
-  let best: { month: string; rate: number } | null = null;
-  for (const m of months) {
-    if (m.acceptanceRateCount === null) continue;
-    if (!best || m.acceptanceRateCount > best.rate) best = { month: m.month, rate: m.acceptanceRateCount };
-  }
-  return best;
-}
-
-/* ── Acceptance Trend card ─────────────────────────────── */
+/* ── Row 2: Acceptance Trend ───────────────────────────── */
 
 export type TrendMode = "count" | "value" | "volume";
 
 const TREND_CHIPS = [
-  { key: "count", label: "By count", color: "#5b63d3" },
-  { key: "value", label: "By value", color: "#6d7890" },
-  { key: "volume", label: "Volume", color: "#c9cfda" },
+  { key: "count", label: "By count", color: ACC },
+  { key: "value", label: "By value", color: SERIES2 },
+  { key: "volume", label: "Volume", color: "#c3cad6" },
 ] as const;
 
-/** Mockup picker semantics: count/value co-plot; Volume is exclusive; at
- *  least one chip stays on. */
+/** Approved picker semantics: count/value co-plot with at least one rate
+ *  series always on; Volume toggles a separate count panel BELOW the chart
+ *  on its own axis (single-axis rule — never bars behind the rate lines). */
 export function nextTrendModes(selected: TrendMode[], k: TrendMode): TrendMode[] {
-  if (k === "volume") return ["volume"];
-  if (selected.includes("volume")) return [k];
-  if (selected.includes(k)) return selected.length > 1 ? selected.filter((x) => x !== k) : selected;
+  if (k === "volume") {
+    return selected.includes("volume") ? selected.filter((x) => x !== "volume") : [...selected, "volume"];
+  }
+  if (selected.includes(k)) {
+    const rest = selected.filter((x) => x !== k);
+    return rest.some((x) => x !== "volume") ? rest : selected;
+  }
   return [...selected, k];
 }
 
-const pf = (v: number) => v.toFixed(1) + "%";
-
 function TrendCard({ model, months, initialVolume }: { model: QuoteMetricsReadModel; months: QuoteMonthlyMetric[]; initialVolume: boolean }) {
-  const [modes, setModes] = useState<TrendMode[]>(initialVolume ? ["volume"] : ["count", "value"]);
-  const [wrapRef, width] = useContainerWidth<HTMLDivElement>();
-  const labels = months.map((m, i) => chartLabel(m.month, i));
-  const band = labels.length - 1;
+  const [modes, setModes] = useState<TrendMode[]>(initialVolume ? ["count", "value", "volume"] : ["count", "value"]);
+  const n = months.length;
   const monShort = monthLong(model.selectedMonth).slice(0, 3);
+  const full = months.map((m) => seriesName(m.month));
+  const labels = months.map((m, i) => (i % 2 === 0 || i === n - 1 ? (i === 0 ? seriesName(m.month) : monthLong(m.month).slice(0, 3)) : ""));
   const rateC = months.map((m) => m.acceptanceRateCount);
   const rateV = months.map((m) => m.acceptanceRateValue);
   const sent = months.map((m) => m.quoteCount);
   const won = months.map((m) => m.acceptedCount);
-  const quoted = months.map((m) => m.quoteValue);
-  const trends = model.trends;
 
-  const volume = modes.includes("volume");
-  const both = !volume && modes.length === 2;
-  const valOnly = !volume && !both && modes[0] === "value";
+  const showCount = modes.includes("count");
+  const showValue = modes.includes("value");
+  const showVolume = modes.includes("volume");
 
-  let legendItems: Array<{ label: string; color?: string; swatchStyle?: CSSProperties }>;
-  let series: TrendSeries[];
-  let annotations: TrendAnnotation[];
-  let bandLabel: string;
-  let chart: ReactNode;
+  const series: LineSeries[] = [];
+  if (showCount) series.push({ name: "By count", vals: rateC, color: ACC, width: 2 });
+  if (showValue) series.push({ name: "By value", vals: rateV, color: SERIES2, width: 2 });
 
-  if (volume) {
-    legendItems = [
-      { label: "Quotes sent", color: "#404a60" },
-      { label: "Won", color: "#5b63d3" },
-    ];
-    series = [
-      { name: "Quotes sent", color: "#404a60", values: sent, tipFmt: fmt.n },
-      { name: "Won", color: "#5b63d3", star: true, fill: true, values: won, endLabel: false, tipFmt: fmt.n },
-    ];
-    const meanWon = won.reduce((a, b) => a + b, 0) / Math.max(won.length, 1);
-    annotations = won.length
-      ? [{ s: 1, i: Math.floor(won.length / 2), text: `~${Math.round(meanWon)} accepted/month`, sub: "closes hold flat while volume swings" }]
-      : [];
-    bandLabel = `${monShort} · ${sent[band] ?? 0} sent · ${won[band] ?? 0} accepted`;
-    chart = (
-      <TrendChart
-        labels={labels}
-        series={series}
-        everyX={1}
-        h={340}
-        band={band}
-        bandLabel={bandLabel}
-        yFmt={fmt.n}
-        yMin={0}
-        annotations={annotations}
-        tipExtra={(i) =>
-          tipRow("#9aa2b2", "Acceptance rate", rateText(rateC[i])) + tipRow("#9aa2b2", "Quoted value", fmt.money(quoted[i]))
-        }
-      />
-    );
-  } else {
-    const base = valOnly ? rateV : rateC;
-    series = [];
-    if (!both) {
-      const t12 = valOnly ? trends.at(-1)?.acceptanceRateValue12Month ?? null : trends.at(-1)?.acceptanceRateCount12Month ?? null;
-      const roll3 = trends.map((t) => (valOnly ? t.acceptanceRateValue3Month : t.acceptanceRateCount3Month));
-      series.push({ name: "Trailing-12", color: "#c9cede", dash: "3 4", values: base.map(() => t12), tipFmt: pf });
-      series.push({ name: "3-mo rolling", color: "#9aa2b2", values: roll3, tipFmt: pf });
-    }
-    if (modes.includes("count")) series.push({ name: "By count", color: "#5b63d3", star: !both || undefined, fill: !both, values: rateC, endLabel: false, tipFmt: pf });
-    if (modes.includes("value")) series.push({ name: "By value", color: "#6d7890", values: rateV, endLabel: false, tipFmt: pf });
-    const pk = peakIndex(base);
-    annotations = pk === null
-      ? []
-      : [{
-          s: series.length - (both ? 2 : 1),
-          i: pk,
-          text: (base[pk] as number).toFixed(1) + "%",
-          sub: `${labels[pk].split(" ")[0]} — ${both ? "count-rate peak" : valOnly ? "value-rate peak" : "best month"}`,
-        }];
-    legendItems = both
-      ? [
-          { label: "By count", color: "#5b63d3" },
-          { label: "By value", color: "#6d7890" },
-        ]
-      : [
-          { label: valOnly ? "By value" : "By count", color: valOnly ? "#6d7890" : "#5b63d3" },
-          { label: "3-mo rolling", color: "#9aa2b2" },
-          { label: "Trailing-12", swatchStyle: { background: "none", borderTop: "2px dashed #c9cede", height: 0 } },
-        ];
-    bandLabel = both
-      ? `${monShort} · ${rateText(rateC[band])} / ${rateText(rateV[band])}`
-      : `${monShort} · ${rateText(base[band])}`;
-    const plottedMax = Math.max(0, ...series.flatMap((s) => s.values).filter((v): v is number => v != null));
-    const yMax = Math.max(valOnly ? 40 : 50, Math.ceil(plottedMax / 10) * 10);
-    chart = (
-      <TrendChart
-        labels={labels}
-        series={series}
-        everyX={1}
-        h={340}
-        band={band}
-        bandLabel={bandLabel}
-        yFmt={(v) => v.toFixed(0) + "%"}
-        yMin={0}
-        yMax={yMax}
-        ticks={valOnly ? 4 : 5}
-        annotations={annotations}
-      />
-    );
+  const plotted = series.flatMap((s) => s.vals).filter((v): v is number => v != null);
+  const ymax = Math.max(35, Math.ceil((Math.max(0, ...plotted) + 5) / 5) * 5);
+
+  const lyFull = model.priorYearSameMonth;
+  const reflines: LineRefline[] = [];
+  if (lyFull?.acceptanceRateCount != null && showCount) {
+    reflines.push({
+      v: lyFull.acceptanceRateCount,
+      text: `${seriesName(addYears(model.selectedMonth, -1))} · ${lyFull.acceptanceRateCount.toFixed(1)}% — same month last year`,
+      anchor: "start",
+    });
   }
+
+  const base = showCount ? rateC : rateV;
+  const baseIdx = 0;
+  const annotations: LineAnnotation[] = [];
+  const pk = peakIndex(base);
+  if (pk !== null && pk !== n - 1) {
+    annotations.push({
+      s: baseIdx,
+      i: pk,
+      text: `${full[pk]} · ${(base[pk] as number).toFixed(1)}%\n${showCount ? "count" : "value"}-rate peak`,
+      dy: -26,
+      anchor: "middle",
+    });
+  }
+  const curC = rateC[n - 1];
+  const curV = rateV[n - 1];
+  const curText =
+    showCount && showValue
+      ? `${monShort} · ${rateText(curC)} / ${rateText(curV)}`
+      : `${monShort} · ${rateText(showCount ? curC : curV)}`;
+  annotations.push({ s: baseIdx, i: n - 1, text: curText, dy: -14, dx: -6, anchor: "end" });
+
+  const tip = (i: number) =>
+    tipTitle(full[i]) +
+    (showCount ? tipRow(ACC, "By count", rateText(rateC[i])) : "") +
+    (showValue ? tipRow(SERIES2, "By value", rateText(rateV[i])) : "") +
+    tipRow("#9aa2b2", "Accepted", `${won[i]} of ${sent[i]}`);
+
+  const volMax = Math.max(1, ...sent);
+  const volStep = 10 ** Math.floor(Math.log10(volMax));
+  const volTop = Math.ceil(volMax / volStep) * volStep;
 
   return (
     <Card
-      title="Acceptance Trend"
-      subtitle={`${months[0]?.label ?? ""} – ${months.at(-1)?.label ?? ""} · hover or tap for monthly detail`}
-      aside={<Legend style={{ padding: 0 }} items={legendItems} />}
+      className="span12"
+      style={{ scrollMarginTop: 70 }}
+      title={<span id="trend">Acceptance Trend</span>}
+      subtitle={`${full[0] ?? ""} – ${full[n - 1] ?? ""} · hover or tap for monthly detail`}
+      aside={
+        <MetricPicker
+          style={{ padding: 0 }}
+          groups={[TREND_CHIPS.map((c) => ({ key: c.key, label: c.label, color: c.color }))]}
+          selected={modes}
+          onToggle={(key) => setModes((prev) => nextTrendModes(prev, key as TrendMode))}
+        />
+      }
     >
-      <MetricPicker
-        groups={[TREND_CHIPS.map((c) => ({ key: c.key, label: c.label, color: c.color }))]}
-        selected={modes}
-        onToggle={(key) => setModes((prev) => nextTrendModes(prev, key as TrendMode))}
-      />
       <CardBody>
-        <div ref={wrapRef}>{chart}</div>
-        <Fnote style={width >= 520 ? { display: "none" } : undefined}>
-          Peak callouts move into the tooltips at this width — hover or tap any point.
-        </Fnote>
+        <div data-primary-viz="">
+        <LineChart
+          labels={labels}
+          series={series}
+          h={300}
+          ymax={ymax}
+          ticks={5}
+          yFmt={(v) => v + "%"}
+          reflines={reflines}
+          annotations={annotations}
+          xlabels={showVolume ? false : undefined}
+          tip={tip}
+          ariaLabel="Acceptance rate by month, count and value"
+        />
+        {showVolume ? (
+          <>
+            <div className="striphead">
+              <span className="sl">Volume</span>
+              <span className="sn">quotes sent (columns) and accepted per month — own count axis</span>
+            </div>
+            <LineChart
+              labels={labels}
+              series={[{ name: "Accepted", vals: won, color: ACC, width: 2 }]}
+              bars={{ vals: sent }}
+              h={110}
+              ymax={volTop}
+              ticks={2}
+              yFmt={fmt.n}
+              tip={(i) => tipTitle(full[i]) + tipRow("#e4e7ed", "Quotes sent", fmt.n(sent[i])) + tipRow(ACC, "Accepted", fmt.n(won[i]))}
+              ariaLabel="Quotes sent and accepted per month"
+            />
+          </>
+        ) : null}
+      </div>
       </CardBody>
     </Card>
   );
@@ -595,7 +529,82 @@ function peakIndex(values: Array<number | null>): number | null {
   return idx;
 }
 
-/* ── Quote classification drawers ──────────────────────── */
+/* ── Row 3: Acceptance by Deal Size ────────────────────── */
+
+function DealSizeCard({
+  model,
+  cur,
+  onOpen,
+}: {
+  model: QuoteMetricsReadModel;
+  cur: QuoteMonthlyMetric;
+  onOpen: (tier: TierSegment) => void;
+}) {
+  const long = monthLong(model.selectedMonth);
+  const tiers = model.acceptanceByTier;
+  const maxValue = Math.max(1, ...tiers.map((t) => t.quoteValue));
+  return (
+    <Card className="span12" title="Acceptance by Deal Size" subtitle={`${long} quotes by value tier · bar = quoted value relative to the largest tier`}>
+      <CardBody>
+        <BarList variant="tiergrid">
+          {tiers.map((t) => {
+            const low = t.acceptanceRateCount !== null && t.acceptanceRateCount < 15;
+            return (
+              <BarListRow
+                key={t.tier}
+                name={displayTier(t.tier)}
+                value={rateText(t.acceptanceRateCount)}
+                bad={low}
+                barPct={Math.max((t.quoteValue / maxValue) * 100, 0.5)}
+                barBad={low}
+                meta={`${fmt.moneyFull(t.quoteValue)} quoted · ${t.quoteCount} ${t.quoteCount === 1 ? "quote" : "quotes"} · ${rateText(t.acceptanceRateValue)} accepted by value`}
+                onClick={() => onOpen(t)}
+              />
+            );
+          })}
+        </BarList>
+        {tierCallout(model, cur)}
+      </CardBody>
+    </Card>
+  );
+}
+
+/** The one allowed narrative callout (owner-approved): the top-value tier's
+ *  share and close rates, derived from the tier data — never hardcoded. */
+function tierCallout(model: QuoteMetricsReadModel, cur: QuoteMonthlyMetric): ReactNode {
+  const long = monthLong(model.selectedMonth);
+  const top = [...model.acceptanceByTier].sort((a, b) => b.quoteValue - a.quoteValue)[0];
+  if (!top || cur.quoteValue <= 0 || top.quoteCount === 0) return null;
+  const share = Math.round((top.quoteValue / cur.quoteValue) * 100);
+  return (
+    <div className="callout">
+      <span className="diam">◆</span>
+      <b>{displayTier(top.tier)} carries the value.</b> {top.quoteCount} {top.quoteCount === 1 ? "quote" : "quotes"} carried{" "}
+      {share}% of {long}’s quoted value, closing at {rateText(top.acceptanceRateCount)} by count and{" "}
+      {rateText(top.acceptanceRateValue)} by value.
+    </div>
+  );
+}
+
+function TierDrawerBody({ tier }: { tier: TierSegment }) {
+  return (
+    <>
+      <KV>
+        <KVCell label="Quoted value" value={fmt.moneyFull(tier.quoteValue)} />
+        <KVCell label="Accepted value" value={fmt.moneyFull(tier.acceptedValue)} />
+        <KVCell label="Rate (count)" value={rateText(tier.acceptanceRateCount)} />
+        <KVCell label="Rate (value)" value={rateText(tier.acceptanceRateValue)} />
+      </KV>
+      <DSec>Cohort</DSec>
+      <DNote>
+        {tier.acceptedCount} accepted · {tier.notAcceptedCount} not accepted. Every quote in this tier is part of the
+        month&rsquo;s Monthly Breakdown cohort; acceptance requires verified online acceptance or an exact converted job.
+      </DNote>
+    </>
+  );
+}
+
+/* ── Quote classification drawers (retained) ───────────── */
 
 export function QuoteDrawerDetail({ row }: { row: QuoteFollowUpQueueRow }) {
   const viewed = /view/i.test(row.status);
@@ -605,7 +614,7 @@ export function QuoteDrawerDetail({ row }: { row: QuoteFollowUpQueueRow }) {
         <KVCell label="Value" value={fmt.moneyFull(row.value)} />
         <KVCell
           label="Sent"
-          def="Simpro DateApproved — the internal approve-and-issue date; it also assigns the quote’s reporting month."
+          def="Simpro DateIssued — the quote issue date that assigns the reporting month."
           value={shortDateYear(row.sentDate)}
           valueStyle={{ fontSize: 14 }}
         />
@@ -773,94 +782,15 @@ function QuoteOverridePanel({ quoteId }: { quoteId: number }) {
   );
 }
 
-/* ── Acceptance by Deal Size ───────────────────────────── */
+/* ── Row 4: tier × month heatmap ───────────────────────── */
 
-function TiersCard({ model, cur }: { model: QuoteMetricsReadModel; cur: QuoteMonthlyMetric }) {
-  const long = monthLong(model.selectedMonth);
-  const tiers = model.acceptanceByTier;
-  const maxCount = Math.max(1, ...tiers.map((t) => t.quoteCount));
-  return (
-    <Card title="Acceptance by Deal Size" subtitle={`${long} quotes by value tier · bar = size relative to the largest tier`}>
-      <CardBody className="fillbd">
-        <div>
-          {tiers.map((t) => {
-            const low = t.acceptanceRateCount !== null && t.acceptanceRateCount < 15;
-            return (
-              <div key={t.tier} style={{ padding: "12px 0", borderBottom: "1px solid var(--hair-2)" }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                  <span className="id1 tnum">{displayTier(t.tier)}</span>
-                  <b className="tnum" style={{ fontSize: 19, letterSpacing: "-.02em", color: low ? "var(--down)" : "var(--ink)" }}>
-                    {rateText(t.acceptanceRateCount)}
-                  </b>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
-                  <div style={{ flex: 1, height: 6, background: "#f1f2f6", borderRadius: 4, overflow: "hidden" }}>
-                    <div style={{ width: `${Math.max((t.quoteCount / maxCount) * 100, 4)}%`, height: "100%", background: "#9aa2b2", borderRadius: 4 }} />
-                  </div>
-                  <span className="id2 tnum" style={{ margin: 0, flex: "none" }}>{t.quoteCount} quotes</span>
-                </div>
-                <div className="id2 tnum" style={{ marginTop: 5 }}>
-                  {fmt.moneyFull(t.quoteValue)} quoted · {rateText(t.acceptanceRateValue)} accepted by value
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <Insight style={{ marginTop: 14 }}>{tierInsight(model, cur)}</Insight>
-      </CardBody>
-    </Card>
-  );
-}
-
-/** Data-driven mix insight: the mockup's "rate drop is mostly mix" sentence
- *  renders only when the data supports it; otherwise an honest value-share
- *  fallback. */
-function tierInsight(model: QuoteMetricsReadModel, cur: QuoteMonthlyMetric): ReactNode {
-  const long = monthLong(model.selectedMonth);
-  const partial = model.provisional.isCurrentMonthPartial;
-  const ly = partial ? model.priorYearSameDay : model.priorYearSameMonth;
-  const tiers = model.acceptanceByTier;
-  const top = [...tiers].sort((a, b) => b.quoteValue - a.quoteValue)[0];
-  if (!top || cur.quoteValue <= 0) {
-    return (
-      <>
-        <b>No quoted value this month.</b> Tier acceptance appears once {long} records quote activity.
-      </>
-    );
-  }
-  const share = Math.round((top.quoteValue / cur.quoteValue) * 100);
-  const rc = rateText(top.acceptanceRateCount);
-  const rv = rateText(top.acceptanceRateValue);
-  const rateDelta = displayRoundedPtsDelta(cur.acceptanceRateCount, ly?.acceptanceRateCount ?? null);
-  const sentYoY = percentChange(cur.quoteCount, ly?.quoteCount ?? null);
-  const mixShift = ly && ly.quoteCount > 0 && cur.quoteCount > 0
-    ? cur.byTier[top.tier].quoteCount / cur.quoteCount > ly.byTier[top.tier].quoteCount / ly.quoteCount
-    : false;
-  if (rateDelta !== null && rateDelta < 0 && sentYoY !== null && sentYoY > 0 && mixShift) {
-    return (
-      <>
-        <b>The rate drop is mostly mix.</b> {long} sent {Math.round(sentYoY)}% more quotes than last {long}, weighted
-        toward {displayTier(top.tier)} — {top.quoteCount} big quotes carried {share}% of the value but close at {rc} by
-        count, {rv} by value.
-      </>
-    );
-  }
-  return (
-    <>
-      <b>{displayTier(top.tier)} carries the value.</b> {top.quoteCount} quotes carried {share}% of {long}’s quoted
-      value, closing at {rc} by count and {rv} by value.
-    </>
-  );
-}
-
-/* ── Tier × month heatmap ──────────────────────────────── */
-
+/* Validated ordinal ramp (mockups tokens.css .heatmap .b0–.b4). */
 const HEAT_LEGEND: Array<[string, string]> = [
-  ["#b8453a", "<15%"],
-  ["#d4d8f9", "15–25"],
-  ["#a3a9ef", "25–35"],
-  ["#5a63c8", "35–45"],
-  ["#4b52c0", "45%+"],
+  ["color-mix(in srgb,#d0463a,#fff 30%)", "<15%"],
+  ["color-mix(in srgb,#5b63d3,#fff 46%)", "15–25"],
+  ["color-mix(in srgb,#5b63d3,#fff 23%)", "25–35"],
+  ["#5b63d3", "35–45"],
+  ["color-mix(in srgb,#5b63d3,#000 22%)", "45%+"],
 ];
 
 function HeatmapCard({ model, months }: { model: QuoteMetricsReadModel; months: QuoteMonthlyMetric[] }) {
@@ -873,64 +803,55 @@ function HeatmapCard({ model, months }: { model: QuoteMetricsReadModel; months: 
     return () => mq.removeEventListener("change", update);
   }, []);
   const keep = narrow ? 6 : 12;
-  const monShort = monthLong(model.selectedMonth).slice(0, 3);
   const heatLabels = months.map((m, i) => heatLabel(m.month, i)).slice(-keep);
   const heatRows = model.heatmap.map((row) => ({
     name: displayTier(row.tier),
     cells: row.months.slice(-keep).map((cell) => ({
       v: cell.acceptanceRate,
-      repr: cell.month !== model.selectedMonth || undefined,
     })),
   }));
-  const bigTier = model.acceptanceByTier.find((t) => t.tier === "$10K+");
-  const bigTierLow = bigTier != null && bigTier.acceptanceRateCount !== null && bigTier.acceptanceRateCount < 15;
   const swatch = (background: string, extra?: CSSProperties) => (
     <i style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, background, ...extra }} />
   );
   return (
     <Card
+      className="span12"
       style={{ display: "flex", flexDirection: "column" }}
       title="Acceptance by Deal Size and Month"
-      subtitle={`Count-based acceptance per tier · ${months[0]?.label ?? ""} – ${months.at(-1)?.label ?? ""} · hover or tap any cell`}
+      subtitle={`Count-based acceptance per tier · ${months[0] ? seriesName(months[0].month) : ""} – ${months.at(-1) ? seriesName(months.at(-1)!.month) : ""} · hover or tap any cell`}
       aside={
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: 9,
-            fontSize: 12,
-            color: "var(--muted)",
-            flexWrap: "wrap",
-            maxWidth: 380,
-          }}
-        >
-          {HEAT_LEGEND.map(([color, label]) => (
-            <span key={label} className="tnum" style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
-              {swatch(color)}
-              {label}
-            </span>
-          ))}
-          <span
-            className="def"
-            data-def={`Hatched cells are representative, pending per-month reconciliation — the ${monShort} column is verified against Simpro.`}
-            style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: 12,
+              fontSize: 12,
+              color: "var(--muted)",
+              flexWrap: "wrap",
+              maxWidth: 380,
+            }}
           >
-            {swatch("#a3a9ef", {
-              backgroundImage: "repeating-linear-gradient(45deg,transparent 0 2.5px,rgba(16,20,34,.22) 2.5px 4px)",
-            })}
-            hatched = representative
-          </span>
+            {HEAT_LEGEND.map(([color, label]) => (
+              <span key={label} className="tnum" style={{ display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                {swatch(color)}
+                {label}
+              </span>
+            ))}
+          </div>
         </div>
       }
     >
-      <Heatmap
-        months={heatLabels}
-        rows={heatRows}
-        highlightLast
-        cols={keep}
-        style={{ paddingTop: 6, flex: 1, alignContent: "start", rowGap: 6 }}
-      />
+      <div data-viz="">
+        <Heatmap
+          months={heatLabels}
+          rows={heatRows}
+          highlightLast
+          cols={keep}
+          style={{ paddingTop: 6, flex: 1, alignContent: "start", rowGap: 6 }}
+        />
+      </div>
       {narrow ? (
         <div style={{ fontSize: 12, color: "var(--subtle)", padding: "6px 20px 0" }}>
           {heatLabels[0]} – {heatLabels.at(-1)} · the full year shows on wider screens
@@ -938,14 +859,14 @@ function HeatmapCard({ model, months }: { model: QuoteMetricsReadModel; months: 
       ) : null}
       <CardBody style={{ paddingTop: 0 }}>
         <Fnote>
-          {monShort} column verified against Simpro{bigTierLow ? " · the pattern: big deals rarely clear 15%." : ""}
+          Each cell is the count-based acceptance rate for that tier and month; — means no denominator.
         </Fnote>
       </CardBody>
     </Card>
   );
 }
 
-/* ── History tab ───────────────────────────────────────── */
+/* ── Row 5: Monthly Breakdown (always present — tabs removed) ── */
 
 function HistoryCard({ model, months }: { model: QuoteMetricsReadModel; months: QuoteMonthlyMetric[] }) {
   const chronological = months;
@@ -956,6 +877,7 @@ function HistoryCard({ model, months }: { model: QuoteMetricsReadModel; months: 
   const footTd: CSSProperties = { fontWeight: 700, padding: "13px 20px", borderTop: "1px solid var(--hair)" };
   return (
     <Card
+      className="span12"
       title="Monthly Breakdown"
       subtitle={hasPartial ? `Trailing 12 months · ${monthLong(model.selectedMonth)} is month-to-date` : "Trailing 12 complete months"}
       aside={
@@ -1030,8 +952,8 @@ function historyTotals(months: QuoteMonthlyMetric[]) {
   };
 }
 
-/** Client-side CSV of the History table (approved C7) — same columns and the
- *  same computed Trailing-12 row, consistent weights (Σaccepted ÷ Σsent). */
+/** Client-side CSV of the Monthly Breakdown (approved C7) — same columns and
+ *  the same computed Trailing-12 row, consistent weights (Σaccepted ÷ Σsent). */
 export function quoteHistoryCsv(model: QuoteMetricsReadModel): string {
   const totals = historyTotals(model.monthlyBreakdown);
   const headings = ["Month", "Sent", "Quote Value", "Accepted", "Accepted Value", "Avg Deal", "Rate (Count)", "Rate (Value)"];
@@ -1067,11 +989,6 @@ function downloadHistoryCsv(model: QuoteMetricsReadModel) {
   URL.revokeObjectURL(link.href);
 }
 
-function csvCell(value: string | number): string {
-  const text = String(value);
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
 /* ── Shared helpers ────────────────────────────────────── */
 
 /** Delta in points computed on the one-decimal rates actually displayed
@@ -1088,14 +1005,6 @@ function round1(v: number): number {
 function percentChange(current: number | null, prior: number | null): number | null {
   if (current === null || prior === null || prior === 0) return null;
   return ((current - prior) / prior) * 100;
-}
-
-function aboveZero(v: number | null): boolean {
-  return v !== null && v > 0;
-}
-
-function signedPct(pct: number): string {
-  return `${pct >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(1)}%`;
 }
 
 function rateText(v: number | null | undefined): string {
@@ -1128,8 +1037,8 @@ function addYears(monthKey: string, years: number): string {
   return `${year + years}-${String(month).padStart(2, "0")}`;
 }
 
-/** Chart x labels: "Jul 25", "Aug", …, "Jan 26", … (year on the first column
- *  and each January, mirroring the approved M array). */
+/** Table month labels: "Jul 25", "Aug", …, "Jan 26", … (year on the first
+ *  column and each January, mirroring the approved M array). */
 function chartLabel(monthKey: string, index: number): string {
   const [year, month] = monthKey.split("-").map(Number);
   const mon = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(year, month - 1, 1)));

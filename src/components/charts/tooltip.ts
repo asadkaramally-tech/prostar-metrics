@@ -8,10 +8,18 @@
 
 let tipEl: HTMLDivElement | null = null;
 let globalHideWired = false;
+const DEFINITION_TOOLTIP_ID = "shared-definition-tooltip";
 
 function tip(): HTMLDivElement {
   if (!tipEl) {
     tipEl = document.createElement("div");
+    // Identifiable hook for the acceptance harness (design-interactions.mjs
+    // looks for .charttip); no stylesheet rule attaches to it — styling stays
+    // in the inline kit css below.
+    tipEl.className = "charttip";
+    tipEl.id = DEFINITION_TOOLTIP_ID;
+    tipEl.setAttribute("role", "tooltip");
+    tipEl.setAttribute("aria-hidden", "true");
     tipEl.style.cssText =
       "position:fixed;z-index:60;background:#fff;border:1px solid #e9ebf0;border-radius:10px;" +
       "padding:9px 12px;font-size:12px;color:#2a3140;box-shadow:0 6px 24px -8px rgba(16,24,40,.24);" +
@@ -30,6 +38,7 @@ export function tipShow(html: string, cx: number, cy: number): void {
   if (typeof document === "undefined") return;
   const t = tip();
   t.innerHTML = html;
+  t.setAttribute("aria-hidden", "false");
   t.style.opacity = "1";
   const w = t.offsetWidth,
     h = t.offsetHeight;
@@ -42,7 +51,10 @@ export function tipShow(html: string, cx: number, cy: number): void {
 }
 
 export function tipHide(): void {
-  if (tipEl) tipEl.style.opacity = "0";
+  if (tipEl) {
+    tipEl.style.opacity = "0";
+    tipEl.setAttribute("aria-hidden", "true");
+  }
 }
 
 /* Repositioning helper for pointermove tracking (kit.js stackedBars hot rect). */
@@ -53,12 +65,30 @@ export function tipTrack(cx: number, cy: number): void {
   t.style.top = Math.max(10, cy - t.offsetHeight - 14) + "px";
 }
 
+export function escapeTooltipText(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function safeTooltipColor(color: string): string {
+  return /^(?:#[\da-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%a-z]+\)|color-mix\([#\w\s,().%-]+\)|var\(--[\w-]+\))$/i.test(color)
+    ? color
+    : "#e9ebf0";
+}
+
 export const tipRow = (color: string, name: string, val: string): string =>
-  `<div style="display:flex;align-items:center;gap:7px;white-space:nowrap"><i style="width:8px;height:8px;border-radius:3px;background:${color};flex:none"></i>` +
-  `<span style="color:#5c6474">${name}</span><b style="margin-left:auto;padding-left:16px;color:#101422">${val}</b></div>`;
+  `<div style="display:flex;align-items:center;gap:7px;white-space:nowrap"><i style="width:8px;height:8px;border-radius:3px;background:${safeTooltipColor(color)};flex:none"></i>` +
+  `<span style="color:#5c6474">${escapeTooltipText(name)}</span><b style="margin-left:auto;padding-left:16px;color:#101422">${escapeTooltipText(val)}</b></div>`;
 
 export const tipTitle = (s: string): string =>
-  `<div style="font-weight:700;color:#101422;margin-bottom:5px">${s}</div>`;
+  `<div style="font-weight:700;color:#101422;margin-bottom:5px">${escapeTooltipText(s)}</div>`;
+
+export const tipText = (s: string): string =>
+  `<span style="color:#6b7383">${escapeTooltipText(s)}</span>`;
 
 /* Definition tooltips: any element with [data-def] shows its formula/date-
    anchor on hover or tap (kit.js document-level delegation, ported). */
@@ -70,9 +100,20 @@ export function wireDefTooltips(): () => void {
     const target = e.target as Element | null;
     const d = target?.closest?.("[data-def]") as HTMLElement | null;
     if (d) tipShow(
-      `<div style="max-width:250px;line-height:1.55;color:#2a3140">${d.dataset.def}</div>`,
+      `<div style="max-width:250px;line-height:1.55;color:#2a3140">${escapeTooltipText(d.dataset.def ?? "")}</div>`,
       (e as PointerEvent).clientX,
       (e as PointerEvent).clientY,
+    );
+  };
+  const focus = (e: FocusEvent) => {
+    const target = e.target as Element | null;
+    const d = target?.closest?.("[data-def]") as HTMLElement | null;
+    if (!d) return;
+    const rect = d.getBoundingClientRect();
+    tipShow(
+      `<div style="max-width:250px;line-height:1.55;color:#2a3140">${escapeTooltipText(d.dataset.def ?? "")}</div>`,
+      rect.left + rect.width / 2,
+      rect.top,
     );
   };
   const out = (e: Event) => {
@@ -81,9 +122,17 @@ export function wireDefTooltips(): () => void {
   };
   document.addEventListener("pointerover", over);
   document.addEventListener("pointerout", out);
+  document.addEventListener("focusin", focus);
+  document.addEventListener("focusout", out);
+  document.querySelectorAll<HTMLElement>("[data-def]").forEach((element) => {
+    if (!element.hasAttribute("tabindex")) element.tabIndex = 0;
+    element.setAttribute("aria-describedby", DEFINITION_TOOLTIP_ID);
+  });
   return () => {
     document.removeEventListener("pointerover", over);
     document.removeEventListener("pointerout", out);
+    document.removeEventListener("focusin", focus);
+    document.removeEventListener("focusout", out);
     defWired = false;
   };
 }

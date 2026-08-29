@@ -22,6 +22,11 @@ import {
   withImmutableDockerBuildContext,
   writeDeploymentManifestAtomic,
 } from "./lib/deployment-provenance.mjs";
+import {
+  computeDependencyTreeSha256,
+  readReusableDeploymentCertificate,
+  writeDeploymentCertificate,
+} from "./lib/deployment-resume.mjs";
 import { PLAN_REVISION, PLAN_SHA256 } from "./lib/feature-status-sync.mjs";
 import {
   assertExactProductionJobNames,
@@ -53,6 +58,7 @@ const EVIDENCE_SIGNING_KEY_NAMES = Object.freeze({
 });
 const MAX_CONTAINER_APP_JOB_NAME_LENGTH = 32;
 const AZURE_CONFIG_DIR = process.env.AZURE_CONFIG_DIR || path.join(path.dirname(ROOT), ".work", "azure");
+const DEPLOYMENT_RESUME_DIRECTORY = path.join(ROOT, ".work", "deploy-prod-resume");
 const migrationEnvironmentNames = new Set([
   "MIGRATION_COMPATIBILITY_COMMAND_TIMEOUT_MS", "MIGRATION_COMPATIBILITY_QUERY_TIMEOUT_MS",
   "AZURE_POSTGRES_CA_CERT", "AZURE_POSTGRES_CA_CERT_PATH", "NODE_TLS_REJECT_UNAUTHORIZED",
@@ -60,6 +66,8 @@ const migrationEnvironmentNames = new Set([
 ]);
 const postgresClientBinCandidates = Object.freeze([
   "/Applications/Postgres.app/Contents/Versions/17/bin",
+  "/opt/homebrew/opt/postgresql@17/bin",
+  "/usr/local/opt/postgresql@17/bin",
   "/opt/homebrew/opt/libpq/bin",
   "/usr/local/opt/libpq/bin",
 ]);
@@ -248,7 +256,7 @@ function listTemporaryMigrationFirewallRules() {
   const output = az([
     "postgres", "flexible-server", "firewall-rule", "list",
     "--resource-group", RESOURCE_GROUP,
-    "--name", POSTGRES_SERVER,
+    "--server-name", POSTGRES_SERVER,
     "--output", "json",
   ], { capture: true });
   const rules = JSON.parse(output);
@@ -272,8 +280,8 @@ async function removeTemporaryMigrationFirewallRule() {
   az([
     "postgres", "flexible-server", "firewall-rule", "delete",
     "--resource-group", RESOURCE_GROUP,
-    "--name", POSTGRES_SERVER,
-    "--rule-name", TEMP_FIREWALL_RULE,
+    "--server-name", POSTGRES_SERVER,
+    "--name", TEMP_FIREWALL_RULE,
     "--yes",
     "--output", "none",
   ]);
@@ -308,14 +316,39 @@ function runPostgresPredeployGate(connectionString, previousImage) {
   }
 }
 
+export function parseMigrationCompatibilityReport(output) {
+  const prefix = "MIGRATION_COMPATIBILITY_REPORT ";
+  const reports = String(output ?? "").split(/\r?\n/)
+    .filter((line) => line.startsWith(prefix))
+    .map((line) => line.slice(prefix.length));
+  if (reports.length !== 1) {
+    throw new Error("Migration compatibility gate did not produce exactly one pending-migration report.");
+  }
+  let report;
+  try {
+    report = JSON.parse(reports[0]);
+  } catch {
+    throw new Error("Migration compatibility gate produced an invalid pending-migration report.");
+  }
+  if (!report || !Number.isSafeInteger(report.pendingMigrationCount) || report.pendingMigrationCount < 0) {
+    throw new Error("Migration compatibility gate reported an invalid pending migration count.");
+  }
+  return Object.freeze({ pendingMigrationCount: report.pendingMigrationCount });
+}
+
 function runMigrationCompatibilityGate(connectionString, previousImage) {
+  const environment = migrationChildEnvironment(connectionString, previousImage);
+  environment.MIGRATION_COMPATIBILITY_MODE = "static";
+  environment.MIGRATION_COMPATIBILITY_REPORT = "1";
   const result = spawnSync("npm", ["run", "migration:compatibility:check"], {
     cwd: ROOT,
-    env: migrationChildEnvironment(connectionString, previousImage),
+    env: environment,
     encoding: "utf8",
-    stdio: "inherit",
   });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
   if (result.status !== 0) throw new Error("Pending migration prior-image compatibility gate failed.");
+  return parseMigrationCompatibilityReport(result.stdout);
 }
 
 function runPreflightCommand(command, args, label, snapshotRoot) {
@@ -342,8 +375,22 @@ function runDeploymentPreflight(snapshotRoot) {
 }
 
 export function parseDeployArgs(argv) {
-  if (argv.length > 0) throw new Error(`Unknown deploy argument: ${argv.join(", ")}`);
-  return Object.freeze({});
+  const full = argv.filter((argument) => argument === "--full");
+  const resume = argv.filter((argument) => argument === "--resume");
+  const unknown = argv.filter((argument) => argument !== "--full" && argument !== "--resume");
+  if (unknown.length > 0 || full.length > 1 || resume.length > 1 || (full.length && resume.length)) {
+    throw new Error(`Unknown deploy argument: ${argv.join(", ")}`);
+  }
+  return Object.freeze({ mode: full.length === 1 ? "full" : "routine" });
+}
+
+export function requireRoutineDeploymentCertificate(mode, reusable) {
+  if (mode === "routine" && !reusable) {
+    throw new Error(
+      "Routine deployment requires an exact full-preflight certificate for the current source and dependency tree; run npm run deploy:prod -- --full.",
+    );
+  }
+  return reusable;
 }
 
 export function validateProductionParameterContract(document) {
@@ -494,7 +541,7 @@ export function monitoringManagedResourceContract(postgresTargetId) {
   ]) add(topLevel("microsoft.insights/metricalerts", `alert-prostar-metrics-postgres-${suffix}`), "microsoft.insights/metricalerts");
   add(topLevel("microsoft.insights/metricalerts", "alert-prostar-metrics-export-storage-failures"), "microsoft.insights/metricalerts");
 
-  if (resources.size !== 70) throw new Error(`Monitoring resource contract must contain exactly 70 resources; received ${resources.size}.`);
+  if (resources.size !== 72) throw new Error(`Monitoring resource contract must contain exactly 72 resources; received ${resources.size}.`);
   return Object.freeze(Array.from(resources, ([resourceId, resourceType]) => Object.freeze({ resourceId, resourceType })));
 }
 
@@ -568,8 +615,10 @@ function reviewMonitoringWhatIfAndTarget() {
     "--parameters", MONITORING_PARAMETERS_PATH, "--result-format", "ResourceIdOnly",
     "--no-pretty-print", "--output", "json",
   ], { capture: true }));
-  validateMonitoringWhatIf(whatIf, server.id);
-  return server;
+  const review = validateMonitoringWhatIf(whatIf, server.id);
+  const changes = Array.isArray(whatIf?.changes) ? whatIf.changes : whatIf?.properties?.changes;
+  const deploymentRequired = changes.some((change) => change?.changeType !== "NoChange");
+  return Object.freeze({ postgresTarget: server, deploymentRequired, reviewedResourceCount: review.changes });
 }
 
 export function validateLongestQueryCollector(parameter, expectedValue = null) {
@@ -833,17 +882,21 @@ function writeMonitoringEvidenceAtomic({ evidence, prefix, timestamp }) {
   return { path: evidencePath, sha256: createHash("sha256").update(bytes).digest("hex") };
 }
 
-async function deployAndVerifyMonitoringReceivers(postgresTarget) {
+async function deployAndVerifyMonitoringReceivers(postgresTarget, { deploymentRequired = true } = {}) {
   const parameters = JSON.parse(fs.readFileSync(path.join(ROOT, MONITORING_PARAMETERS_PATH), "utf8")).parameters;
   const actionGroupName = parameters.ownerActionGroupName?.value;
   const expected = { asad: parameters.asadOwnerEmail?.value, laila: parameters.lailaOwnerEmail?.value };
   if (!actionGroupName || !expected.asad || !expected.laila) throw new Error("Monitoring owner receiver parameters are incomplete.");
-  log("deploying authoritative monitoring configuration and enabling owner receivers");
-  az([
-    "deployment", "group", "create", "--resource-group", RESOURCE_GROUP,
-    "--name", "prostar-metrics-monitoring-release", "--template-file", "infra/azure/monitoring.bicep",
-    "--parameters", MONITORING_PARAMETERS_PATH, "--output", "none",
-  ]);
+  if (deploymentRequired) {
+    log("deploying authoritative monitoring configuration and enabling owner receivers");
+    az([
+      "deployment", "group", "create", "--resource-group", RESOURCE_GROUP,
+      "--name", "prostar-metrics-monitoring-release", "--template-file", "infra/azure/monitoring.bicep",
+      "--parameters", MONITORING_PARAMETERS_PATH, "--output", "none",
+    ]);
+  } else {
+    log("monitoring what-if proved all managed resources unchanged; skipping the no-op monitoring ARM deployment");
+  }
   const metricResult = await verifyLongestQueryMetricAvailability({
     resourceGroup: RESOURCE_GROUP,
     serverName: POSTGRES_SERVER,
@@ -984,7 +1037,7 @@ function verifyProductionKeyVaultPreflight(contract) {
       name,
     );
   }
-  log(`verified versionless Key Vault references for ${CONTAINER_APP_NAME} and 23 jobs`);
+  log(`verified versionless Key Vault references for ${CONTAINER_APP_NAME} and 24 jobs`);
 }
 
 export function validateEvidenceSigningKeyIds(keyIds, vaultName) {
@@ -1568,19 +1621,78 @@ async function verifyLiveProduction(fqdn) {
   });
 }
 
-async function executeProductionRelease(keyVaultContract, postgresTarget, buildSnapshot, releaseIdentity) {
-  const monitoring = await deployAndVerifyMonitoringReceivers(postgresTarget);
+function readRoutineMonitoringEvidence() {
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(path.join(ROOT, DEPLOYMENT_MANIFEST_PATH), "utf8"));
+  } catch {
+    throw new Error("Routine deployment requires existing full-release monitoring evidence; run npm run deploy:prod -- --full first.");
+  }
+  const evidence = manifest?.monitoringEvidence;
+  const expected = ["actionGroupNotification", "longestQueryMetric"];
+  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)
+    || JSON.stringify(Object.keys(evidence).sort()) !== JSON.stringify(expected)) {
+    throw new Error("Routine deployment requires an exact prior full-release monitoring evidence set; run --full.");
+  }
+  for (const name of expected) {
+    const artifact = evidence[name];
+    if (!artifact || typeof artifact.path !== "string" || !/^[a-f0-9]{64}$/.test(artifact.sha256 ?? "")) {
+      throw new Error("Routine deployment monitoring evidence is malformed; run --full.");
+    }
+    const target = path.resolve(ROOT, artifact.path);
+    if (!target.startsWith(`${ROOT}${path.sep}`)) throw new Error("Routine deployment monitoring evidence path escapes the repository");
+    const bytes = fs.readFileSync(target);
+    if (createHash("sha256").update(bytes).digest("hex") !== artifact.sha256) {
+      throw new Error("Routine deployment monitoring evidence hash mismatch; run --full.");
+    }
+    try {
+      JSON.parse(bytes.toString("utf8"));
+    } catch {
+      throw new Error("Routine deployment monitoring evidence is not JSON; run --full.");
+    }
+  }
+  return Object.freeze({
+    longestQueryMetric: Object.freeze({ ...evidence.longestQueryMetric }),
+    actionGroupNotification: Object.freeze({ ...evidence.actionGroupNotification }),
+  });
+}
+
+function acrRunFromCertifiedBuild(acrBuild) {
+  return {
+    status: "Succeeded",
+    runId: acrBuild.runId,
+    createdAt: acrBuild.createdAt,
+    outputImages: [{
+      registry: ACR_NAME,
+      repository: PRODUCTION_REPOSITORY,
+      tag: acrBuild.imageTag,
+      digest: acrBuild.digest,
+    }],
+  };
+}
+
+async function executeProductionRelease(keyVaultContract, buildSnapshot, releaseIdentity, certification, monitoringEvidence) {
   verifyProductionKeyVaultPreflight(keyVaultContract);
   const evidenceSigningKeyIds = resolveEvidenceSigningKeyIds(keyVaultContract.keyVaultName);
   const baseline = captureDeploymentState();
   assertRollbackCompatibleBaseline(baseline);
   const connectionString = getMigrationConnectionString();
   const previousImage = baseline.webImage;
-  const imageTag = createImmutableImageTag(buildSnapshot.sha256, releaseIdentity.deploymentNonce);
-  const taggedImage = `${PRODUCTION_REPOSITORY}:${imageTag}`;
-
-  log("building and pushing metrics image in ACR");
-  const buildResult = JSON.parse(az([
+  let imageTag;
+  let buildResult;
+  let acrBuild;
+  if (certification.reusable?.acrBuild) {
+    imageTag = certification.reusable.acrBuild.imageTag;
+    buildResult = acrRunFromCertifiedBuild(certification.reusable.acrBuild);
+    log(`re-verifying reusable certified ACR image ${imageTag}`);
+    // The local certificate is only a pointer. This queries ACR again and
+    // rejects tag movement, changed run output, or a digest mismatch.
+    acrBuild = readAndVerifyAcrBuild(buildResult, imageTag);
+  } else {
+    imageTag = createImmutableImageTag(buildSnapshot.sha256, releaseIdentity.deploymentNonce);
+    const taggedImage = `${PRODUCTION_REPOSITORY}:${imageTag}`;
+    log("building and pushing metrics image in ACR");
+    buildResult = JSON.parse(az([
       "acr",
       "build",
       "--resource-group",
@@ -1594,7 +1706,17 @@ async function executeProductionRelease(keyVaultContract, postgresTarget, buildS
       "json",
       buildSnapshot.path,
     ], { capture: true }));
-  const acrBuild = readAndVerifyAcrBuild(buildResult, imageTag);
+    acrBuild = readAndVerifyAcrBuild(buildResult, imageTag);
+    await writeDeploymentCertificate({
+      stateDirectory: DEPLOYMENT_RESUME_DIRECTORY,
+      sourceSha256: certification.sourceSha256,
+      dependencySha256: certification.dependencySha256,
+      certificationMode: certification.mode,
+      preflightSucceededAt: certification.preflightSucceededAt,
+      acrBuild,
+    });
+    log(`recorded content-addressed ${certification.mode} ACR certificate for a safe routine retry`);
+  }
   log(`canonical immutable Docker build context SHA-256 ${buildSnapshot.sha256} (${buildSnapshot.entries} entries)`);
   const pinnedImage = `${ACR_NAME}.azurecr.io/${PRODUCTION_REPOSITORY}@${acrBuild.digest}`;
 
@@ -1604,25 +1726,25 @@ async function executeProductionRelease(keyVaultContract, postgresTarget, buildS
   const publicIp = await getPublicIp();
   await withReconciledTemporaryFirewall({
     create: async () => {
-    log("opening temporary migration firewall rule");
-    az([
-      "postgres",
-      "flexible-server",
-      "firewall-rule",
-      "create",
-      "--resource-group",
-      RESOURCE_GROUP,
-      "--name",
-      POSTGRES_SERVER,
-      "--rule-name",
-      TEMP_FIREWALL_RULE,
-      "--start-ip-address",
-      publicIp,
-      "--end-ip-address",
-      publicIp,
-      "--output",
-      "none",
-    ]);
+      log("opening temporary migration firewall rule");
+      az([
+        "postgres",
+        "flexible-server",
+        "firewall-rule",
+        "create",
+        "--resource-group",
+        RESOURCE_GROUP,
+        "--server-name",
+        POSTGRES_SERVER,
+        "--name",
+        TEMP_FIREWALL_RULE,
+        "--start-ip-address",
+        publicIp,
+        "--end-ip-address",
+        publicIp,
+        "--output",
+        "none",
+      ]);
     },
     verifyPresent: async () => verifyTemporaryMigrationFirewallPresent(publicIp),
     remove: async () => {
@@ -1631,9 +1753,13 @@ async function executeProductionRelease(keyVaultContract, postgresTarget, buildS
     },
     verifyAbsent: async () => verifyTemporaryMigrationFirewallAbsent(),
     run: async () => {
-      log("checking pending migrations remain additive for the prior production image");
-      runMigrationCompatibilityGate(connectionString, previousImage);
-      log("running PostgreSQL migrations-twice and two-session concurrency gate");
+      log("checking pending migrations with static prior-image compatibility classification (no production data clone)");
+      const migrationCompatibility = runMigrationCompatibilityGate(connectionString, previousImage);
+      if (migrationCompatibility.pendingMigrationCount === 0) {
+        log("no pending migrations; skipping the migration-only predeploy gates");
+        return;
+      }
+      log("running PostgreSQL migrations-twice and two-session concurrency gate on a dedicated empty database");
       runPostgresPredeployGate(connectionString, previousImage);
       log("applying hash-tracked metrics migrations under the advisory lock");
       applyTrackedMigrations(connectionString, previousImage);
@@ -1652,10 +1778,7 @@ async function executeProductionRelease(keyVaultContract, postgresTarget, buildS
     acrBuild,
     buildSourceSha256: buildSnapshot.sha256,
     baseline,
-    monitoringEvidence: {
-      longestQueryMetric: monitoring.metric.persisted,
-      actionGroupNotification: monitoring.notification.persisted,
-    },
+    monitoringEvidence,
     operations: {
       deployCandidate: () => deployMetrics({
         ...deploymentInputs,
@@ -1691,7 +1814,7 @@ async function executeProductionRelease(keyVaultContract, postgresTarget, buildS
 }
 
 async function main() {
-  parseDeployArgs(process.argv.slice(2));
+  const args = parseDeployArgs(process.argv.slice(2));
   const keyVaultContract = validateDeploymentInputs();
   const deploymentNonce = randomUUID();
   const releaseIdentity = Object.freeze({
@@ -1704,18 +1827,52 @@ async function main() {
       materializeSnapshotDependencies(snapshotPath);
     },
     build: async ({ path: snapshotPath, sha256, entries }) => {
-      runDeploymentPreflight(snapshotPath);
+      const dependencySha256 = await computeDependencyTreeSha256(path.join(snapshotPath, "node_modules"));
+      const reusable = args.mode === "routine"
+        ? await readReusableDeploymentCertificate({
+          stateDirectory: DEPLOYMENT_RESUME_DIRECTORY,
+          sourceSha256: sha256,
+          dependencySha256,
+        })
+        : null;
+      requireRoutineDeploymentCertificate(args.mode, reusable);
+      let preflightSucceededAt = reusable?.preflightSucceededAt ?? new Date().toISOString();
+      if (reusable) {
+        log("exact source and dependency ACR certificate found; reusing immutable ACR checkpoint");
+      } else if (args.mode === "full") {
+        runDeploymentPreflight(snapshotPath);
+        preflightSucceededAt = new Date().toISOString();
+      }
+      const buildSnapshot = { path: snapshotPath, sha256, entries };
+      const certification = {
+        mode: args.mode,
+        sourceSha256: sha256,
+        dependencySha256,
+        preflightSucceededAt,
+        reusable,
+      };
+      if (args.mode === "routine") {
+        return executeProductionRelease(
+          keyVaultContract,
+          buildSnapshot,
+          releaseIdentity,
+          certification,
+          readRoutineMonitoringEvidence(),
+        );
+      }
       return withLongestQueryCollectorEnabled({
         operations: {
           preflight: () => reviewMonitoringWhatIfAndTarget(),
           readParameter: () => readLongestQueryCollector(),
           setParameter: (value) => setLongestQueryCollector(value),
         },
-        run: ({ preflight }) => executeProductionRelease(keyVaultContract, preflight, {
-          path: snapshotPath,
-          sha256,
-          entries,
-        }, releaseIdentity),
+        run: async ({ preflight }) => {
+          const monitoring = await deployAndVerifyMonitoringReceivers(preflight.postgresTarget);
+          return executeProductionRelease(keyVaultContract, buildSnapshot, releaseIdentity, certification, {
+            longestQueryMetric: monitoring.metric.persisted,
+            actionGroupNotification: monitoring.notification.persisted,
+          });
+        },
       });
     },
   });

@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   CustomerDrawerDetail,
   displayRoundedPtsDelta,
+  moneyK,
   moneyM,
   nextTrendModes,
   partialMonthStateCopy,
@@ -16,7 +17,7 @@ import {
   seriesName,
   type TrendMode,
 } from "../../src/components/quotes/quote-metrics-dashboard";
-import { quoteDashboardReadModelOptions } from "../../src/app/api/quotes/route";
+import { quoteDashboardReadModelOptions } from "../../src/lib/api/dashboard-route-params";
 import {
   quoteDealTiers,
   type QuoteDealTier,
@@ -26,10 +27,11 @@ import {
   type QuoteTierMetric,
 } from "../../src/lib/store/quote-dashboard-read-model";
 
-/* Fixture mirrors the approved June-2026 mockup snapshot
-   (APPROVED-2026-07-15/mockups/quotes.html) so the rendered copy can be
-   checked against the approved grammar — every number flows from this
-   payload, none from the component. */
+/* Fixture mirrors the June-2026 payload snapshot — every rendered number must
+   flow from this payload, none from the component. The composition under test
+   is the owner-approved docs/approved-design/mockups/quotes.html: KPI band →
+   Acceptance Trend → Deal Size (4-up + callout) → heatmap → always-present
+   Monthly Breakdown. */
 
 const M_KEYS = [
   "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12",
@@ -84,23 +86,17 @@ const june = chronological[11];
 const may = chronological[10];
 const junePriorYear = month("2025-06", 105, 1551974, 33, 108538, junePriorYearTiers);
 
-/* Follow-up queue — the eight approved rows plus two small ones; totals carry
-   the full 146-quote cohort exactly like the read model payload. */
+/* Follow-up queue payload (drawer components still consume it). */
 const queueRows: QuoteFollowUpQueue["rows"] = [
   { quoteId: 2467, quoteNo: "2467", name: "Boiler Replacement — Hotel Lulu", customer: "Hotel Lulu, BW Premier Collection", site: "Hotel Lulu, BW Premier Collection", status: "Quote : Viewed", sentDate: "2026-06-02", ageDays: 43, value: 323087, tier: "$10K+" },
   { quoteId: 2537, quoteNo: "2537", name: "Heat Pump Water Heater Install with Structural", customer: "Best Western #259", site: "Best Western #259", status: "Quote : Sent", sentDate: "2026-06-11", ageDays: 34, value: 178438, tier: "$10K+" },
   { quoteId: 2466, quoteNo: "2466", name: "Dual Hydronic Replacement", customer: "Park Plaza HOA", site: "Park Plaza HOA", status: "Quote : Viewed", sentDate: "2026-06-02", ageDays: 43, value: 114218, tier: "$10K+" },
   { quoteId: 2504, quoteNo: "2504", name: "Dual Boiler Replacement", customer: "Hotel Lulu, BW Premier Collection", site: "Hotel Lulu, BW Premier Collection", status: "Quote : Viewed", sentDate: "2026-06-08", ageDays: 37, value: 96691, tier: "$10K+" },
   { quoteId: 2498, quoteNo: "2498", name: "Boiler 1 Replace & Boiler 2 Repair", customer: "Hotel Lulu, BW Premier Collection", site: "Hotel Lulu, BW Premier Collection", status: "Quote : Viewed", sentDate: "2026-06-08", ageDays: 37, value: 84850, tier: "$10K+" },
-  { quoteId: 2529, quoteNo: "2529", name: "Single Boiler Replacement — XFIIRE WH7-0800B", customer: "JW Marriott Anaheim", site: "JW Marriott Anaheim", status: "Quote : Sent", sentDate: "2026-06-11", ageDays: 34, value: 56425, tier: "$10K+" },
-  { quoteId: 2457, quoteNo: "2457", name: "Preventive Maintenance Plan", customer: "Symphony at Del Sur Apartments", site: "Symphony at Del Sur Apartments", status: "Quote : Sent", sentDate: "2026-06-01", ageDays: 44, value: 50750, tier: "$10K+" },
-  { quoteId: 2477, quoteNo: "2477", name: "Water Heater Replacement — (4) tankless", customer: "Lake Murray Terrace", site: "Lake Murray Terrace", status: "Quote : Sent", sentDate: "2026-06-04", ageDays: 41, value: 47485, tier: "$10K+" },
-  { quoteId: 2601, quoteNo: "2601", name: "Small repair A", customer: "Other Customer A", site: "Other Site A", status: "Quote : Sent", sentDate: "2026-06-20", ageDays: 25, value: 5000, tier: "$2K-$10K" },
-  { quoteId: 2602, quoteNo: "2602", name: "Small repair B", customer: "Other Customer B", site: "Other Site B", status: "Quote : Sent", sentDate: "2026-06-21", ageDays: 24, value: 3000, tier: "$2K-$10K" },
 ];
 
 const queue: QuoteFollowUpQueue = {
-  scope: "2026-06 cohort: every non-excluded DateApproved quote without acceptance evidence, oldest first.",
+  scope: "2026-06 cohort: every non-excluded DateIssued quote without acceptance evidence, oldest first.",
   asOf: "2026-07-15",
   totalCount: 146,
   totalValue: 1963611,
@@ -108,17 +104,11 @@ const queue: QuoteFollowUpQueue = {
   byCustomer: [
     { customer: "Hotel Lulu, BW Premier Collection", count: 3, totalValue: 504628, oldestAgeDays: 43, newestAgeDays: 37 },
     { customer: "Best Western #259", count: 1, totalValue: 178438, oldestAgeDays: 34, newestAgeDays: 34 },
-    { customer: "Park Plaza HOA", count: 1, totalValue: 114218, oldestAgeDays: 43, newestAgeDays: 43 },
-    { customer: "JW Marriott Anaheim", count: 1, totalValue: 56425, oldestAgeDays: 34, newestAgeDays: 34 },
-    { customer: "Symphony at Del Sur Apartments", count: 1, totalValue: 50750, oldestAgeDays: 44, newestAgeDays: 44 },
-    { customer: "Lake Murray Terrace", count: 1, totalValue: 47485, oldestAgeDays: 41, newestAgeDays: 41 },
-    { customer: "Other Customer A", count: 1, totalValue: 5000, oldestAgeDays: 25, newestAgeDays: 25 },
-    { customer: "Other Customer B", count: 1, totalValue: 3000, oldestAgeDays: 24, newestAgeDays: 24 },
   ],
 };
 
-/* Heatmap — representative values for earlier months, June verified; one
-   empty cell to prove the "—, never 0%" treatment. */
+/* Heatmap — monthly rates from the payload; one empty cell proves the
+   "—, never 0%" treatment. */
 const HM: Record<QuoteDealTier, Array<number | null>> = {
   "Under $750": [38, 45, null, 42, 48, 57, 40, 33, 25, 31, 36, 38.5],
   "$750-$2K": [30, 42, 36, 40, 44, 52, 36, 30, 27, 33, 32, 25.0],
@@ -185,111 +175,126 @@ const componentSource = readFileSync(
 );
 const pageSource = readFileSync(new URL("../../src/app/quotes/page.tsx", import.meta.url), "utf8");
 
-/* ── Hero focal ────────────────────────────────────────── */
+/* ── Row 1: KPI band ───────────────────────────────────── */
 
-test("hero renders the acceptance rate, coverage rows and dgrid from the payload", () => {
+test("primary card leads with accepted value, labeled pill, sub and the one comparison bar", () => {
   const html = render();
-  assert.match(html, /Acceptance Rate/);
-  assert.match(html, />22\.8%<\/div>/);
-  assert.match(html, /43 of 189 quotes accepted/);
+  // Primary value = accepted dollars (owner ruling: NOT acceptance rate).
+  assert.match(html, /class="kpi primary" href="#trend"/);
+  assert.match(html, /Accepted</);
+  assert.match(html, /<span class="val">\$189,074<\/span>/);
+  assert.match(html, /43 of 189 quotes accepted · 8\.8% of value sent/);
+  // Labeled delta pill — a bare percentage is banned.
+  assert.match(html, /↑ 74\.2% vs Jun ’25/);
+  // ONE bullet bar: fill = month, ticks keyed to prior-year + prior-month.
+  assert.match(html, /class="bullet"/);
+  assert.match(html, /class="bmark m1"/);
+  assert.match(html, /class="bmark m2"/);
+  assert.match(html, /Jun ’25 · full <b>\$108\.5K<\/b>/);
+  assert.match(html, /May ’26 · full <b>\$396\.6K<\/b>/);
+});
+
+test("2x2 tiles carry acceptance rate, sent, value sent and avg deal — all pills labeled", () => {
+  const html = render();
+  assert.match(html, /Acceptance rate/);
+  assert.match(html, /<span class="val">22\.8%<\/span>/);
   assert.match(html, /↓ 8\.6 pts vs Jun ’25/);
   assert.match(html, /↓ 10\.5 pts vs May/);
-  // Won / Open coverage rows.
-  assert.match(html, />Won<\/span>/);
-  assert.match(html, /\$189,074/);
-  assert.match(html, /8\.8% of quoted value/);
-  assert.match(html, /Open — not yet accepted/);
-  assert.match(html, /\$1,963,611/);
-  assert.match(html, /146 quotes/);
-  assert.match(html, /still in play/);
-  // dgrid tiles: full-dollar value, YoY deltas computed from the payload.
-  assert.match(html, /\$2,152,685/);
-  assert.match(html, /↑ 80\.0%/);
-  assert.match(html, /↑ 38\.7%/);
-  assert.match(html, /↑ 74\.2%/);
-  assert.match(html, /↑ 33\.7%/);
-  assert.match(html, /\$4,397/);
-  // Bullet: current vs same-month-last-year tick vs 12-month high.
-  assert.match(html, /June · 22\.8%/);
-  assert.match(html, /Jun ’25 · 31\.4%/);
-  assert.match(html, /Dec ’25 · 50\.0%/);
-  // Coverage line names the comparison and the volume context.
-  assert.match(html, /Tile deltas compare to Jun ’25 · a rate drop on 80% more volume still means more won work/);
+  assert.match(html, /Quotes sent/);
+  assert.match(html, /↑ 80\.0% vs Jun ’25/);
+  assert.match(html, /Value of quotes sent/);
+  assert.match(html, /<span class="val">\$2,152,685<\/span>/);
+  assert.match(html, /↑ 38\.7% vs Jun ’25/);
+  assert.match(html, /Avg accepted deal/);
+  assert.match(html, /<span class="val">\$4,397<\/span>/);
+  assert.match(html, /↑ 33\.7% vs Jun ’25/);
+  // Band footnote defines the comparison windows (full month here).
+  assert.match(html, /All vs-comparisons are full-month\./);
+  // DateIssued methodology survives as a tile tooltip.
+  assert.match(html, /DateIssued sets the month only — it is not acceptance evidence\./);
+});
+
+test("partial months day-align the band note and the prior-year tick label", () => {
+  const partialModel = {
+    ...model,
+    provisional: { ...model.provisional, isCurrentMonthPartial: true, elapsedDays: 18 },
+  } as QuoteMetricsReadModel;
+  const html = render({ model: partialModel });
+  assert.match(html, /Accepted · month to date/);
+  assert.match(html, /All vs-comparisons are day-aligned through Jun 18 \(“d18”\) unless marked “full”\./);
+  assert.match(html, /Jun ’25 · d18 <b>\$108\.5K<\/b>/);
+  assert.match(html, /May ’26 · full <b>\$396\.6K<\/b>/);
 });
 
 test("pts deltas use the display-rounding policy and defs disclose it", () => {
   assert.equal(displayRoundedPtsDelta((43 / 189) * 100, (33 / 105) * 100), -8.6);
   assert.equal(displayRoundedPtsDelta(null, 30), null);
   assert.equal(displayRoundedPtsDelta(30, null), null);
-  // Computed on the one-decimal displayed rates, not the raw ratios.
   assert.equal(displayRoundedPtsDelta(22.84, 22.75), 0.0);
-
   const html = render();
   assert.match(html, /Display-rounded: 31\.4% \(Jun ’25\) − 22\.8% \(Jun ’26\) = 8\.6 pts\. Deltas are computed on the one-decimal rates shown\./);
-  assert.match(html, /Vs May: \+12\.5%\./);
-  assert.match(html, /Vs May: −52\.3%\./);
-  assert.match(html, /Vs May: −37\.9%\./);
-  assert.match(html, /DateApproved sets the month only — it is not acceptance evidence\./);
 });
 
-/* ── Acceptance trend ──────────────────────────────────── */
+/* ── Row 2: Acceptance Trend ───────────────────────────── */
 
-test("trend defaults to the count/value co-plot with the approved band label", () => {
+test("trend card is full-width with count+value co-plot, refline and annotations", () => {
   const html = render();
   assert.match(html, /Acceptance Trend/);
-  assert.match(html, /Jul 2025 – Jun 2026 · hover or tap for monthly detail/);
-  assert.match(html, /Jun · 22\.8% \/ 8\.8%/);
-  // Legend and picker chips.
-  assert.match(html, /<span><i style="background:#5b63d3"><\/i>By count<\/span>/);
-  assert.match(html, /<span><i style="background:#6d7890"><\/i>By value<\/span>/);
+  assert.match(html, /Jul ’25 – Jun ’26 · hover or tap for monthly detail/);
+  // Chips: By count + By value on (value in --series-2), Volume off.
   assert.match(html, /class="mchip on" aria-pressed="true" style="--c:#5b63d3"/);
-  assert.match(html, /class="mchip" aria-pressed="false" style="--c:#c9cfda"/);
-  // Peak annotation on the count series (Dec 2025 = 50.0%).
-  assert.match(html, />50\.0%<\/text>/);
-  assert.match(html, /Dec — count-rate peak/);
-  // The narrow-width note exists but is hidden at the default measured width.
-  assert.match(html, /style="display:none">Peak callouts move into the tooltips at this width — hover or tap any point\./);
+  assert.match(html, /class="mchip on" aria-pressed="true" style="--c:#0e9aae"/);
+  assert.match(html, /class="mchip" aria-pressed="false" style="--c:#c3cad6"/);
+  // Prior-year reference line label (narrow SSR width truncates at the em dash).
+  assert.match(html, /Jun ’25 · 31\.4%/);
+  // Peak + current-month annotations replace the old hero slider.
+  assert.match(html, /Dec ’25 · 50\.0%/);
+  assert.match(html, /count-rate peak/);
+  assert.match(html, /Jun · 22\.8% \/ 8\.8%/);
+  // Both series drawn as polylines on ONE axis.
+  assert.match(html, /polyline[^>]*stroke="#5b63d3"/);
+  assert.match(html, /polyline[^>]*stroke="#0e9aae"/);
 });
 
-test("volume mode plots sent vs won with the flatline annotation", () => {
+test("volume renders a separate count panel below the chart — never bars behind the rate lines", () => {
   const html = render({ initialTrendVolume: true });
-  assert.match(html, /<span><i style="background:#404a60"><\/i>Quotes sent<\/span>/);
-  assert.match(html, /<span><i style="background:#5b63d3"><\/i>Won<\/span>/);
-  assert.match(html, /Jun · 189 sent · 43 accepted/);
-  assert.match(html, /~55 accepted\/month/);
-  assert.match(html, /closes hold flat while volume swings/);
-  assert.doesNotMatch(html, /Jun · 22\.8%/);
+  assert.match(html, /class="striphead"/);
+  assert.match(html, /Volume<\/span>/);
+  assert.match(html, /own count axis/);
+  // Columns live in the second panel only.
+  assert.match(html, /Quotes sent and accepted per month/);
+  const mainSvg = html.slice(html.indexOf("Acceptance rate by month"), html.indexOf("Quotes sent and accepted"));
+  assert.doesNotMatch(mainSvg, /<rect[^>]*rx="2"[^>]*fill="#e4e7ed"/);
 });
 
-test("trend picker semantics: volume is exclusive and one chip always stays on", () => {
-  assert.deepEqual(nextTrendModes(["count", "value"], "volume"), ["volume"]);
-  assert.deepEqual(nextTrendModes(["volume"], "count"), ["count"]);
+test("trend picker semantics: volume is additive and one rate series always stays on", () => {
+  assert.deepEqual(nextTrendModes(["count", "value"], "volume"), ["count", "value", "volume"]);
+  assert.deepEqual(nextTrendModes(["count", "value", "volume"], "volume"), ["count", "value"]);
   assert.deepEqual(nextTrendModes(["count", "value"], "value"), ["count"]);
   assert.deepEqual(nextTrendModes(["count"], "count"), ["count"]);
   assert.deepEqual(nextTrendModes(["count"] as TrendMode[], "value"), ["count", "value"]);
+  assert.deepEqual(nextTrendModes(["count", "volume"], "count"), ["count", "volume"]);
 });
 
-/* ── Status mix ────────────────────────────────────────── */
+/* ── Row 3: Deal Size ──────────────────────────────────── */
 
-test("status mix renders accepted/open value and aggregate aging without a queue", () => {
+test("deal size renders the 4-up tier grid with shared-scale bars and the one callout", () => {
   const html = render();
-  assert.match(html, /Quote Status Mix/);
-  assert.match(html, /June cohort · accepted vs open quoted value/);
-  assert.match(html, /\$189,074 accepted/);
-  assert.match(html, /\$1,963,611 open/);
-  assert.match(html, /<span>Accepted quotes<\/span><b class="tnum">43<\/b>/);
-  assert.match(html, /<span>Open quotes<\/span><b class="tnum">146<\/b>/);
-  assert.match(html, /<span>31-45d<\/span><b class="tnum">8<\/b>/);
-  assert.match(html, /Open quote aging is aggregated from 146 still-open quotes as of Jul 15/);
-  assert.doesNotMatch(html, /Follow-Up Queue|View all|Remaining .* open quotes|Suggested action/);
-});
-
-test("status mix handles an empty open cohort without rendering queue rows", () => {
-  const emptyQueue: QuoteFollowUpQueue = { ...queue, totalCount: 0, totalValue: 0, rows: [], byCustomer: [] };
-  const html = render({ model: { ...model, followUpQueue: emptyQueue } as QuoteMetricsReadModel });
-  assert.match(html, /<span>0-30d<\/span><b class="tnum">0<\/b>/);
-  assert.match(html, /Open quote aging is aggregated from 0 still-open quotes/);
-  assert.doesNotMatch(html, /Remaining .* open quotes|View all/);
+  assert.match(html, /Acceptance by Deal Size/);
+  assert.match(html, /June quotes by value tier · bar = quoted value relative to the largest tier/);
+  assert.match(html, /class="barlist tiergrid"/);
+  assert.match(html, /\$750–\$2K/); // en-dash display tier
+  assert.match(html, /<span class="rv">38\.5%<\/span>/);
+  assert.match(html, /<span class="rv bad">9\.8%<\/span>/);
+  assert.match(html, /\$1,660,066 quoted · 41 quotes · 4\.8% accepted by value/);
+  // Bars share one scale: the largest tier ($10K+) fills 100% and is red-flagged.
+  assert.match(html, /<i class="bad" style="width:100%"><\/i>/);
+  // Quoted-value scale: $2K–$10K = 428,917 / 1,660,066 → 25.8%.
+  assert.match(html, /width:25\.8/);
+  // The ONE allowed narrative callout, derived from tier data.
+  assert.match(html, /class="callout"/);
+  assert.match(html, /◆/);
+  assert.match(html, /\$10K\+ carries the value\.<\/b> 41 quotes carried 77% of June’s quoted value, closing at 9\.8% by count and 4\.8% by value\./);
 });
 
 /* ── Classification drawers + override action ──────────── */
@@ -333,52 +338,40 @@ test("exclusion writes preserve the revision and idempotency semantics of the ov
   assert.match(componentSource, /evidenceUrl: null/);
 });
 
-/* ── Deal-size tiers + heatmap ─────────────────────────── */
+/* ── Row 4: heatmap ────────────────────────────────────── */
 
-test("tier rows carry the honest share caption, red sub-15 rates and the mix insight", () => {
-  const html = render();
-  assert.match(html, /Acceptance by Deal Size/);
-  assert.match(html, /June quotes by value tier · bar = size relative to the largest tier/);
-  assert.match(html, /\$750–\$2K/); // en-dash display tier
-  assert.match(html, />38\.5%<\/b>/);
-  assert.match(html, /color:var\(--down\)">9\.8%<\/b>/);
-  assert.match(html, /\$1,660,066 quoted · 4\.8% accepted by value/);
-  assert.match(html, /91 quotes/);
-  // Largest tier sets the bar scale (91 → 100%).
-  assert.match(html, /width:100%;height:100%;background:#9aa2b2/);
-  // Data-driven mix insight matches the approved sentence on the approved data.
-  assert.match(html, /The rate drop is mostly mix\./);
-  assert.match(html, /June sent 80% more quotes than last June, weighted toward \$10K\+ — 41 big quotes carried 77% of the value but close at 9\.8% by count, 4\.8% by value\./);
-});
-
-test("heatmap hatches representative months, keeps the verified column solid and never shows 0% for empty cells", () => {
+test("heatmap keeps the validated ramp and factual monthly cells without unsupported verification claims", () => {
   const html = render();
   assert.match(html, /Acceptance by Deal Size and Month/);
-  assert.match(html, /Count-based acceptance per tier · Jul 2025 – Jun 2026 · hover or tap any cell/);
-  // Discrete 5-swatch legend with bounds + hatch key.
-  for (const bound of ["&lt;15%", "15–25", "25–35", "35–45", "45%+", "hatched = representative"]) {
+  assert.match(html, /Count-based acceptance per tier · Jul ’25 – Jun ’26 · hover or tap any cell/);
+  for (const bound of ["&lt;15%", "15–25", "25–35", "35–45", "45%+"]) {
     assert.ok(html.includes(bound), `legend includes ${bound}`);
   }
-  assert.match(html, /Hatched cells are representative, pending per-month reconciliation — the Jun column is verified against Simpro\./);
+  assert.doesNotMatch(html, /representative|column verified against Simpro|pending per-month reconciliation/i);
+  // Validated ordinal ramp: color-mix tints over --acc, red band from --down.
+  assert.match(html, /background-color:color-mix\(in srgb,#5b63d3,#fff 46%\)/);
+  assert.match(html, /background-color:color-mix\(in srgb,#d0463a,#fff 30%\)/);
   // Year anchors on the first column and January.
   assert.match(html, /Jul ’25/);
   assert.match(html, /Jan ’26/);
-  // Earlier cells hatched (data-r="1"), the selected June column solid + highlighted.
+  // Every data-bearing cell is rendered on the same factual basis; selected June stays highlighted.
   const hatched = html.match(/data-r="1"/g) ?? [];
-  assert.equal(hatched.length, 43); // 4 tiers × 11 representative months − 1 empty cell
+  assert.equal(hatched.length, 0);
   assert.match(html, /class="hcell now" data-m="Jun" data-t="Under \$750" data-v="38\.5" data-r=""/);
   // Empty cell renders — (never 0%).
   assert.match(html, /class="hcell na" data-m="Sep" data-t="Under \$750">—</);
-  assert.match(html, /Jun column verified against Simpro · the pattern: big deals rarely clear 15%\./);
+  assert.match(html, /Each cell is the count-based acceptance rate for that tier and month; — means no denominator\./);
 });
 
-/* ── History tab ───────────────────────────────────────── */
+/* ── Row 5: Monthly Breakdown (tabs removed) ───────────── */
 
-test("history table renders 12 months newest-first with a computed trailing-12 row and June highlight", () => {
-  const html = render({ initialTab: "history" });
+test("monthly breakdown is always present with 12 months newest-first and a computed trailing-12 row", () => {
+  const html = render();
   assert.match(html, /Monthly Breakdown/);
   assert.match(html, /Trailing 12 complete months/);
   assert.match(html, /Download CSV/);
+  // The Overview/History tab bar is gone — one scroll, no navigation layer.
+  assert.doesNotMatch(html, /data-tab=|id="pageTabs"|>History</);
   // Newest first: June appears before May in the table body.
   const bodyStart = html.indexOf("Monthly Breakdown");
   const jun = html.indexOf(">189<", bodyStart);
@@ -396,7 +389,6 @@ test("history table renders 12 months newest-first with a computed trailing-12 r
   assert.ok(html.includes(`>$${val.toLocaleString()}<`));
   assert.ok(html.includes(`>${((acc / sent) * 100).toFixed(1)}%<`));
   assert.ok(html.includes(`>${((accv / val) * 100).toFixed(1)}%<`));
-  // hide-sm columns collapse on phones.
   assert.match(html, /class="num hide-sm">Quote Value</);
 });
 
@@ -428,10 +420,8 @@ test("states strip renders only when gated on, with data-driven partial-month co
   assert.match(shown, /State treatments \(design reference\)/);
   assert.match(shown, /A month with no quotes in a tier shows — \(never 0%\)\./);
   assert.match(shown, /Quote data could not be loaded\./);
-  // Final month: honest description instead of fabricated pace numbers.
   assert.match(shown, /Selecting the live month shows actuals through the pull day/);
 
-  // Partial month: real payload numbers drive the example copy.
   const partialModel = {
     ...model,
     provisional: {
@@ -457,43 +447,64 @@ test("load failures render the honest error treatment instead of fabricated figu
   assert.match(html, /Quote data could not be loaded\./);
   assert.match(html, /Try again/);
   assert.doesNotMatch(html, /22\.8%/);
-  assert.doesNotMatch(html, /Follow-Up Queue/);
 });
 
 test("footline is the approved single sentence", () => {
   const html = render();
   assert.match(
     html,
-    /Source: Simpro quotes · month assigned by DateApproved · acceptance requires verified online acceptance or an exact converted job/,
+    /Source: Simpro quotes · month assigned by DateIssued · acceptance requires verified online acceptance or an exact converted job/,
   );
 });
 
 /* ── Deleted surfaces + wiring ─────────────────────────── */
 
-test("rejected surfaces are gone: no methodology, evidence lists, path diagnostics or category panels", () => {
+test("owner-killed surfaces stay deleted: status mix, aging, open pipeline, tabs, hero slab", () => {
+  const html = render();
+  assert.doesNotMatch(html, /Quote Status Mix/);
+  assert.doesNotMatch(html, /Open — not yet accepted|still in play/);
+  assert.doesNotMatch(html, /0-30d|31-45d|46d\+/);
+  assert.doesNotMatch(html, /\$1,963,611/); // the invented "open pipeline" number
+  assert.doesNotMatch(html, /class="focal"|class="hero split"/);
   assert.doesNotMatch(componentSource, /Methodology|methodology\./);
   assert.doesNotMatch(componentSource, /Acceptance Evidence|ClassificationWorkbench|QuoteEvidencePanel|OverrideHistory/);
   assert.doesNotMatch(componentSource, /acceptancePaths|AcceptancePath/);
   assert.doesNotMatch(componentSource, /acceptanceByCategory|AcceptanceByCategory/);
   assert.doesNotMatch(componentSource, /largestNotAccepted|LargestNotAccepted/);
-  assert.doesNotMatch(componentSource, /RecordFiltersPanel|classificationRows|PaginationBar/);
+  assert.doesNotMatch(componentSource, /RecordFiltersPanel|PaginationBar/);
+  assert.match(html, /Quote Classification Review/);
   assert.doesNotMatch(componentSource, /recharts/);
-  const html = render();
-  assert.doesNotMatch(html, /Methodology|Acceptance Evidence|Acceptance Path|Snapshot/);
 });
 
-test("helpers format series names and card money the approved way", () => {
+test("key figures render exactly once outside charts, tables and tooltips (one number, one home)", () => {
+  const html = render();
+  const breakdownStart = html.indexOf("Monthly Breakdown");
+  // The gate exempts chart data labels (svg) and [data-def] tooltip text.
+  const beforeTable = html
+    .slice(0, breakdownStart)
+    .replace(/<svg[\s\S]*?<\/svg>/g, "")
+    .replace(/data-def="[^"]*"/g, "");
+  for (const figure of ["$189,074", "$2,152,685", "22.8%"]) {
+    const count = beforeTable.split(figure).length - 1;
+    assert.equal(count, 1, `${figure} should appear exactly once before the breakdown table, saw ${count}`);
+  }
+});
+
+test("helpers format series names and money the approved way", () => {
   assert.equal(seriesName("2026-06"), "Jun ’26");
   assert.equal(seriesName("2025-12"), "Dec ’25");
   assert.equal(moneyM(1963611), "$1.96M");
   assert.equal(moneyM(951944), "$952K");
+  assert.equal(moneyK(108538), "$108.5K");
+  assert.equal(moneyK(1963611), "$1.96M");
+  assert.equal(moneyK(444), "$444");
 });
 
-test("page wires the mockup deep-link params and only those", () => {
+test("page wires only the retained deep-link params (?states, ?mode) — tabs are gone", () => {
   assert.match(pageSource, /params\?\.states\) === "1"/);
-  assert.match(pageSource, /params\?\.history\) === "1"/);
   assert.match(pageSource, /params\?\.mode\) === "volume"/);
   assert.match(pageSource, /<PeriodSelector action="\/quotes"/);
+  assert.doesNotMatch(pageSource, /initialTab|params\?\.history/);
   assert.doesNotMatch(pageSource, /params\?\.big|acceptancePath|outcome|classification|filters\./);
 });
 
@@ -518,4 +529,10 @@ test("quotes API preserves its existing query contract untouched", () => {
     sort: "value-desc",
     page: "2",
   });
+});
+
+test("quotes API rejects unsupported reporting months", () => {
+  const now = new Date("2026-07-15T19:00:00.000Z");
+  assert.equal(quoteDashboardReadModelOptions(new URLSearchParams({ month: "2022-12" }), now), null);
+  assert.equal(quoteDashboardReadModelOptions(new URLSearchParams({ month: "2026-08" }), now), null);
 });

@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quote Metrics — Pro Star Metrics (redesign mockup)</title>
+<link rel="stylesheet" href="assets/tokens.css?v=8">
+</head>
+<body>
+
+<nav class="appnav">
+  <div class="brand"><span>PRO<span class="star">★</span>STAR</span><span style="letter-spacing:.22em;font-weight:500">METRICS</span></div>
+  <div class="navlinks">
+    <a class="on" href="quotes.html" aria-current="page">Quotes</a>
+    <a href="jobs.html">Jobs</a>
+    <a href="materials.html">Materials</a>
+    <a href="technicians.html">Technicians</a>
+    <a href="commissions.html">Commissions</a>
+  </div>
+  <div class="right">
+    <button class="health btn" style="all:unset" aria-label="Data health, 5 active alerts"><span class="health">Data health <span class="badge">5 active</span></span></button>
+    <div class="user"><div class="av">A</div><div class="who"><b>asad</b><span>Owner · Admin</span></div></div>
+  </div>
+</nav>
+
+<main class="container">
+  <header class="pagehead">
+    <div>
+      <div class="eyebrow">Operations</div>
+      <h1>Quote Metrics</h1>
+      <div class="sub">Quote activity, acceptance, status mix and value trend.</div>
+    </div>
+    <div class="controls">
+      <div class="stepper"><button aria-label="Previous month">‹</button><span class="lbl">📅 July 2026</span><button aria-label="Next month" disabled style="opacity:.35">›</button></div>
+      <div class="updated"><span class="dot"></span>Updated 4 days ago</div>
+    </div>
+  </header>
+
+  <!-- Row 1 — KPI band -->
+  <section class="kpis hero" aria-label="July key metrics">
+    <a class="kpi primary" href="#trend">
+      <span class="lblrow"><span class="lbl">Accepted · month to date</span><span class="pills"><span class="pill down">↓ 93.3% vs Jul ’25</span></span></span>
+      <span class="val tnum">$10,045</span>
+      <span class="sub">6 of 21 quotes accepted · 6.9% of value sent</span>
+      <div class="bullet" data-viz aria-label="Accepted month to date $10.0K; ticks mark Jul ’25 day-aligned $149.9K and full June $200.2K">
+        <div class="btrack"><i style="width:4.8%"></i><span class="bmark m1" style="left:71.9%"></span><span class="bmark m2" style="left:96.1%"></span></div>
+        <div class="bcap"><span class="bkey"><i class="tick m1"></i>Jul ’25 · d18 <b>$149.9K</b></span><span class="bkey"><i class="tick m2"></i>Jun ’26 · full <b>$200.2K</b></span></div>
+      </div>
+    </a>
+    <div class="ktiles">
+      <div class="kpi">
+        <span class="lblrow"><span class="lbl">Acceptance rate</span><span class="pills"><span class="pill down">↓ 1.6 pts vs Jul ’25</span><span class="pill up">↑ 4.1 pts vs Jun</span></span></span>
+        <span class="val tnum">28.6%</span>
+      </div>
+      <div class="kpi">
+        <span class="lblrow"><span class="lbl">Quotes sent</span><span class="pills"><span class="pill down">↓ 80.2% vs Jul ’25</span></span></span>
+        <span class="val tnum">21</span>
+      </div>
+      <div class="kpi">
+        <span class="lblrow"><span class="lbl">Value of quotes sent</span><span class="pills"><span class="pill down">↓ 91.8% vs Jul ’25</span></span></span>
+        <span class="val tnum">$145,225</span>
+      </div>
+      <div class="kpi">
+        <span class="lblrow"><span class="lbl">Avg accepted deal</span><span class="pills"><span class="pill down">↓ 64.0% vs Jul ’25</span></span></span>
+        <span class="val tnum">$1,674</span>
+      </div>
+    </div>
+  </section>
+  <p class="kpiband-note">All vs-comparisons are day-aligned through Jul 18 (“d18”) unless marked “full”.</p>
+
+  <!-- Row 2 — Acceptance Trend (primary chart) -->
+  <div class="grid12">
+    <section class="cardx span12" id="trend" aria-label="Acceptance trend">
+      <div class="hd">
+        <div>
+          <div class="ti">Acceptance Trend</div>
+          <div class="st">Aug ’25 – Jul ’26 · hover or tap for monthly detail</div>
+        </div>
+        <div class="tools">
+          <div class="chips" role="group" aria-label="Series">
+            <button class="chip on"><span class="sw"></span>By count</button>
+            <button class="chip on"><span class="sw" style="background:var(--series-2)"></span>By value</button>
+            <button class="chip"><span class="sw"></span>Volume</button><!-- implementation note: enabling Volume renders a small column panel BELOW this chart on its own count axis (single-axis rule) — never bars behind the rate lines -->
+          </div>
+        </div>
+      </div>
+      <div class="plot" data-chart="quotesTrend" data-viz data-label="Acceptance rate by month, count and value"></div>
+    </section>
+  </div>
+
+  <!-- Row 3 — deal size (full width) -->
+  <div class="grid12">
+    <section class="cardx span12" aria-label="Acceptance by deal size">
+      <div class="hd">
+        <div>
+          <div class="ti">Acceptance by Deal Size</div>
+          <div class="st">July quotes by value tier · bar = quoted value relative to the largest tier</div>
+        </div>
+      </div>
+      <div class="barlist tiergrid">
+        <div class="brow">
+          <div class="toprow"><span class="name">Under $750</span><span class="rv tnum">100.0%</span></div>
+          <div class="bar"><i style="width:0.5%"></i></div>
+          <div class="meta">$444 quoted · 1 quote · 100.0% accepted by value</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">$750–$2K</span><span class="rv tnum">42.9%</span></div>
+          <div class="bar"><i style="width:8.9%"></i></div>
+          <div class="meta">$8,819 quoted · 7 quotes · 47.4% accepted by value</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">$2K–$10K</span><span class="rv tnum">22.2%</span></div>
+          <div class="bar"><i style="width:37.9%"></i></div>
+          <div class="meta">$37,354 quoted · 9 quotes · 14.5% accepted by value</div>
+        </div>
+        <div class="brow">
+          <div class="toprow"><span class="name">$10K+</span><span class="rv bad tnum">0.0%</span></div>
+          <div class="bar"><i class="bad" style="width:100%"></i></div>
+          <div class="meta">$98,608 quoted · 4 quotes · 0.0% accepted by value</div>
+        </div>
+      </div>
+          <div class="callout"><span class="diam">◆</span><b>$10K+ carries the value.</b> 4 quotes carried 68% of July’s quoted value, closing at 0.0% by count and 0.0% by value.</div>
+    </section>
+  </div>
+
+  <!-- Row 4 — heatmap -->
+  <div class="grid12">
+    <section class="cardx span12" aria-label="Acceptance by deal size and month">
+      <div class="hd">
+        <div>
+          <div class="ti">Acceptance by Deal Size and Month</div>
+          <div class="st">Count-based acceptance per tier · Aug ’25 – Jul ’26 · hover or tap any cell</div>
+        </div>
+        <div class="tools" style="flex-direction:column;align-items:flex-end;gap:4px">
+          <div class="hm-legend">
+            <span><span class="sw" style="background:color-mix(in srgb,var(--down),#fff 30%)"></span>&lt;15%</span>
+            <span><span class="sw" style="background:color-mix(in srgb,var(--acc),#fff 46%)"></span>15–25</span>
+            <span><span class="sw" style="background:color-mix(in srgb,var(--acc),#fff 23%)"></span>25–35</span>
+            <span><span class="sw" style="background:var(--acc)"></span>35–45</span>
+            <span><span class="sw" style="background:color-mix(in srgb,var(--acc),#000 22%)"></span>45%+</span>
+          </div>
+          <div class="hm-legend"><span><span class="sw hatchsw" style="background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--acc),#fff 23%) 0 3px,#fff 3px 5px)"></span>hatched = representative</span></div>
+        </div>
+      </div>
+      <div class="tblwrap" data-viz>
+        <table class="heatmap" aria-label="Acceptance percentage by tier and month">
+          <thead><tr><th></th><th>Aug ’25</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th><th>Jan ’26</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th><th>Jul</th></tr></thead>
+          <tbody>
+            <tr><td class="tier">Under $750</td>
+              <td class="cell b2 hatch">33%</td><td class="cell b4 hatch">50%</td><td class="cell b3 hatch">43%</td><td class="cell b3 hatch">45%</td><td class="cell b4 hatch">57%</td><td class="cell b3 hatch">38%</td><td class="cell b2 hatch">35%</td><td class="cell b1 hatch">20%</td><td class="cell b3 hatch">44%</td><td class="cell b3 hatch">43%</td><td class="cell b3 hatch">38%</td><td class="cell b4 cur">100%</td></tr>
+            <tr><td class="tier">$750–$2K</td>
+              <td class="cell b4 hatch">53%</td><td class="cell b4 hatch">64%</td><td class="cell b4 hatch">58%</td><td class="cell b4 hatch">58%</td><td class="cell b4 hatch">56%</td><td class="cell b3 hatch">42%</td><td class="cell b3 hatch">43%</td><td class="cell b3 hatch">42%</td><td class="cell b4 hatch">48%</td><td class="cell b3 hatch">42%</td><td class="cell b1 hatch">25%</td><td class="cell b3 cur">43%</td></tr>
+            <tr><td class="tier">$2K–$10K</td>
+              <td class="cell b3 hatch">43%</td><td class="cell b2 hatch">26%</td><td class="cell b3 hatch">38%</td><td class="cell b3 hatch">36%</td><td class="cell b4 hatch">60%</td><td class="cell b4 hatch">47%</td><td class="cell b2 hatch">31%</td><td class="cell b1 hatch">24%</td><td class="cell b3 hatch">38%</td><td class="cell b3 hatch">36%</td><td class="cell b2 hatch">29%</td><td class="cell b1 cur">22%</td></tr>
+            <tr><td class="tier">$10K+</td>
+              <td class="cell b1 hatch">24%</td><td class="cell b0 hatch">13%</td><td class="cell b0 hatch">7%</td><td class="cell b1 hatch">16%</td><td class="cell b1 hatch">20%</td><td class="cell b0 hatch">6%</td><td class="cell b1 hatch">18%</td><td class="cell b1 hatch">16%</td><td class="cell b0 hatch">7%</td><td class="cell b0 hatch">14%</td><td class="cell b0 hatch">10%</td><td class="cell b0 cur">0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fnote">Jul column verified against Simpro · the pattern: big deals rarely clear 15%.</p>
+    </section>
+  </div>
+
+  <!-- Row 5 — monthly breakdown -->
+  <div class="grid12">
+    <section class="cardx span12" aria-label="Monthly breakdown">
+      <div class="hd">
+        <div>
+          <div class="ti">Monthly Breakdown</div>
+          <div class="st">Trailing 12 months · July is month-to-date</div>
+        </div>
+        <div class="tools"><button class="btn">⭳ Download CSV</button></div>
+      </div>
+      <div class="tblwrap">
+        <table class="data">
+          <thead><tr>
+            <th>Month</th><th class="num">Sent</th><th class="num">Quote value</th><th class="num">Accepted</th>
+            <th class="num">Accepted value</th><th class="num">Avg deal</th><th class="num">Rate (count)</th><th class="num">Rate (value)</th>
+          </tr></thead>
+          <tbody>
+            <tr style="background:var(--acc-weak)"><td><b>Jul</b></td><td class="num">21</td><td class="money">$145,225</td><td class="num">6</td><td class="money">$10,045</td><td class="num">$1,674</td><td class="num">28.6%</td><td class="num">6.9%</td></tr>
+            <tr><td>Jun</td><td class="num">188</td><td class="money">$2,146,134</td><td class="num">46</td><td class="money">$200,178</td><td class="num">$4,352</td><td class="num">24.5%</td><td class="num">9.3%</td></tr>
+            <tr><td>May</td><td class="num">168</td><td class="money">$1,631,073</td><td class="num">56</td><td class="money">$396,608</td><td class="num">$7,082</td><td class="num">33.3%</td><td class="num">24.3%</td></tr>
+            <tr><td>Apr</td><td class="num">156</td><td class="money">$2,313,459</td><td class="num">52</td><td class="money">$287,778</td><td class="num">$5,534</td><td class="num">33.3%</td><td class="num">12.4%</td></tr>
+            <tr><td>Mar</td><td class="num">167</td><td class="money">$1,743,115</td><td class="num">45</td><td class="money">$256,104</td><td class="num">$5,691</td><td class="num">26.9%</td><td class="num">14.7%</td></tr>
+            <tr><td>Feb</td><td class="num">168</td><td class="money">$2,814,350</td><td class="num">50</td><td class="money">$323,818</td><td class="num">$6,476</td><td class="num">29.8%</td><td class="num">11.5%</td></tr>
+            <tr><td>Jan ’26</td><td class="num">193</td><td class="money">$2,272,111</td><td class="num">67</td><td class="money">$287,014</td><td class="num">$4,284</td><td class="num">34.7%</td><td class="num">12.6%</td></tr>
+            <tr><td>Dec</td><td class="num">126</td><td class="money">$1,454,970</td><td class="num">63</td><td class="money">$382,922</td><td class="num">$6,078</td><td class="num">50.0%</td><td class="num">26.3%</td></tr>
+            <tr><td>Nov</td><td class="num">126</td><td class="money">$1,554,078</td><td class="num">52</td><td class="money">$190,176</td><td class="num">$3,657</td><td class="num">41.3%</td><td class="num">12.2%</td></tr>
+            <tr><td>Oct</td><td class="num">163</td><td class="money">$1,890,855</td><td class="num">65</td><td class="money">$224,333</td><td class="num">$3,451</td><td class="num">39.9%</td><td class="num">11.9%</td></tr>
+            <tr><td>Sep</td><td class="num">124</td><td class="money">$724,665</td><td class="num">44</td><td class="money">$202,796</td><td class="num">$4,609</td><td class="num">35.5%</td><td class="num">28.0%</td></tr>
+            <tr><td>Aug ’25</td><td class="num">159</td><td class="money">$1,058,123</td><td class="num">66</td><td class="money">$320,511</td><td class="num">$4,856</td><td class="num">41.5%</td><td class="num">30.3%</td></tr>
+            <tr class="total"><td>Trailing 12</td><td class="num">1,759</td><td class="money">$19,748,159</td><td class="num">612</td><td class="money">$3,082,283</td><td class="num">$5,036</td><td class="num">34.8%</td><td class="num">15.6%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <p class="srcline">Source: Simpro quotes · month assigned by DateApproved · acceptance requires verified online acceptance or an exact converted job</p>
+</main>
+
+<script src="assets/charts.js?v=8"></script>
+<script src="assets/drill.js?v=8"></script>
+<script>
+/* Real trailing-12 data from the live Monthly Breakdown (Aug '25 → Jul '26) */
+const M = ['Aug ’25','','Oct','','Dec','','Feb','','Apr','','Jun','Jul'];
+const MFULL = ['Aug ’25','Sep ’25','Oct ’25','Nov ’25','Dec ’25','Jan ’26','Feb ’26','Mar ’26','Apr ’26','May ’26','Jun ’26','Jul ’26'];
+const sent = [159,124,163,126,126,193,168,167,156,168,188,21];
+const accepted = [66,44,65,52,63,67,50,45,52,56,46,6];
+const rateCount = [41.5,35.5,39.9,41.3,50.0,34.7,29.8,26.9,33.3,33.3,24.5,28.6];
+const rateValue = [30.3,28.0,11.9,12.2,26.3,12.6,11.5,14.7,12.4,24.3,9.3,6.9];
+function quotesTrend(el){
+  lineChart(el, {
+    labels: M, h: 300, ymax: 55, ticks: 5,
+    yfmt: v => v + '%',
+    series: [
+      { name:'By count', vals: rateCount, color: css('--acc'), width: 2 },
+      { name:'By value', vals: rateValue, color: css('--series-2'), width: 2 },
+    ],
+    reflines: [ { v: 30.2, text: 'Jul ’25 · 30.2% — same month last year', anchor: 'start' } ],
+    tip: (i) => `<div class="tt-t">${MFULL[i]}</div>
+      <div class="tt-r"><span><span class="sw" style="background:var(--acc)"></span>By count</span><b>${rateCount[i]}%</b></div>
+      <div class="tt-r"><span><span class="sw" style="background:var(--series-2)"></span>By value</span><b>${rateValue[i]}%</b></div>
+      <div class="tt-r"><span>Accepted</span><b>${accepted[i]} of ${sent[i]}</b></div>`,
+    annotations: [
+      { s:0, i:4, text: 'Dec ’25 · 50.0%\ncount-rate peak', dy: -26, anchor: 'middle' },
+      { s:0, i:11, text: 'Jul · 28.6% / 6.9%', dy: -14, dx: -6, anchor: 'end' },
+    ],
+  });
+}
+</script>
+</body>
+</html>

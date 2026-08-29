@@ -441,7 +441,7 @@ test("live ACR verification binds the production repository tag and digest indep
   }
 });
 
-test("injectable live Azure verifier cross-checks app, exact 23 jobs, build, ARM, keys, health, and auth", async (t) => {
+test("injectable live Azure verifier cross-checks app, exact 24 jobs, build, ARM, keys, health, and auth", async (t) => {
   const fixture = await createReleaseFixture();
   t.after(() => fixture.cleanup());
   const { deployment } = fixture;
@@ -549,12 +549,12 @@ test("injectable live Azure verifier cross-checks app, exact 23 jobs, build, ARM
     authenticatedIdentityVerifier: identityVerifier,
     now: verificationNow,
   });
-  assert.equal(reader.calls.filter((args) => args[0] === "containerapp" && args[1] === "job").length, 23);
+  assert.equal(reader.calls.filter((args) => args[0] === "containerapp" && args[1] === "job").length, 24);
   assert.equal(reader.calls.filter((args) => args[0] === "keyvault").length, 3);
   assert.equal(reader.calls.filter((args) => args[0] === "acr" && args[1] === "repository").length, 2);
   assert.ok(reader.calls.some((args) => args.includes(`${deployment.repository}:${deployment.acrBuild.imageTag}`)));
   assert.ok(reader.calls.some((args) => args.includes(`${deployment.repository}@${deployment.imageDigest}`)));
-  assert.equal(live.targets.length, 24);
+  assert.equal(live.targets.length, 25);
   assert.deepEqual(live.liveVerification, deployment.liveVerification);
   assert.notEqual(actualLocation, deployment.liveVerification.unauthenticated.browser.location);
 
@@ -566,7 +566,7 @@ test("injectable live Azure verifier cross-checks app, exact 23 jobs, build, ARM
     fetchImpl,
     authenticatedIdentityVerifier: identityVerifier,
     now: verificationNow,
-  }), /exact 23-job target contracts/);
+  }), /exact 24-job target contracts/);
 
   const keyDrift = azureReader({ disabledKey: deployment.evidenceSigningKeyIds.reviewer });
   await assert.rejects(verifyAzureDeploymentLive({

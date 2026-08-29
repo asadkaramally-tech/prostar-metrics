@@ -9,12 +9,25 @@ import { fmt } from "../../src/components/charts/fmt";
 import { HStack } from "../../src/components/charts/h-stack";
 import { Heatmap } from "../../src/components/charts/heatmap";
 import { Histogram } from "../../src/components/charts/histogram";
+import { LineChart } from "../../src/components/charts/line-chart";
 import { RatioBars } from "../../src/components/charts/ratio-bars";
 import { StackedBars } from "../../src/components/charts/stacked-bars";
 import { TrendChart } from "../../src/components/charts/trend-chart";
 import { Waterfall } from "../../src/components/charts/waterfall";
 
 const M12 = ["Jul 25", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan 26", "Feb", "Mar", "Apr", "May", "Jun"];
+
+test("charts start with desktop geometry before their container is measured", () => {
+  const html = renderToStaticMarkup(createElement(LineChart, {
+    labels: ["Jan", "Feb"],
+    series: [{ name: "Sales", color: "#5b63d3", vals: [100, 200] }],
+    ymax: 200,
+    yFmt: fmt.n,
+  }));
+
+  assert.match(html, /viewBox="0 0 960 300"/);
+  assert.doesNotMatch(html, /viewBox="0 0 560 220"/);
+});
 
 test("TrendChart dual axis renders tick-count-aligned labels on both gutters", () => {
   const html = renderToStaticMarkup(createElement(TrendChart, {
@@ -225,19 +238,36 @@ test("Heatmap applies the contrast-safe ramp, hatches representative cells and m
     months: ["May", "Jun"],
     highlightLast: true,
     rows: [
-      { name: "$10K+", cells: [{ v: 9.8, repr: true }, { v: 50 }] },
+      { name: "$10K+", cells: [{ v: 50, repr: true }, { v: 9.8 }] },
       { name: "Under $750", cells: [{ v: null }, { v: 20, repr: true }] },
     ],
   }));
-  assert.match(html, /background-color:#b8453a;color:#fff/, "below-threshold cell is red with white text");
-  assert.match(html, /background-color:#4b52c0;color:#fff/, "45%+ cell takes the deepest indigo");
-  assert.match(html, /background-color:#d4d8f9;color:#2a3140/, "15–25 cell takes the lightest indigo with ink text");
-  assert.match(html, /repeating-linear-gradient\(45deg,transparent 0 5px,rgba\(255,255,255,\.26\) 5px 8px\)/, "white hatch on dark repr cell");
-  assert.match(html, /repeating-linear-gradient\(45deg,transparent 0 5px,rgba\(16,20,34,\.10\) 5px 8px\)/, "ink hatch on light repr cell");
+  assert.match(html, /background-color:color-mix\(in srgb,#d0463a,#fff 30%\);color:#101422/, "below-threshold cell takes the red band with ink text");
+  assert.match(html, /background-color:color-mix\(in srgb,#5b63d3,#000 22%\);color:#fff;background-image/, "45%+ cell takes the darkest band");
+  assert.match(html, /background-color:color-mix\(in srgb,#5b63d3,#fff 46%\);color:#101422/, "15–25 cell takes the lightest band with ink text");
+  assert.match(html, /repeating-linear-gradient\(45deg,transparent 0 5px,#00000024 5px 8px\)/, "dark hatch on dark repr cell");
+  assert.match(html, /repeating-linear-gradient\(45deg,transparent 0 5px,#ffffff1f 5px 8px\)/, "light hatch on light repr cell");
   assert.match(html, /class="hcell na"[^>]*>—</, "empty cells show — (never 0%)");
   assert.match(html, /class="hcell now"/, "last column highlights when highlightLast is set");
   assert.match(html, /--hm-cols:2/, "grid column count follows the month count");
   assert.match(html, /class="hcol">May</);
+});
+
+test("Bullet and Heatmap render source labels as text rather than markup", () => {
+  const payload = `<img src=x onerror="globalThis.pwned=1">`;
+  const bullet = renderToStaticMarkup(createElement(Bullet, {
+    cur: { m: payload, v: 50 },
+    high: { m: payload, v: 100 },
+  }));
+  const heatmap = renderToStaticMarkup(createElement(Heatmap, {
+    months: [payload],
+    rows: [{ name: payload, cells: [{ v: 25 }] }],
+  }));
+
+  for (const html of [bullet, heatmap]) {
+    assert.doesNotMatch(html, /<img/);
+    assert.match(html, /&lt;img/);
+  }
 });
 
 test("HStack draws capacity ticks and over-capacity notes", () => {

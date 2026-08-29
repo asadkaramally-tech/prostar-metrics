@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import { withIsolatedBicepEnvironment } from "./helpers/bicep-environment.mjs";
+
 const azureDirectory = fileURLToPath(new URL("../../infra/azure/", import.meta.url));
 const projectRoot = fileURLToPath(new URL("../../", import.meta.url));
 const [monitoringBicep, metricsBicep, monitoringParametersText, operationalTelemetryWorker, operationalTelemetryProducer] = await Promise.all([
@@ -19,23 +21,25 @@ const [monitoringBicep, metricsBicep, monitoringParametersText, operationalTelem
 const monitoringParameters = JSON.parse(monitoringParametersText);
 
 test("all Azure Bicep entry points compile to ARM JSON", (t) => {
-  const probe = spawnSync("az", ["bicep", "version"], { encoding: "utf8" });
-  if (probe.error?.code === "ENOENT") {
-    t.skip("Azure CLI is not installed");
-    return;
-  }
-  assert.equal(probe.status, 0, probe.stderr);
+  withIsolatedBicepEnvironment((options) => {
+    const probe = spawnSync("az", ["bicep", "version"], options);
+    if (probe.error?.code === "ENOENT") {
+      t.skip("Azure CLI is not installed");
+      return;
+    }
+    assert.equal(probe.status, 0, probe.stderr);
 
-  for (const file of ["metrics.bicep", "monitoring.bicep", "postgres.bicep", "security.bicep", "evidence-runners.bicep"]) {
-    const result = spawnSync(
-      "az",
-      ["bicep", "build", "--file", `${azureDirectory}${file}`, "--stdout"],
-      { encoding: "utf8" },
-    );
-    assert.equal(result.status, 0, `${file} failed to compile:\n${result.stderr}`);
-    const template = JSON.parse(result.stdout);
-    assert.equal(template.$schema.includes("deploymentTemplate.json"), true);
-  }
+    for (const file of ["metrics.bicep", "monitoring.bicep", "postgres.bicep", "security.bicep", "evidence-runners.bicep"]) {
+      const result = spawnSync(
+        "az",
+        ["bicep", "build", "--file", `${azureDirectory}${file}`, "--stdout"],
+        options,
+      );
+      assert.equal(result.status, 0, `${file} failed to compile:\n${result.stderr}`);
+      const template = JSON.parse(result.stdout);
+      assert.equal(template.$schema.includes("deploymentTemplate.json"), true);
+    }
+  });
 });
 
 test("monitoring imports the shared workspace and links Application Insights", () => {
@@ -295,6 +299,6 @@ test("monitoring parameters cover every job declared by metrics.bicep", () => {
     ...monitoringParameters.parameters.containerAppsJobNames.value,
   ].sort();
 
-  assert.equal(deployedJobNames.length, 23);
+  assert.equal(deployedJobNames.length, 24);
   assert.deepEqual(monitoredJobNames, deployedJobNames);
 });

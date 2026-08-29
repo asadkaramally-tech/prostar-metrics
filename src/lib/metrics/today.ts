@@ -1,6 +1,7 @@
 import { calculateCommissionPoolFromPercent } from "@/lib/metrics/commissions";
 import {
   classifyLoss,
+  grossMarginPercent,
   isCompletedJobStage,
   LOSS_CLASSIFICATION_RULE,
   type LossClass,
@@ -18,23 +19,39 @@ export const MTD_CAPACITY_RULE =
   "Flat capacity: Monday-Friday workdays elapsed in the month multiplied by 8 productive hours and the effective roster size. Observed holidays are not deducted.";
 
 export const QUOTES_SENT_BASIS =
-  "DateApproved (the Simpro send event) assigns quotes-sent activity to the month.";
+  "DateIssued assigns quotes-sent activity to the month.";
 
 export type TodayJobInput = {
   jobId: string | number;
+  jobNo?: string | null;
   name?: string | null;
   completedDate?: string | null;
   stageName?: string | null;
   sellValue: number | null;
+  grossProfitActual?: number | null;
   netProfitActual?: number | null;
   siteName?: string | null;
   customerName?: string | null;
+  updatedFromSourceAt?: string | null;
   sourceDeletedAt?: string | null;
+};
+
+export type TodayProfitabilityJob = {
+  jobId: string;
+  jobNo: string;
+  name: string;
+  siteName: string;
+  sellValue: number | null;
+  grossProfit: number | null;
+  grossMargin: number | null;
+  netProfit: number | null;
+  netMargin: number | null;
+  updatedFromSourceAt: string | null;
 };
 
 export type TodayQuoteInput = {
   quoteId: string | number;
-  dateApproved?: string | null;
+  dateIssued?: string | null;
   totalValue: number | null;
   sourceDeletedAt?: string | null;
 };
@@ -75,6 +92,21 @@ export type TodayReadModel = {
   timezone: "America/Los_Angeles";
   elapsedDays: number;
   daysInMonth: number;
+  today: {
+    completedJobs: number;
+    revenue: number;
+    revenueCoveredJobs: number;
+    grossProfit: number;
+    grossMargin: number | null;
+    netProfit: number;
+    netMargin: number | null;
+    averageJobValue: number | null;
+    grossProfitCoveredJobs: number;
+    netProfitCoveredJobs: number;
+    netNegativeJobs: number;
+    netNegativeTotal: number;
+    jobs: TodayProfitabilityJob[];
+  };
   dailyCumulativeRevenue: {
     currentMonth: { month: string; days: Array<{ day: number; cumulativeRevenue: number; jobs: number }> };
     priorMonth: { month: string; days: Array<{ day: number; cumulativeRevenue: number; jobs: number }> };
@@ -138,8 +170,38 @@ export function buildTodayReadModel(params: {
     && Boolean(job.completedDate)
     && isCompletedJobStage(job.stageName));
   const mtdJobs = jobsInMonth(completed, month).filter((job) => dayOfMonth(job.completedDate!) <= elapsedDays);
+  const todayJobs = mtdJobs.filter((job) => job.completedDate === asOfDate);
   const priorMonthJobs = jobsInMonth(completed, priorMonth);
   const priorYearJobs = jobsInMonth(completed, priorYearMonth);
+
+  const todayRevenue = sum(todayJobs.map((job) => supportedNumber(job.sellValue) ?? 0));
+  const todayRevenueCovered = todayJobs.filter((job) => supportedNumber(job.sellValue) !== null);
+  const todayGrossProfit = sum(todayJobs.map((job) => supportedNumber(job.grossProfitActual) ?? 0));
+  const todayNetProfit = sum(todayJobs.map((job) => supportedNumber(job.netProfitActual) ?? 0));
+  const todayGrossCovered = todayJobs.filter((job) => supportedNumber(job.grossProfitActual) !== null);
+  const todayNetCovered = todayJobs.filter((job) => supportedNumber(job.netProfitActual) !== null);
+  const todayGrossRevenue = sum(todayGrossCovered.map((job) => supportedNumber(job.sellValue) ?? 0));
+  const todayNetRevenue = sum(todayNetCovered.map((job) => supportedNumber(job.sellValue) ?? 0));
+  const todayNegative = todayJobs.filter((job) => (supportedNumber(job.netProfitActual) ?? 0) < 0);
+  const todayRows = todayJobs.map((job) => {
+    const sellValue = supportedNumber(job.sellValue);
+    const grossProfit = supportedNumber(job.grossProfitActual);
+    const netProfit = supportedNumber(job.netProfitActual);
+    return {
+      jobId: String(job.jobId),
+      jobNo: displayText(job.jobNo, String(job.jobId)),
+      name: plainDisplayText(job.name, `Job ${job.jobId}`),
+      siteName: displayText(job.siteName, "Unclassified"),
+      sellValue,
+      grossProfit,
+      grossMargin: sellValue !== null && grossProfit !== null ? grossMarginPercent(sellValue, grossProfit) : null,
+      netProfit,
+      netMargin: sellValue !== null && netProfit !== null ? grossMarginPercent(sellValue, netProfit) : null,
+      updatedFromSourceAt: job.updatedFromSourceAt ?? null,
+    } satisfies TodayProfitabilityJob;
+  }).sort((left, right) =>
+    (right.updatedFromSourceAt ?? "").localeCompare(left.updatedFromSourceAt ?? "")
+      || right.jobId.localeCompare(left.jobId));
 
   const revenue = sum(mtdJobs.map((job) => supportedNumber(job.sellValue) ?? 0));
   let netProfit = 0;
@@ -152,9 +214,9 @@ export function buildTodayReadModel(params: {
   }
 
   const quotes = params.quotesSent.filter((quote) => !quote.sourceDeletedAt
-    && Boolean(quote.dateApproved)
-    && quote.dateApproved!.slice(0, 7) === month
-    && dayOfMonth(quote.dateApproved!) <= elapsedDays);
+    && Boolean(quote.dateIssued)
+    && quote.dateIssued!.slice(0, 7) === month
+    && dayOfMonth(quote.dateIssued!) <= elapsedDays);
   const teamRecordedHours = sum(params.timesheets
     .filter((row) => !row.sourceDeletedAt
       && Boolean(row.workDate)
@@ -207,6 +269,21 @@ export function buildTodayReadModel(params: {
     timezone: "America/Los_Angeles",
     elapsedDays,
     daysInMonth: daysInMonth(month),
+    today: {
+      completedJobs: todayJobs.length,
+      revenue: todayRevenue,
+      revenueCoveredJobs: todayRevenueCovered.length,
+      grossProfit: todayGrossProfit,
+      grossMargin: grossMarginPercent(todayGrossRevenue, todayGrossProfit),
+      netProfit: todayNetProfit,
+      netMargin: grossMarginPercent(todayNetRevenue, todayNetProfit),
+      averageJobValue: todayJobs.length > 0 && todayRevenueCovered.length === todayJobs.length ? todayRevenue / todayJobs.length : null,
+      grossProfitCoveredJobs: todayGrossCovered.length,
+      netProfitCoveredJobs: todayNetCovered.length,
+      netNegativeJobs: todayNegative.length,
+      netNegativeTotal: sum(todayNegative.map((job) => supportedNumber(job.netProfitActual) ?? 0)),
+      jobs: todayRows,
+    },
     dailyCumulativeRevenue: {
       currentMonth: { month, days: dailyCumulative(mtdJobs, month, elapsedDays).days },
       priorMonth: priorMonthCumulative,

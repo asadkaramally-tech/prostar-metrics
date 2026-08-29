@@ -1,7 +1,8 @@
+import { notFound } from "next/navigation";
 import { DashboardPage } from "@/components/dashboard-page";
 import { JobsDashboard } from "@/components/jobs-dashboard";
 import { PeriodSelector } from "@/components/period-selector";
-import { monthParamToPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
+import { boundedDashboardPeriodStart, periodStartToMonthKey } from "@/lib/metrics/periods";
 import { getJobDashboardReadModel } from "@/lib/store/job-dashboard-read-model";
 import { cachedPageLoad } from "@/lib/store/page-cache";
 
@@ -18,7 +19,8 @@ export default async function JobsPage({
   }>;
 }) {
   const params = await searchParams;
-  const periodStart = monthParamToPeriodStart(params?.month);
+  const periodStart = boundedDashboardPeriodStart(params?.month);
+  if (!periodStart) notFound();
   const jobQuery = {
     selectedMonth: periodStartToMonthKey(periodStart),
     category: params?.category,
@@ -35,7 +37,10 @@ export default async function JobsPage({
       title="Job Metrics"
       description="Revenue, profit and outcomes for completed work."
       freshness={model.freshness}
-      controls={<PeriodSelector action="/jobs" value={model.selectedMonth} />}
+      controls={<PeriodSelector action="/jobs" value={model.selectedMonth} hiddenFields={{
+        category: params?.category, costCenter: params?.costCenter, technician: params?.technician,
+        jobPage: params?.jobPage, states: params?.states,
+      }} />}
     >
       <JobsDashboard model={model} showStates={params?.states === "1"} />
     </DashboardPage>

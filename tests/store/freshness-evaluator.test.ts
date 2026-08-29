@@ -36,17 +36,101 @@ test("building and partial states become current only after every aggregate gate
   }
 });
 
-test("a required continuation keeps aggregate freshness building", () => {
+test("fresh incremental work keeps the complete serving page current", () => {
   const sources = successfulSources("quotes").map((source) =>
     source.sourceFamily === "quote_logs"
-      ? { ...source, pendingCount: 1, completeWindow: false }
+      ? { ...source, pendingCount: 1, completeWindow: false, servingWindowComplete: true }
       : source,
   );
   const result = evaluatePageFreshness(baseInput("quotes", sources));
 
-  assert.equal(result.state, "building");
-  assert.match(result.detail, /quote_logs/);
+  assert.equal(result.state, "current");
   assert.equal(result.continuationCount, 1);
+  assert.equal(result.coverage.sources.quote_logs.state, "successful");
+  assert.equal(result.coverage.sources.quote_logs.pendingCount, 1);
+  assert.match(result.coverage.sources.quote_logs.detail, /Serving the last complete source window/);
+});
+
+test("pending nested work keeps a complete same-generation manifest serving", () => {
+  const sources = successfulSources("quotes").map((source) =>
+    source.sourceFamily === "quote_nested"
+      ? { ...source, pendingCount: 1 }
+      : source,
+  );
+  const result = evaluatePageFreshness(baseInput("quotes", sources));
+
+  assert.equal(result.state, "current");
+  assert.equal(result.coverage.sources.quote_nested.state, "successful");
+  assert.equal(result.coverage.sources.quote_nested.pendingCount, 1);
+  assert.match(result.coverage.sources.quote_nested.detail, /Serving the last complete source window/);
+});
+
+test("incremental work still warns when its last successful poll is stale", () => {
+  const sources = successfulSources("quotes").map((source) =>
+    source.sourceFamily === "quote_logs"
+      ? {
+          ...source,
+          pendingCount: 1,
+          completeWindow: false,
+          servingWindowComplete: true,
+          dataThrough: "2026-07-09T09:00:00.000Z",
+          lastSuccessfulRunAt: "2026-07-09T09:00:00.000Z",
+        }
+      : source,
+  );
+
+  assert.equal(evaluatePageFreshness(baseInput("quotes", sources)).state, "stale");
+});
+
+test("a recent no-event incremental poll remains current while preserving its data-through", () => {
+  const sources = successfulSources("quotes").map((source) =>
+    source.sourceFamily === "quote_logs"
+      ? {
+          ...source,
+          dataThrough: "2026-07-01T00:00:00.000Z",
+          lastChangeAt: "2026-07-01T00:00:00.000Z",
+          lastSuccessfulRunAt: "2026-07-09T11:45:00.000Z",
+        }
+      : source,
+  );
+
+  const result = evaluatePageFreshness(baseInput("quotes", sources));
+  assert.equal(result.state, "current");
+  assert.equal(result.coverage.sources.quote_logs.state, "successful");
+  assert.equal(result.coverage.sources.quote_logs.dataThrough, "2026-07-01T00:00:00.000Z");
+});
+
+test("an incremental source is stale when its successful poll is genuinely old", () => {
+  const sources = successfulSources("quotes").map((source) =>
+    source.sourceFamily === "quote_logs"
+      ? {
+          ...source,
+          dataThrough: "2026-07-09T11:45:00.000Z",
+          lastSuccessfulRunAt: "2026-07-09T09:00:00.000Z",
+        }
+      : source,
+  );
+
+  const result = evaluatePageFreshness(baseInput("quotes", sources));
+  assert.equal(result.state, "stale");
+  assert.match(result.coverage.sources.quote_logs.detail, /Last successful poll/);
+});
+
+test("a serving-ready rollup retains queued rebuild detail in aggregate coverage", () => {
+  const result = evaluatePageFreshness({
+    ...baseInput("quotes", successfulSources("quotes")),
+    rollup: {
+      status: "ready",
+      rebuiltAt: rollupAt,
+      pendingCount: 2,
+      detail: "Serving the latest ready read model while 2 rollup rebuild jobs are queued or running.",
+    },
+  });
+
+  assert.equal(result.state, "current");
+  assert.equal(result.coverage.rollup.status, "ready");
+  assert.equal(result.coverage.rollup.pendingCount, 2);
+  assert.match(result.coverage.rollup.detail ?? "", /queued or running/);
 });
 
 test("an older success cannot replace the current source-period manifest", () => {
@@ -103,6 +187,8 @@ test("current source SLAs match the scheduled baseline-plus-change-log architect
   assert.equal(technicianRequirements.find((item) => item.sourceFamily === "jobs_from_timesheets")?.maxAgeHours, 2);
   assert.equal(technicianRequirements.find((item) => item.sourceFamily === "employees")?.maxAgeHours, 26);
   assert.equal(technicianRequirements.find((item) => item.sourceFamily === "schedules")?.maxAgeHours, null);
+  assert.equal(technicianRequirements.find((item) => item.sourceFamily === "schedule_logs")?.requiresCurrentManifest, false);
+  assert.equal(technicianRequirements.find((item) => item.sourceFamily === "mobile_status")?.requiresCurrentManifest, false);
 
   const result = evaluatePageFreshness(baseInput("quotes", successfulSources("quotes")));
   assert.equal(result.state, "current");
@@ -125,7 +211,11 @@ test("fresh change logs keep a page current between scheduled baseline scans", (
 
   const staleLogs = sources.map((source) =>
     source.sourceFamily === "quote_logs"
-      ? { ...source, dataThrough: "2026-07-09T10:00:00.000Z" }
+      ? {
+          ...source,
+          dataThrough: "2026-07-09T10:00:00.000Z",
+          lastSuccessfulRunAt: "2026-07-09T10:00:00.000Z",
+        }
       : source,
   );
   assert.equal(evaluatePageFreshness(baseInput("quotes", staleLogs)).state, "stale");
@@ -153,13 +243,13 @@ test("failed, suspect, and stale source evidence use status precedence", async (
     assert.equal(evaluatePageFreshness(baseInput("quotes", sources)).state, "failed");
   });
 
-  await t.test("complete serving evidence supersedes a dead-lettered source attempt", () => {
+  await t.test("a dead-lettered source attempt remains a warning despite older serving evidence", () => {
     const sources = successfulSources("quotes").map((source) =>
       source.sourceFamily === "quote_logs"
         ? { ...source, failedCount: 1, lastFailedRunAt: "2026-07-09T11:30:00.000Z" }
         : source,
     );
-    assert.equal(evaluatePageFreshness(baseInput("quotes", sources)).state, "current");
+    assert.equal(evaluatePageFreshness(baseInput("quotes", sources)).state, "failed");
   });
 
   await t.test("suspect reconciliation", () => {
@@ -171,7 +261,11 @@ test("failed, suspect, and stale source evidence use status precedence", async (
   await t.test("stale source", () => {
     const sources = successfulSources("quotes").map((source) =>
       source.sourceFamily === "quote_logs"
-        ? { ...source, dataThrough: "2026-07-09T09:00:00.000Z" }
+        ? {
+            ...source,
+            dataThrough: "2026-07-09T09:00:00.000Z",
+            lastSuccessfulRunAt: "2026-07-09T09:00:00.000Z",
+          }
         : source,
     );
     assert.equal(evaluatePageFreshness(baseInput("quotes", sources)).state, "stale");
@@ -288,12 +382,22 @@ test("explicit failure and suspect states remain until durable evidence supersed
     assert.equal(result.state, "failed");
   });
 
-  await t.test("explicit suspect needs a newer matched reconciliation", () => {
+  await t.test("an equally current matched reconciliation clears explicit suspect", () => {
     const result = evaluatePageFreshness({
       ...baseInput("quotes", successfulSources("quotes")),
       explicitState: "suspect",
       explicitDetail: "Prior mismatch",
       explicitReconciledAt: reconciliationAt,
+    });
+    assert.equal(result.state, "current");
+  });
+
+  await t.test("explicit suspect remains when its evidence is newer than the matched reconciliation", () => {
+    const result = evaluatePageFreshness({
+      ...baseInput("quotes", successfulSources("quotes")),
+      explicitState: "suspect",
+      explicitDetail: "Prior mismatch",
+      explicitReconciledAt: "2026-07-09T11:40:00.000Z",
     });
     assert.equal(result.state, "suspect");
     assert.equal(result.detail, "Prior mismatch");

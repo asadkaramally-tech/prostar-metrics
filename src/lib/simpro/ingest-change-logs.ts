@@ -57,16 +57,27 @@ export async function ingestChangeLogPage(params: {
   const affected = new Map<string, { scope: RollupScope; periodStart: string }>();
   const candidates = new Map<string, ChangeLogCandidate>();
 
-  for (const row of page.rows) {
+  // Simpro occasionally returns equal-timestamp rows in an unstable order and
+  // live inserts can shift already-seen rows onto the next numeric page. Sort
+  // each page deterministically and ignore those forward duplicates. The
+  // overlapping next poll will still re-read the boundary, while an unstable
+  // page no longer creates a permanent false "gap" warning.
+  const orderedRows = [...page.rows].sort((left, right) => {
+    const leftCursor = logCursor(asRecord(left));
+    const rightCursor = logCursor(asRecord(right));
+    if (!leftCursor) return 1;
+    if (!rightCursor) return -1;
+    return compareLogCursor(rightCursor, leftCursor);
+  });
+
+  for (const row of orderedRows) {
     const payload = asRecord(row);
     const cursor = logCursor(payload);
     if (!cursor) {
       gapDetected = true;
       continue;
     }
-    if (previousCursor && compareLogCursor(cursor, previousCursor) > 0) {
-      gapDetected = true;
-    }
+    if (previousCursor && compareLogCursor(cursor, previousCursor) >= 0) continue;
     previousCursor = cursor;
     if (!observedMax || compareLogCursor(cursor, observedMax) > 0) observedMax = cursor;
     if (new Date(cursor.dateLogged).getTime() < new Date(overlapStart).getTime()) {
