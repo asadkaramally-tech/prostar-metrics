@@ -69,6 +69,15 @@ async function remoteSha256(blobClient) {
   return hash.digest("hex");
 }
 
+async function atOperation(label, operation) {
+  try {
+    return await operation();
+  } catch (error) {
+    if (error && typeof error === "object") error.psmOperation = label;
+    throw error;
+  }
+}
+
 async function run({ execute = false } = {}) {
   const files = [];
   for (const source of sourceSets) await enumerate(source, files);
@@ -81,12 +90,16 @@ async function run({ execute = false } = {}) {
     return { mode: "preview", account: ACCOUNT, container: CONTAINER, prefix: PREFIX, files: files.length, totalBytes, manifestSha256 };
   }
 
-  const credential = new AzureCliCredential();
-  const service = new BlobServiceClient(`https://${ACCOUNT}.blob.core.windows.net`, credential);
+  const sasToken = process.env.PSM_EVIDENCE_SAS_TOKEN?.trim();
+  const service = sasToken
+    ? new BlobServiceClient(`https://${ACCOUNT}.blob.core.windows.net?${sasToken}`)
+    : new BlobServiceClient(`https://${ACCOUNT}.blob.core.windows.net`, new AzureCliCredential());
   const container = service.getContainerClient(CONTAINER);
-  await container.createIfNotExists();
-  const properties = await container.getProperties();
-  if (properties.blobPublicAccess) throw new Error(`Container ${CONTAINER} unexpectedly permits ${properties.blobPublicAccess} access`);
+  if (!sasToken) await container.createIfNotExists();
+  if (!sasToken) {
+    const properties = await atOperation("read-container-properties", () => container.getProperties());
+    if (properties.blobPublicAccess) throw new Error(`Container ${CONTAINER} unexpectedly permits ${properties.blobPublicAccess} access`);
+  }
 
   let uploaded = 0;
   let reused = 0;
@@ -144,7 +157,15 @@ if (invokedPath === import.meta.url) {
   run({ execute: args.includes("--execute") })
     .then((result) => console.log(JSON.stringify(result, null, 2)))
     .catch((error) => {
-      console.error(`[preserve-evidence] ${error.message}`);
+      const details = {
+        name: error?.name ?? "Error",
+        message: error?.message ?? String(error),
+        code: error?.code,
+        statusCode: error?.statusCode,
+        cause: error?.cause?.message,
+        operation: error?.psmOperation,
+      };
+      console.error(`[preserve-evidence] ${JSON.stringify(details)}`);
       process.exitCode = 1;
     });
 }

@@ -4,7 +4,7 @@ Status date: 2026-08-28. “Implemented locally” means code and regression cov
 
 | Workstream | Status | Closure evidence / next authority |
 |---|---|---|
-| Preserve candidate evidence | Partial | First hashed local copy complete; owner must select and verify a second protected copy. |
+| Preserve candidate evidence | Complete | The second protected copy was uploaded to private encrypted Azure Blob storage and every object was read back and SHA-256 verified; see `releases/2026-08-28-preservation-receipt.md`. |
 | Establish release authority | Partial | Live revision 152 and source-context binding recorded; owner-authorized production query must add 24 job digests, migration ledger, smoke result, and rollback digest. |
 | Diagnose out-of-window schedule dead letters | Implemented locally | Valid pre-2023 and future rollups are deferred; malformed dates still fail closed. Deploy first, then use the bounded repair procedure in `runbook.md`. |
 | Dependency and injection security | Implemented locally | Patched dependency tree, escaped/React-rendered source labels, regression tests, zero known npm advisories at local verification. |
