@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { homedir, tmpdir } from "node:os";
-import { join } from "node:path";
 import test from "node:test";
+
+import { withIsolatedBicepEnvironment } from "./helpers/bicep-environment.mjs";
 
 const azureDirectory = fileURLToPath(new URL("../../infra/azure/", import.meta.url));
 const projectRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -22,27 +21,7 @@ const [monitoringBicep, metricsBicep, monitoringParametersText, operationalTelem
 const monitoringParameters = JSON.parse(monitoringParametersText);
 
 test("all Azure Bicep entry points compile to ARM JSON", (t) => {
-  const isolatedConfig = mkdtempSync(join(tmpdir(), "psm-bicep-test-"));
-  const installedConfig = process.env.AZURE_CONFIG_DIR || join(homedir(), ".azure");
-  const binaryName = process.platform === "win32" ? "bicep.exe" : "bicep";
-  const installedBicep = join(installedConfig, "bin", binaryName);
-  const isolatedBin = join(isolatedConfig, "bin");
-  const dotnetCache = join(isolatedConfig, "dotnet-cache");
-  mkdirSync(isolatedBin, { recursive: true });
-  mkdirSync(dotnetCache, { recursive: true });
-  if (existsSync(installedBicep)) {
-    symlinkSync(installedBicep, join(isolatedBin, binaryName));
-  }
-  const options = {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      AZURE_CONFIG_DIR: isolatedConfig,
-      DOTNET_BUNDLE_EXTRACT_BASE_DIR: dotnetCache,
-    },
-  };
-
-  try {
+  withIsolatedBicepEnvironment((options) => {
     const probe = spawnSync("az", ["bicep", "version"], options);
     if (probe.error?.code === "ENOENT") {
       t.skip("Azure CLI is not installed");
@@ -60,9 +39,7 @@ test("all Azure Bicep entry points compile to ARM JSON", (t) => {
       const template = JSON.parse(result.stdout);
       assert.equal(template.$schema.includes("deploymentTemplate.json"), true);
     }
-  } finally {
-    rmSync(isolatedConfig, { recursive: true, force: true });
-  }
+  });
 });
 
 test("monitoring imports the shared workspace and links Application Insights", () => {
